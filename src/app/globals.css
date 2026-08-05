@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme inline {
+    --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+    --font-korean:
+        var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+}
+
+:root {
+    --background: #ffffff;
+    --foreground: #18181b;
+}
+
+body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Utility for the display/heading font used by section headings. */
+.font-display {
+    font-family: var(--font-display);
+}

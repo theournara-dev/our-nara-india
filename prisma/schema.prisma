@@ -1,0 +1,346 @@
+// OUR:NARA — Prisma schema
+// PostgreSQL · Prisma 7 (`prisma-client` TS generator)
+//
+// Money is stored as integer minor units (paise for INR) to avoid floating
+// point errors. Every money field carries a `currency` so the store can add
+// multi-currency pricing later without a migration of intent.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Accounts
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  phone        String?
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  addresses         Address[]
+  orders            Order[]
+  reviews           Review[]
+  wishlist          WishlistItem[]
+  recentViews       RecentView[]
+  mileage           MileageLedger[]
+  couponRedemptions CouponRedemption[]
+
+  @@map("users")
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String  @map("user_id")
+  label     String
+  recipient String
+  line1     String
+  line2     String?
+  city      String
+  state     String?
+  postal    String
+  country   String  @default("IN")
+  phone     String?
+  isDefault Boolean @default(false) @map("is_default")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Brand {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  logoUrl     String?  @map("logo_url")
+  coverUrl    String?  @map("cover_url")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@map("brands")
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  sortOrder Int        @default(0) @map("sort_order")
+  parentId  String?    @map("parent_id")
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+
+  products Product[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  brandId        String   @map("brand_id")
+  categoryId     String   @map("category_id")
+  name           String
+  summary        String?
+  shortTags      String[] @map("short_tags")
+  description    String?
+  priceCents     Int      @map("price_cents")
+  compareAtCents Int?     @map("compare_at_cents")
+  currency       String   @default("INR")
+  isPreOrder     Boolean  @default(false) @map("is_pre_order")
+  preOrderNotice String?  @map("pre_order_notice")
+  images         String[]
+  isActive       Boolean  @default(true) @map("is_active")
+  seoTitle       String?  @map("seo_title")
+  seoDescription String?  @map("seo_description")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  brand       Brand            @relation(fields: [brandId], references: [id])
+  category    Category         @relation(fields: [categoryId], references: [id])
+  variants    ProductVariant[]
+  reviews     Review[]
+  orderItems  OrderItem[]
+  wishlist    WishlistItem[]
+  recentViews RecentView[]
+
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([isActive])
+  @@map("products")
+}
+
+// A purchasable option of a product, e.g. shade "01 Rose" for a "Choose 1 of 6"
+// lip product. Price may override the product base price when it differs.
+model ProductVariant {
+  id          String  @id @default(cuid())
+  productId   String  @map("product_id")
+  optionLabel String? @map("option_label") // e.g. "Shade"
+  optionValue String  @map("option_value") // e.g. "01 Rose"
+  sku         String  @unique
+  priceCents  Int?    @map("price_cents")
+  stock       Int     @default(0)
+  isActive    Boolean @default(true) @map("is_active")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PRE_ORDER
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  orderNumber   String      @unique @map("order_number")
+  userId        String?     @map("user_id")
+  email         String
+  status        OrderStatus @default(PENDING)
+  currency      String      @default("INR")
+  subtotalCents Int         @map("subtotal_cents")
+  shippingCents Int         @default(0) @map("shipping_cents")
+  discountCents Int         @default(0) @map("discount_cents")
+  totalCents    Int         @map("total_cents")
+  isPreOrder    Boolean     @default(false) @map("is_pre_order")
+  billing       Json?
+  shipping      Json?
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  user        User?              @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+  payments    Payment[]
+  redemptions CouponRedemption[]
+  mileage     MileageLedger[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String  @map("order_id")
+  productId   String  @map("product_id")
+  variantId   String? @map("variant_id")
+  name        String
+  optionValue String? @map("option_value")
+  sku         String?
+  priceCents  Int     @map("price_cents")
+  quantity    Int     @default(1)
+  currency    String  @default("INR")
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  REFUNDED
+  FAILED
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  orderId     String        @map("order_id")
+  provider    String // "razorpay" | "stripe"
+  providerRef String?       @map("provider_ref")
+  amountCents Int           @map("amount_cents")
+  currency    String        @default("INR")
+  status      PaymentStatus @default(CREATED)
+  rawPayload  Json?         @map("raw_payload")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([providerRef])
+  @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty & promotions
+// ---------------------------------------------------------------------------
+
+enum CouponType {
+  PERCENT
+  FIXED
+  SHIPPING
+}
+
+model Coupon {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  type          CouponType
+  value         Int // percent (0-100) or amount in minor units
+  minOrderCents Int?       @map("min_order_cents")
+  maxUses       Int?
+  perUserLimit  Int?       @map("per_user_limit")
+  startsAt      DateTime?  @map("starts_at")
+  expiresAt     DateTime?  @map("expires_at")
+  isActive      Boolean    @default(true) @map("is_active")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  redemptions CouponRedemption[]
+
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id         String   @id @default(cuid())
+  couponId   String   @map("coupon_id")
+  userId     String   @map("user_id")
+  orderId    String   @map("order_id")
+  redeemedAt DateTime @default(now()) @map("redeemed_at")
+
+  coupon Coupon @relation(fields: [couponId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+
+  @@index([couponId])
+  @@index([userId])
+  @@map("coupon_redemptions")
+}
+
+// Append-only ledger so a user's running balance can always be reconstructed
+// and audited.
+model MileageLedger {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  delta        Int // positive = earned, negative = spent
+  reason       String
+  orderId      String?  @map("order_id")
+  balanceAfter Int      @map("balance_after")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id])
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@index([userId])
+  @@map("mileage_ledger")
+}
+
+// ---------------------------------------------------------------------------
+// Social
+// ---------------------------------------------------------------------------
+
+model Review {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  userId     String   @map("user_id")
+  rating     Int
+  title      String?
+  body       String?
+  images     String[]
+  isVerified Boolean  @default(false) @map("is_verified")
+  status     String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@map("reviews")
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+model RecentView {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId, viewedAt])
+  @@map("recent_views")
+}
