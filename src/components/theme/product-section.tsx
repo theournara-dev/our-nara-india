@@ -7,8 +7,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import { ThemeProductCard } from "@/components/theme/product-card";
 import type { ProductCard as ProductCardType } from "@/data/products";
-import { cn } from "@/lib/utils";
-import { SliderArrows } from "@/components/ui/slider-arrows";
+import { SliderNav } from "@/components/ui/slider-nav";
 
 interface ThemeProductSectionProps {
   sub?: string;
@@ -107,23 +106,15 @@ export function ThemeProductSection({
 
           {/* Progressbar pagination + prev/next arrows (in the bottom bar, like the original).
               Kept mounted for Swiper, but hidden when there is nothing to scroll (no overflow). */}
-          <div
-            className={cn(
-              "mx-auto mt-4 flex w-[56vw] items-center justify-center max-[767px]:w-[80vw]",
-              "md:hidden",
-            )}
-          >
-            <div
-              ref={paginationRef}
-              className="swiper-pagination swiper-pagination-prd relative! h-1 flex-1"
-            />
-            <SliderArrows
-              onPrev={() => swiperRef.current?.slidePrev()}
-              onNext={() => swiperRef.current?.slideNext()}
-              canPrev={canPrev}
-              canNext={canNext}
-            />
-          </div>
+          <SliderNav
+            paginationRef={paginationRef}
+            paginationClassName="swiper-pagination-prd"
+            onPrev={() => swiperRef.current?.slidePrev()}
+            onNext={() => swiperRef.current?.slideNext()}
+            canPrev={canPrev}
+            canNext={canNext}
+            className="md:hidden"
+          />
         </div>
       </div>
     </div>

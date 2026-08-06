@@ -7,7 +7,7 @@ import Swiper from "swiper";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import { SliderArrows } from "@/components/ui/slider-arrows";
+import { SliderNav } from "@/components/ui/slider-nav";
 import { HiPause, HiPlay } from "react-icons/hi2";
 
 interface HeroSlide {
@@ -174,15 +174,12 @@ export function HeroCarousel() {
       </div>
 
       {/* Nav controls (below the slider) */}
-      <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center gap-3 max-md:w-[80vw]">
-        <div
-          ref={paginationRef}
-          className="swiper-pagination swiper-pagination-main relative! h-1 flex-1"
-        />
-        <SliderArrows
-          onPrev={() => swiperRef.current?.slidePrev()}
-          onNext={() => swiperRef.current?.slideNext()}
-        />
+      <SliderNav
+        paginationRef={paginationRef}
+        paginationClassName="swiper-pagination-main"
+        onPrev={() => swiperRef.current?.slidePrev()}
+        onNext={() => swiperRef.current?.slideNext()}
+      >
         <div className="flex items-center">
           <button
             type="button"
@@ -200,7 +197,7 @@ export function HeroCarousel() {
             {!paused ? <HiPause size={24} /> : <HiPlay size={24} />}
           </button>
         </div>
-      </div>
+      </SliderNav>
     </div>
   );
 }
