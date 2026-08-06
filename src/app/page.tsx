@@ -1,22 +1,23 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { ProductGrid } from "@/components/product/product-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { HeroCarousel } from "@/components/content/hero-carousel";
+import { ShortsCarousel } from "@/components/content/shorts-carousel";
+import { ProductCarousel } from "@/components/product/carousel";
 import { brands, productsByBrand, toCardView } from "@/data/catalog";
 import { getBrands } from "@/data/brands";
 import { getRootCategories } from "@/data/categories";
-import { reviews, shortsPicks } from "@/data/content";
+import { reviews } from "@/data/content";
 import {
   getAvailableNow,
   getFeaturedProducts,
   getPreOrderProducts,
 } from "@/data/products";
-import { SITE } from "@/lib/constants";
 
 function BrandSection({ slug }: { slug: string }) {
   const brand = brands.find((b) => b.slug === slug);
-  const items = productsByBrand(slug).slice(0, 4).map(toCardView);
+  const items = productsByBrand(slug).slice(0, 6).map(toCardView);
   if (!brand || items.length === 0) return null;
 
   return (
@@ -27,7 +28,7 @@ function BrandSection({ slug }: { slug: string }) {
         href={`/brand/${brand.slug}`}
         linkLabel="More products"
       />
-      <ProductGrid products={items} />
+      <ProductCarousel products={items} />
     </Container>
   );
 }
@@ -54,29 +55,8 @@ export default async function HomePage() {
 
   return (
     <div>
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-amber-50 to-white">
-        <Container className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
-          <p className="text-sm font-medium uppercase tracking-widest text-amber-600">
-            {SITE.tagline} 🎁
-          </p>
-          <h1 className="font-display max-w-3xl text-4xl font-semibold leading-tight text-zinc-900 sm:text-6xl">
-            Korean beauty, now in India.
-          </h1>
-          <p className="max-w-xl text-zinc-600">
-            Curated K-Beauty skincare, makeup and haircare from trusted Korean
-            brands — shipped to your door.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button href="/category/skin-care" size="lg">
-              Shop Skin Care
-            </Button>
-            <Button href="/category/pre-order" size="lg" variant="outline">
-              Explore Pre-Orders
-            </Button>
-          </div>
-        </Container>
-      </section>
+      {/* Hero carousel */}
+      <HeroCarousel />
 
       {/* Categories */}
       <Container className="py-14">
@@ -97,14 +77,14 @@ export default async function HomePage() {
       </Container>
 
       {/* Top Picks */}
-      <Container className="py-14">
+      <Container className="py-12">
         <SectionHeading
           eyebrow="Top Picks"
           title="Best Product"
           href="/category/skin-care"
           linkLabel="View all"
         />
-        <ProductGrid products={featured} />
+        <ProductCarousel products={featured} />
       </Container>
 
       {/* Brand sections */}
@@ -115,7 +95,7 @@ export default async function HomePage() {
       {/* Available now */}
       <Container className="py-12">
         <SectionHeading eyebrow="In Stock" title="Available Now" />
-        <ProductGrid products={availableNow} />
+        <ProductCarousel products={availableNow} />
       </Container>
 
       {/* Pre-orders */}
@@ -126,26 +106,13 @@ export default async function HomePage() {
           href="/category/pre-order"
           linkLabel="More products"
         />
-        <ProductGrid products={preOrder} />
+        <ProductCarousel products={preOrder} />
       </Container>
 
-      {/* Shorts picks */}
+      {/* Shorts reels */}
       <Container className="py-14">
         <SectionHeading eyebrow="TikTok" title="Shorts Picks" />
-        <div className="grid gap-4 sm:grid-cols-3">
-          {shortsPicks.map((short) => (
-            <a
-              key={short.id}
-              href={short.tiktokUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex aspect-[3/4] flex-col justify-between rounded-2xl bg-zinc-900 p-5 text-white transition-transform hover:-translate-y-1"
-            >
-              <span className="text-sm text-zinc-300">{short.handle}</span>
-              <span className="font-medium">{short.title}</span>
-            </a>
-          ))}
-        </div>
+        <ShortsCarousel />
       </Container>
 
       {/* Real reviews */}

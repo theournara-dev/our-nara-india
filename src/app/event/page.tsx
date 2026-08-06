@@ -20,7 +20,7 @@ export default function EventPage() {
           {events.map((event) => (
             <div
               key={event.id}
-              className="flex flex-col rounded-2xl bg-gradient-to-br from-amber-50 to-white p-8 ring-1 ring-amber-100"
+              className="flex flex-col rounded-2xl bg-gradient-to-br from-point-50 to-white p-8 ring-1 ring-point-100"
             >
               <div className="mb-3 flex items-center gap-2">
                 {event.badge && <Badge tone="accent">{event.badge}</Badge>}

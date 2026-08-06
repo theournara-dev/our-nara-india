@@ -8,6 +8,28 @@ A frontend replica of the [OUR:NARA](https://our-nara.com/) K-Beauty store.
 > purchases** to work. The database, Razorpay checkout and accounts are scaffolded
 > and can be wired in later.
 
+## Port status (from the original static site)
+
+The original Cafe24 HTML/CSS/JS/images were copied into the project and are
+being ported to the Next.js app.
+
+Done
+
+- All images copied into public/ (site graphics in /upload, product photos in
+  /product) and referenced from the static catalog.
+- Original brand palette + fonts converted to Tailwind design tokens
+  (purple #6F2DBD accent, sale/ink/soft colors) in globals.css.
+- Working interactive header (client component): auto-rotating top banner,
+  mobile menu drawer, all-categories popup, search overlay - real logo.
+- Swiper-powered product carousels and the Shorts Picks reels carousel.
+
+Still to do
+
+- Match specific pages/components to the original layout more closely
+  (the site is Tailwind-native now, not a rule-by-rule port of the minified
+  theme CSS).
+- Reimplement remaining JS interactions (product image zoom, etc.).
+
 ## Stack
 
 - **Framework:** Next.js 16 (App Router) · TypeScript · React 19

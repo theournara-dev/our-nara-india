@@ -1,3 +1,5 @@
+import { PRODUCT_IMAGES } from "@/data/product-images";
+
 /**
  * Static catalog mirroring the live OUR:NARA store.
  *
@@ -599,6 +601,13 @@ export const products: StaticProduct[] = [
     variants: [],
   },
 ];
+
+// Attach the real product photos from the original site where available,
+// falling back to the generated placeholder otherwise.
+for (const product of products) {
+  const real = PRODUCT_IMAGES[product.slug];
+  if (real) product.images = [real];
+}
 
 // ── Lookups (used by the static data layer) ────────────────────────────────
 

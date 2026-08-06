@@ -8,6 +8,20 @@
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+
+    /* Brand palette converted from the original theme CSS. */
+    --color-point-50: #f7f3fb;
+    --color-point-100: #eee5f7;
+    --color-point-200: #ddcbf0;
+    --color-point-400: #a67fd6;
+    --color-point-500: #6f2dbd;
+    --color-point-600: #5c23a3;
+    --color-point-700: #4b1c88;
+    --color-point-800: #3d1670;
+    --color-point-900: #2c1052;
+    --color-sale: #e70124;
+    --color-ink: #222222;
+    --color-soft: #999999;
 }
 
 :root {

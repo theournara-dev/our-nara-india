@@ -13,7 +13,7 @@ const variantClasses = {
     "border border-zinc-300 text-zinc-900 hover:border-zinc-900 hover:bg-zinc-50 focus-visible:outline-zinc-900",
   ghost: "text-zinc-700 hover:bg-zinc-100 focus-visible:outline-zinc-900",
   accent:
-    "bg-amber-500 text-white hover:bg-amber-600 focus-visible:outline-amber-600",
+    "bg-point-500 text-white hover:bg-point-600 focus-visible:outline-point-600",
 } as const;
 
 const sizeClasses = {

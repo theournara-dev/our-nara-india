@@ -25,7 +25,7 @@ export default function AmbassadorPage() {
           <ul className="space-y-3">
             {perks.map((perk) => (
               <li key={perk} className="flex items-start gap-3 text-zinc-700">
-                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-point-500" />
                 {perk}
               </li>
             ))}
