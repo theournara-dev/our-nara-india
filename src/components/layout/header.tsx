@@ -300,10 +300,10 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile toggle */}
+        {/* Mobile toggle (mobile-only floating button) */}
         <button
           type="button"
-          className="mobMenuBtn"
+          className="fixed bottom-4 right-4 z-50 hidden h-12 w-12 items-center justify-center rounded-full bg-point-500 text-xl text-white max-md:inline-flex"
           aria-label="Open menu"
           onClick={() => setMobileOpen(true)}
         >

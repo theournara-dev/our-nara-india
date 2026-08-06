@@ -155,11 +155,11 @@ export function HeroCarousel() {
             </div>
           ))}
         </div>
-        <div className="btns">
+        <div className="btns justify-center">
           <div className="swiper-pagination swiper-pagination-main" />
           <div className="btn_arrow">
-            <div className="swiper-button-prev swiper-button-prev-main" />
-            <div className="swiper-button-next swiper-button-next-main" />
+            <div className="swiper-button-prev swiper-button-prev-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-2.5 after:w-2.5 after:border-t after:border-r after:border-zinc-900 after:bg-transparent! after:rotate-[-135deg]" />
+            <div className="swiper-button-next swiper-button-next-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-2.5 after:w-2.5 after:border-t after:border-r after:border-zinc-900 after:bg-transparent! after:rotate-45" />
           </div>
           <div className={`btn_active${paused ? " active" : ""}`}>
             <button

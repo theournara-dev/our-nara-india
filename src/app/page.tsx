@@ -76,14 +76,21 @@ export default async function HomePage() {
               What Our Customers Say
             </h2>
           </div>
-          <div className="reviewGrid">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {reviews.map((review) => (
-              <figure key={review.id} className="reviewCard">
-                <div className="reviewStars">{"★".repeat(review.rating)}</div>
-                <figcaption className="reviewAuthor">
+              <figure
+                key={review.id}
+                className="rounded-2xl border border-zinc-100 bg-white p-5"
+              >
+                <div className="mb-2 text-amber-500">
+                  {"★".repeat(review.rating)}
+                </div>
+                <figcaption className="mb-2 font-semibold text-zinc-900">
                   {review.author}
                 </figcaption>
-                <p className="reviewBody">{review.body}</p>
+                <p className="text-sm leading-relaxed text-zinc-600">
+                  {review.body}
+                </p>
               </figure>
             ))}
           </div>
@@ -99,7 +106,7 @@ export default async function HomePage() {
               Influencer story · 10,000+ reviews
             </h2>
           </div>
-          <p className="instaCta">
+          <p className="text-center text-zinc-600">
             Follow the community and tag <strong>#our__nara</strong> to get
             featured.
           </p>
