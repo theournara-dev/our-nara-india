@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-/* eslint-disable @next/next/no-css-tags -- theme CSS must load as a static asset */
 import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -47,12 +46,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${poppins.variable} ${playfair.variable} ${notoSansKr.variable} h-full antialiased`}
     >
       <head>
-        {/* Original fonts + Cafe24 theme CSS, served as static assets. */}
+        {/* Original Pretendard font (the theme's primary font). */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
         />
-        <link rel="stylesheet" href="/css/theme.css" />
       </head>
       <body className="flex min-h-full flex-col">
         <Header />

@@ -55,11 +55,13 @@ export default async function HomePage() {
       />
 
       {/* Shorts reels */}
-      <div className="ec-base-product prdRoll mg_60">
-        <div className="prd_inner">
-          <div className="title">
-            <h2>
-              <span className="sub">TIKTOK</span>
+      <div className="w-full">
+        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
+          <div className="mx-auto mb-2">
+            <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
+              <span className="block text-base font-medium leading-6 text-point-500">
+                TIKTOK
+              </span>
               Shorts Picks
             </h2>
           </div>
@@ -68,11 +70,13 @@ export default async function HomePage() {
       </div>
 
       {/* Reviews */}
-      <div className="ec-base-product prdRoll mg_60">
-        <div className="prd_inner">
-          <div className="title">
-            <h2>
-              <span className="sub">REAL REVIEWS</span>
+      <div className="w-full">
+        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
+          <div className="mx-auto mb-2">
+            <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
+              <span className="block text-base font-medium leading-6 text-point-500">
+                REAL REVIEWS
+              </span>
               What Our Customers Say
             </h2>
           </div>
@@ -98,11 +102,13 @@ export default async function HomePage() {
       </div>
 
       {/* Instagram */}
-      <div className="ec-base-product prdRoll mg_60">
-        <div className="prd_inner">
-          <div className="title">
-            <h2>
-              <span className="sub">INSTAGRAM #our__nara</span>
+      <div className="w-full">
+        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
+          <div className="mx-auto mb-2">
+            <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
+              <span className="block text-base font-medium leading-6 text-point-500">
+                INSTAGRAM #our__nara
+              </span>
               Influencer story · 10,000+ reviews
             </h2>
           </div>
