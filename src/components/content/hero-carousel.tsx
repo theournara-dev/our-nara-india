@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper";
 import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -83,6 +83,8 @@ const slides: HeroSlide[] = [
  */
 export function HeroCarousel() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const swiperRef = useRef<Swiper | null>(null);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -111,8 +113,10 @@ export function HeroCarousel() {
       },
     });
 
+    swiperRef.current = swiper;
     return () => {
       swiper.destroy(true, true);
+      swiperRef.current = null;
     };
   }, []);
 
@@ -156,6 +160,32 @@ export function HeroCarousel() {
           <div className="btn_arrow">
             <div className="swiper-button-prev swiper-button-prev-main" />
             <div className="swiper-button-next swiper-button-next-main" />
+          </div>
+          <div className={`btn_active${paused ? " active" : ""}`}>
+            <button
+              type="button"
+              className="start"
+              aria-label="Play"
+              onClick={() => {
+                swiperRef.current?.autoplay.start();
+                setPaused(false);
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/upload/goodymall1/en/layout/play.png" alt="play" />
+            </button>
+            <button
+              type="button"
+              className="stop"
+              aria-label="Pause"
+              onClick={() => {
+                swiperRef.current?.autoplay.stop();
+                setPaused(true);
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/upload/goodymall1/en/layout/pause.png" alt="pause" />
+            </button>
           </div>
         </div>
       </div>

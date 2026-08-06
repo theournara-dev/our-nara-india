@@ -88,7 +88,7 @@ export function Header() {
 
                   {/* All-categories panel */}
                   {allCateOpen && (
-                    <div id="allCate" className="pc">
+                    <div id="allCate" className="pc open">
                       <div className="allArea">
                         <div className="all_cont">
                           <ul>
