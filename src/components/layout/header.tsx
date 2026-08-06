@@ -68,7 +68,7 @@ export function Header() {
           </h1>
 
           {/* Top category menu */}
-          <div className="text-center">
+          <div className="flex flex-1 justify-center">
             <div className="flex items-center">
               {/* All categories button */}
               <div className="relative h-20 w-[50px] shrink-0">

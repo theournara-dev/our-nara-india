@@ -108,7 +108,7 @@ export function HeroCarousel() {
       },
       breakpoints: {
         768: { slidesPerView: 2.5, spaceBetween: 16 },
-        1200: { slidesPerView: 3, spaceBetween: 16 },
+        1200: { slidesPerView: 3.7, spaceBetween: 16 },
       },
     });
 
@@ -123,9 +123,9 @@ export function HeroCarousel() {
     <div className="mx-auto mt-5 mb-15 w-full">
       <div className="swiper pb-[50px]" ref={rootRef}>
         <div className="swiper-wrapper">
-          {slides.map((slide, i) => (
+          {[...slides, ...slides].map((slide, i) => (
             <div
-              key={slide.image + i}
+              key={`${slide.image}-${i}`}
               className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100"
             >
               {slide.preorder && (
@@ -166,8 +166,8 @@ export function HeroCarousel() {
         <div className="absolute bottom-0 left-0 right-0 z-10 mx-auto flex w-[56vw] items-center justify-center px-2.5 text-center">
           <div className="swiper-pagination swiper-pagination-main relative mr-3 inline-block h-1 w-full bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
           <div className="relative flex items-center">
-            <div className="swiper-button-prev swiper-button-prev-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3 after:w-3 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-[-135deg]" />
-            <div className="swiper-button-next swiper-button-next-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3 after:w-3 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-45" />
+            <div className="swiper-button-prev swiper-button-prev-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3.5 after:w-3.5 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-[-135deg]" />
+            <div className="swiper-button-next swiper-button-next-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3.5 after:w-3.5 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-45" />
           </div>
           <div className={`flex items-center ${paused ? "active" : ""}`}>
             <button
