@@ -2,9 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Swiper from "swiper";
-import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/pagination";
 import { ThemeProductCard } from "@/components/theme/product-card";
 import type { ProductCard as ProductCardType } from "@/data/products";
 
@@ -32,13 +30,8 @@ export function ThemeProductSection({
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: [Navigation, Pagination],
       slidesPerView: 4,
       spaceBetween: 0,
-      pagination: {
-        el: el.querySelector(".swiper-pagination-prd") as HTMLElement,
-        clickable: true,
-      },
       breakpoints: {
         640: { slidesPerView: 2 },
         1024: { slidesPerView: 4 },
@@ -84,17 +77,17 @@ export function ThemeProductSection({
             type="button"
             aria-label="Previous products"
             onClick={() => swiperRef.current?.slidePrev()}
-            className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
+            className="absolute left-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
           >
-            <span className="block h-2.5 w-2.5 -rotate-135 border-t-2 border-r-2 border-zinc-900" />
+            <span className="block h-3.5 w-3.5 -rotate-135 border-t-2 border-r-2 border-zinc-900" />
           </button>
           <button
             type="button"
             aria-label="Next products"
             onClick={() => swiperRef.current?.slideNext()}
-            className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
+            className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
           >
-            <span className="block h-2.5 w-2.5 rotate-45 border-t-2 border-r-2 border-zinc-900" />
+            <span className="block h-3.5 w-3.5 rotate-45 border-t-2 border-r-2 border-zinc-900" />
           </button>
         </div>
       </div>
