@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+import { SliderArrows } from "@/components/ui/slider-arrows";
 import { HiPause, HiPlay } from "react-icons/hi2";
 
 interface HeroSlide {
@@ -119,7 +121,7 @@ export function HeroCarousel() {
   }, []);
 
   return (
-    <div className="mx-auto mt-5 mb-15 w-full">
+    <div className="mx-auto mt-5 mb-15 w-full overflow-x-clip max-md:mt-0 max-md:mb-10">
       <div
         className={`swiper transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0 min-h-20"
@@ -130,7 +132,7 @@ export function HeroCarousel() {
           {[...slides, ...slides].map((slide, i) => (
             <div
               key={`${slide.image}-${i}`}
-              className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100"
+              className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100 [&.swiper-slide-prev]:opacity-100 [&.swiper-slide-next]:opacity-100"
             >
               {slide.preorder && (
                 <div className="pointer-events-none absolute right-5 top-5 z-10 flex h-20 w-20 items-center justify-center rounded-full bg-point-500 text-center text-[13px] font-semibold leading-tight tracking-wide text-white">
@@ -139,27 +141,30 @@ export function HeroCarousel() {
                   ORDER
                 </div>
               )}
-              <a href={slide.href ?? "/"}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <Link href={slide.href ?? "/"}>
+                <Image
                   src={slide.image}
                   alt={slide.title ?? "OUR:NARA"}
-                  className="w-full"
+                  width={830}
+                  height={1100}
+                  sizes="(min-width: 1200px) 27vw, (min-width: 768px) 40vw, 85vw"
+                  loading="eager" // carousel slides are translated off-screen; eager avoids blank slides
+                  className="h-auto w-full"
                 />
-              </a>
+              </Link>
               {slide.title && (
-                <div className="absolute bottom-[8%] left-[10%] text-left tracking-tight text-white">
+                <div className="absolute bottom-[8%] left-[10%] text-left tracking-tight text-white max-md:bottom-[6%] max-md:left-[8%]">
                   <h3 className="text-2xl font-semibold leading-8">
                     {slide.title}
                   </h3>
                   <p className="mt-2 text-lg leading-6">{slide.description}</p>
                   {slide.brand && slide.href && (
-                    <a
+                    <Link
                       href={slide.href}
-                      className="mt-6 inline-block rounded-full border border-white bg-white px-5 py-3 text-sm font-medium text-black"
+                      className="mt-6 inline-block rounded-full border border-white bg-white px-5 py-3 text-sm font-medium text-black max-md:mt-4 max-md:px-4 max-md:py-2"
                     >
                       {slide.brand}
-                    </a>
+                    </Link>
                   )}
                 </div>
               )}
@@ -169,30 +174,15 @@ export function HeroCarousel() {
       </div>
 
       {/* Nav controls (below the slider) */}
-      <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center gap-3">
+      <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center gap-3 max-md:w-[80vw]">
         <div
           ref={paginationRef}
           className="swiper-pagination swiper-pagination-main relative! h-1 flex-1"
         />
-        <div className="flex items-center">
-          <button
-            type="button"
-            aria-label="Previous"
-            className="cursor-pointer hover:opacity-50 transition-opacity duration-150"
-            onClick={() => swiperRef.current?.slidePrev()}
-          >
-            <MdKeyboardArrowLeft size={28} />
-          </button>
-          <div className="w-px h-3 bg-gray-200" />
-          <button
-            type="button"
-            aria-label="Next"
-            className="cursor-pointer hover:opacity-50 transition-opacity duration-150"
-            onClick={() => swiperRef.current?.slideNext()}
-          >
-            <MdKeyboardArrowRight size={28} />
-          </button>
-        </div>
+        <SliderArrows
+          onPrev={() => swiperRef.current?.slidePrev()}
+          onNext={() => swiperRef.current?.slideNext()}
+        />
         <div className="flex items-center">
           <button
             type="button"

@@ -1,36 +1,97 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { formatMoney } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 /**
- * Product card (Tailwind-native). Rendered inside the product carousel's
- * <li class="swiper-slide">.
+ * Product card. Default image is shown, the hover image crossfades in on hover
+ * along with two quick actions (wishlist + add to cart). Images are served
+ * unoptimized so any format (jpg, png, gif) is supported.
  */
-export function ThemeProductCard({ product }: { product: ProductCardType }) {
+export function ThemeProductCard({
+  product,
+  index,
+}: {
+  product: ProductCardType;
+  index: number;
+}) {
+  const primaryImage = product.images[0];
+  const hoverImage = product.hoverImage ?? primaryImage;
+
   return (
     <>
       <div className="relative text-center">
-        <div className="overflow-hidden rounded-lg">
-          <Link href={`/products/${product.slug}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={product.images[0]}
+        <span className="absolute left-1 -top-5 z-[10] text-[48px] font-semibold italic leading-none text-point-500 max-[767px]:text-[36px]">
+          {index + 1}
+        </span>
+
+        <div className="group relative aspect-square w-full overflow-hidden rounded-2xl">
+          <Link
+            href={`/products/${product.slug}`}
+            className="relative block h-full w-full"
+            aria-label={product.name}
+          >
+            <Image
+              src={primaryImage}
               alt={product.name}
-              className="aspect-square w-full object-cover"
+              fill
+              unoptimized
+              className="object-cover transition-opacity duration-300 ease-in-out group-hover:opacity-0"
+            />
+            <Image
+              src={hoverImage}
+              alt=""
+              fill
+              unoptimized
+              className="object-cover opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100"
             />
           </Link>
+
+          {/* Quick actions (wishlist + cart), revealed on hover */}
+          <div
+            className={cn(
+              "absolute bottom-2 -right-50 z-10 flex flex-col gap-1 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:right-2",
+            )}
+          >
+            <button
+              type="button"
+              aria-label="Add to wishlist"
+              className="block cursor-pointer"
+            >
+              <img
+                src="/upload/icon_202508271427425900.png"
+                alt="wishlist"
+                className="max-w-[30px] rounded bg-white/60 p-1"
+              />
+            </button>
+            <button
+              type="button"
+              aria-label="Add to cart"
+              className="block cursor-pointer"
+            >
+              <img
+                src="/upload/icon_202508271427351600.png"
+                alt="cart"
+                className="max-w-[30px] rounded bg-white/60 p-1"
+              />
+            </button>
+          </div>
         </div>
       </div>
-      <div className="mt-6 px-2 text-left text-xs leading-relaxed">
-        <strong className="mb-2 block text-left font-normal leading-8 line-clamp-2">
-          <Link href={`/products/${product.slug}`} className="text-zinc-800">
+
+      <div className="mt-6 px-2 text-left space-y-1 leading-relaxed">
+        <span className="text-sm text-black">[{product.brand.name}]</span>
+        <strong className="block text-left text-[15px] font-normal leading-8 line-clamp-2">
+          <Link href={`/products/${product.slug}`} className="text-black">
             {product.name}
           </Link>
         </strong>
         <ul className="space-y-0.5">
-          <li className="text-zinc-500">{product.brand.name}</li>
-          <li className="text-zinc-400">{product.shortTags.join(" · ")}</li>
-          <li className="font-semibold text-zinc-900">
+          <li className="text-sm text-[#888888]">
+            {product.shortTags.join(" · ")}
+          </li>
+          <li className="text-[18px] font-bold text-black">
             {formatMoney(product.priceCents, product.currency)}
           </li>
         </ul>

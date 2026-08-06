@@ -1,22 +1,9 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
-import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { ThemeProductSection } from "@/components/theme/product-section";
-import { productsByBrand, toCardView } from "@/data/catalog";
-import { getBrands } from "@/data/brands";
-import { reviews } from "@/data/content";
-import {
-  getAvailableNow,
-  getFeaturedProducts,
-  getPreOrderProducts,
-} from "@/data/products";
+import { getFeaturedProducts } from "@/data/products";
 
 export default async function HomePage() {
-  const [brandList, featured, availableNow, preOrder] = await Promise.all([
-    getBrands(),
-    getFeaturedProducts(8),
-    getAvailableNow(8),
-    getPreOrderProducts(8),
-  ]);
+  const featured = await getFeaturedProducts(4);
 
   return (
     <div>
@@ -31,31 +18,31 @@ export default async function HomePage() {
       />
 
       {/* Brand sections */}
-      {brandList.slice(0, 6).map((brand) => (
+      {/*{brandList.slice(0, 6).map((brand) => (
         <ThemeProductSection
           key={brand.slug}
           sub="BRAND"
           title={brand.name}
           products={productsByBrand(brand.slug).slice(0, 8).map(toCardView)}
         />
-      ))}
+      ))}*/}
 
       {/* Available now */}
-      <ThemeProductSection
+      {/*<ThemeProductSection
         sub="AVAILABLE NOW"
         title="In Stock"
         products={availableNow}
-      />
+      />*/}
 
       {/* Pre-orders */}
-      <ThemeProductSection
+      {/*<ThemeProductSection
         sub="PRE-ORDER"
         title="Order now, ships later"
         products={preOrder}
-      />
+      />*/}
 
       {/* Shorts reels */}
-      <div className="w-full">
+      {/*<div className="w-full">
         <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
           <div className="mx-auto mb-2">
             <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
@@ -67,10 +54,10 @@ export default async function HomePage() {
           </div>
           <ShortsCarousel />
         </div>
-      </div>
+      </div>*/}
 
       {/* Reviews */}
-      <div className="w-full">
+      {/*<div className="w-full">
         <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
           <div className="mx-auto mb-2">
             <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
@@ -99,10 +86,10 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
-      </div>
+      </div>*/}
 
       {/* Instagram */}
-      <div className="w-full">
+      {/*<div className="w-full">
         <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
           <div className="mx-auto mb-2">
             <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
@@ -117,7 +104,7 @@ export default async function HomePage() {
             featured.
           </p>
         </div>
-      </div>
+      </div>*/}
     </div>
   );
 }

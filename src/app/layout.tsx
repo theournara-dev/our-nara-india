@@ -43,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${poppins.variable} ${playfair.variable} ${notoSansKr.variable} h-full antialiased`}
+      className={`${poppins.variable} ${playfair.variable} ${notoSansKr.variable} h-full antialiased overflow-x-clip`}
     >
       <head>
         {/* Original Pretendard font (the theme's primary font). */}
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
         />
       </head>
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col overflow-x-clip">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

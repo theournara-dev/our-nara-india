@@ -38,6 +38,8 @@ export interface StaticProduct {
   isPreOrder: boolean;
   preOrderNotice?: string;
   images: string[];
+  /** Optional second image (e.g. on-hover view). Falls back to images[0]. */
+  hoverImage?: string;
   variants: StaticVariant[];
 }
 
@@ -54,6 +56,7 @@ export interface ProductCardView {
   isPreOrder: boolean;
   preOrderNotice?: string;
   images: string[];
+  hoverImage?: string;
   brand: { slug: string; name: string };
 }
 
@@ -155,6 +158,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: false,
     images: [image("Vitamin Serum")],
+    hoverImage: image("Vitamin Serum", "d6c7ff"), // TODO: replace with the real on-hover image
     variants: variantsFor("brightening-vitamin-serum", [
       { label: "Size", value: "30ml" },
       { label: "Size", value: "50ml" },
@@ -172,6 +176,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: false,
     images: [image("Collagen Cream")],
+    hoverImage: image("Collagen Cream", "d6c7ff"), // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -186,6 +191,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: false,
     images: [image("Teatree Mask")],
+    hoverImage: image("Teatree Mask", "d6c7ff"), // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -200,6 +206,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: false,
     images: [image("Eye Cream")],
+    hoverImage: image("Eye Cream", "d6c7ff"), // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -637,6 +644,7 @@ export function toCardView(p: StaticProduct): ProductCardView {
     isPreOrder: p.isPreOrder,
     preOrderNotice: p.preOrderNotice,
     images: p.images,
+    hoverImage: p.hoverImage,
     brand: {
       slug: p.brandSlug,
       name: getBrand(p.brandSlug)?.name ?? p.brandSlug,

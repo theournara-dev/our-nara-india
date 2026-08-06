@@ -1,7 +1,7 @@
 "use client";
 
-/* eslint-disable @next/next/no-html-link-for-pages -- faithful port uses <a> */
-
+import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 
@@ -79,35 +79,39 @@ export function Header() {
   const [allCateOpen, setAllCateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [openCate, setOpenCate] = useState<string | null>(null);
 
   return (
     <div>
       <TopBanner />
 
       <div className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
-        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] items-center justify-between">
-          {/* Logo */}
-          <h1 className="relative pl-[18px] pr-10">
-            <a href="/">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-md:min-h-0 max-md:px-[7px]">
+          {/* Logo (row 1, left) */}
+          <h1 className="relative order-1 pl-[18px] pr-10 max-md:flex max-md:max-w-[160px] max-md:items-center max-md:p-0">
+            <Link href="/">
+              <Image
                 src="/upload/goodymall1/en/main/logo_.png"
                 alt="OUR:NARA"
-                className="max-h-8 max-w-[170px]"
+                width={2483}
+                height={392}
+                loading="eager"
+                className="h-auto w-auto max-h-8 max-w-[170px] max-md:max-h-[30px] max-md:max-w-[160px]"
               />
-            </a>
+            </Link>
           </h1>
 
-          {/* Top category menu (left-aligned, near the logo) */}
-          <div className="flex flex-1">
-            <div className="flex items-center">
-              {/* All categories button */}
-              <div className="relative h-20 w-[50px] shrink-0">
+          {/* Top category menu. Desktop: middle row (flex-1). Mobile: full-width
+              second row that scrolls horizontally (like the original). */}
+          <div className="flex flex-1 min-w-0 order-2 items-center justify-center max-md:order-3 max-md:h-9 max-md:w-full max-md:justify-start max-md:basis-full">
+            <div className="flex w-full min-w-0 items-center max-md:w-full max-md:min-w-0">
+              {/* All categories button (desktop-only) */}
+              <div className="relative h-20 w-[50px] shrink-0 max-md:hidden">
                 <button
                   type="button"
                   aria-label="All categories"
                   onClick={() => setAllCateOpen((v) => !v)}
-                  className={`relative top-1/2 block h-10 w-full -translate-y-1/2 cursor-pointer ${allCateOpen ? "open" : ""}`}
+                  className="relative top-1/2 block h-10 w-full -translate-y-1/2 cursor-pointer"
                 >
                   <span
                     className={`absolute left-0 ml-3 block h-0.5 w-[18px] bg-[#222] transition-all duration-300 ${
@@ -127,9 +131,9 @@ export function Header() {
                 </button>
               </div>
 
-              {/* All-categories panel */}
+              {/* All-categories panel (desktop-only) */}
               {allCateOpen && (
-                <div className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
+                <div className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)] max-md:hidden">
                   <div className="mx-auto box-border w-[96%] max-w-[1440px] px-2.5 py-[30px]">
                     <div className="flex">
                       <div className="w-[70%]">
@@ -139,22 +143,22 @@ export function Header() {
                               key={item.href}
                               className="group mb-[30px] w-1/5 align-top"
                             >
-                              <a
+                              <Link
                                 href={item.href}
                                 className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                               >
                                 {item.label}
-                              </a>
+                              </Link>
                               {item.children.length > 0 && (
                                 <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                                   {item.children.map((child) => (
                                     <li key={child}>
-                                      <a
+                                      <Link
                                         href={item.href}
                                         className="block text-sm font-light leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                       >
                                         {child}
-                                      </a>
+                                      </Link>
                                     </li>
                                   ))}
                                 </ul>
@@ -165,41 +169,41 @@ export function Header() {
                       </div>
                       <div className="flex w-[30%] border-l border-[#ddd] pl-[2%] text-left">
                         <div className="group w-1/2">
-                          <a
+                          <Link
                             href="/community"
                             className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                           >
                             COMMUNITY
-                          </a>
+                          </Link>
                           <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                             {communityLinks.map((link) => (
                               <li key={link.href}>
-                                <a
+                                <Link
                                   href={link.href}
                                   className="block text-sm font-normal leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                 >
                                   {link.label}
-                                </a>
+                                </Link>
                               </li>
                             ))}
                           </ul>
                         </div>
                         <div className="group w-1/2">
-                          <a
+                          <Link
                             href="/account"
                             className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                           >
                             MY PAGE
-                          </a>
+                          </Link>
                           <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                             {myPageLinks.map((link) => (
                               <li key={link.href}>
-                                <a
+                                <Link
                                   href={link.href}
                                   className="block text-sm font-normal leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                 >
                                   {link.label}
-                                </a>
+                                </Link>
                               </li>
                             ))}
                           </ul>
@@ -211,46 +215,45 @@ export function Header() {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center">
-                <div className="relative z-[39]">
-                  <ul className="flex items-center">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
+                <div className="relative z-[39] max-md:w-full max-md:min-w-0">
+                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-md:h-9 max-md:w-full max-md:overflow-y-hidden">
                     {categoryNav.map((item) => (
                       <li
                         key={item.href}
                         className={
                           item.label === "AMBASSADOR"
                             ? "relative grid place-items-center"
-                            : "group relative inline-block leading-20"
+                            : "group relative inline-block leading-20 max-md:leading-9"
                         }
                       >
-                        <a
+                        <Link
                           href={item.href}
                           className={
                             item.label === "AMBASSADOR"
-                              ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white"
-                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full"
+                              ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white max-md:mx-1.5"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full max-md:mx-1.5 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
                           }
                         >
                           {item.label}
                           {item.label === "AMBASSADOR" && (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src="/upload/goodymall1/icon/right_extra_bold.svg"
                               alt="arrow"
                               className="w-5 brightness-0 invert"
                             />
                           )}
-                        </a>
+                        </Link>
                         {item.children && item.children.length > 0 && (
-                          <ul className="invisible absolute left-1/2 top-[110%] z-20 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[calc(100%-10px)] group-hover:opacity-100">
+                          <ul className="invisible absolute left-1/2 top-[110%] z-20 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[calc(100%-10px)] group-hover:opacity-100 max-lg:hidden">
                             {item.children.map((child) => (
                               <li key={child}>
-                                <a
+                                <Link
                                   href={item.href}
                                   className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
                                 >
                                   {child}
-                                </a>
+                                </Link>
                               </li>
                             ))}
                           </ul>
@@ -264,47 +267,46 @@ export function Header() {
           </div>
 
           {/* Right icons + search */}
-          <div className="grid place-items-center">
+          <div className="order-3 grid place-items-center max-md:order-2 max-md:h-[50px]">
             <div className="relative flex items-center">
-              {/* User / log state */}
+              {/* User / log state (desktop-only; drawer covers mobile) */}
               <ul className="inline-flex">
-                <li className="group relative min-w-6 px-1">
+                <li className="group relative min-w-6 px-1 max-md:hidden">
                   <div>
-                    <a href="/account">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <Link href="/account">
                       <img
                         src="/upload/goodymall1/icon/user.svg"
                         alt="my page"
                         className="w-8"
                       />
-                    </a>
+                    </Link>
                   </div>
                   <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)] animate-[motion_0.6s_linear_0s_infinite_alternate]">
                     <div className="flex h-5 w-[60px] items-center justify-center rounded bg-point-500">
-                      <a
+                      <Link
                         href="/join"
                         className="text-[11px] leading-5 text-white"
                       >
                         +3,000P
-                      </a>
+                      </Link>
                     </div>
                   </div>
                   <ul className="invisible absolute left-1/2 top-[70px] z-40 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[45px] group-hover:opacity-100">
                     {logStateLinks.map((link) => (
                       <li key={link.label}>
-                        <a
+                        <Link
                           href={link.href}
                           className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
                         >
                           {link.label}
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>
                 </li>
                 {/* Basket */}
                 <li className="relative min-w-6 px-1">
-                  <a
+                  <Link
                     href="/cart"
                     className="block text-center text-[13px] font-medium text-[#555]"
                   >
@@ -312,14 +314,13 @@ export function Header() {
                       0
                     </span>
                     <div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src="/upload/goodymall1/icon/basket.svg"
                         alt="basket"
-                        className="w-8"
+                        className="w-8 max-md:w-7"
                       />
                     </div>
-                  </a>
+                  </Link>
                 </li>
               </ul>
 
@@ -331,11 +332,26 @@ export function Header() {
                   onClick={() => setSearchOpen(true)}
                   className="flex items-center justify-center"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src="/upload/goodymall1/icon/search.svg"
                     alt="search"
-                    className="mx-auto block w-8"
+                    className="mx-auto block w-8 max-md:w-7"
+                  />
+                </button>
+              </div>
+
+              {/* Hamburger (mobile-only, inline in the header like the original) */}
+              <div className="relative ml-1 hidden h-8 w-8 max-md:block">
+                <button
+                  type="button"
+                  aria-label="Open menu"
+                  onClick={() => setMobileOpen(true)}
+                  className="block h-full w-full cursor-pointer"
+                >
+                  <img
+                    src="/upload/goodymall1/icon/option.svg"
+                    alt="menu"
+                    className="h-7 w-7"
                   />
                 </button>
               </div>
@@ -381,12 +397,12 @@ export function Header() {
                           "Lip Tint",
                         ].map((term) => (
                           <li key={term}>
-                            <a
+                            <Link
                               href={`/search?q=${encodeURIComponent(term)}`}
                               className="text-sm text-[#555] hover:text-black"
                             >
                               {term}
-                            </a>
+                            </Link>
                           </li>
                         ))}
                       </ul>
@@ -398,17 +414,7 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile toggle (mobile-only floating button) */}
-        <button
-          type="button"
-          className="fixed bottom-4 right-4 z-50 hidden h-12 w-12 items-center justify-center rounded-full bg-point-500 text-xl text-white max-md:inline-flex"
-          aria-label="Open menu"
-          onClick={() => setMobileOpen(true)}
-        >
-          ☰
-        </button>
-
-        {/* Mobile drawer */}
+        {/* Mobile drawer — matches the original #aside (right-side slide-out) */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50">
             <button
@@ -417,44 +423,138 @@ export function Header() {
               onClick={() => setMobileOpen(false)}
               className="absolute inset-0 bg-black/40"
             />
-            <div className="absolute inset-y-0 left-0 w-72 bg-white shadow-xl">
+            <aside className="absolute inset-y-0 right-0 h-full w-full min-w-[225px] max-w-[340px] overflow-y-auto bg-white shadow-xl">
+              <div className="relative bg-white px-4 pb-4 pt-10 shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
+                {/* Logo + login/join */}
+                <div className="flex items-center gap-5">
+                  <Image
+                    src="/upload/goodymall1/en/main/logo_.png"
+                    alt="OUR:NARA"
+                    width={2483}
+                    height={392}
+                    className="h-auto w-auto max-w-[120px]"
+                  />
+                  <div className="flex items-center gap-4 text-sm font-normal text-[#222]">
+                    <Link href="/login" className="hover:text-black">
+                      Login
+                    </Link>
+                    <span className="h-[11px] w-px bg-[#ddd]" />
+                    <Link href="/join" className="hover:text-black">
+                      Join
+                    </Link>
+                  </div>
+                </div>
+                {/* Account quick links */}
+                <div className="mt-6 flex w-4/5 flex-wrap gap-x-4 gap-y-2 text-[13px]">
+                  <span>
+                    <Link href="/account" className="text-[#555] hover:text-black">
+                      My page
+                    </Link>
+                  </span>
+                  <span>
+                    <Link
+                      href="/account/orders"
+                      className="text-[#555] hover:text-black"
+                    >
+                      Order
+                    </Link>
+                  </span>
+                  <span>
+                    <Link href="/cart" className="text-[#555] hover:text-black">
+                      Cart
+                    </Link>
+                  </span>
+                  <span>
+                    <Link
+                      href="/account/wishlist"
+                      className="text-[#555] hover:text-black"
+                    >
+                      Wish (0)
+                    </Link>
+                  </span>
+                  <span>
+                    <Link href="/account" className="text-[#555] hover:text-black">
+                      Recent (0)
+                    </Link>
+                  </span>
+                  <span>
+                    <Link href="/coupons" className="text-[#555] hover:text-black">
+                      Couponzone
+                    </Link>
+                  </span>
+                </div>
+              </div>
+
+              <div className="my-5 px-4 md:my-10">
+                <div className="px-4">
+                  {/* Categories — accordion, matching the original #aside */}
+                  <ul className="text-[13px] font-normal">
+                    {categoryNav
+                      .filter((item) => item.label !== "AMBASSADOR")
+                      .map((item) => {
+                        const hasChildren = item.children.length > 0;
+                        const open = openCate === item.href;
+                        return (
+                          <li key={item.href} className="relative">
+                            <div className="relative">
+                              <Link
+                                href={item.href}
+                                onClick={() => setMobileOpen(false)}
+                                className="block py-2.5 pl-2.5 pr-10 text-[17px] font-semibold leading-[18px] tracking-[0.5px] text-[#222]"
+                              >
+                                {item.label}
+                              </Link>
+                              {hasChildren && (
+                                <button
+                                  type="button"
+                                  aria-label="View subcategories"
+                                  onClick={() =>
+                                    setOpenCate(open ? null : item.href)
+                                  }
+                                  className="absolute right-0 top-0 flex h-10 w-10 cursor-pointer items-center justify-center"
+                                >
+                                  <img
+                                    src="/upload/goodymall1/en/layout/bg_snb_1depth_on.gif"
+                                    alt=""
+                                    className={`h-[18px] w-[30px] transition-transform duration-300 ${
+                                      open ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+                              )}
+                            </div>
+                            {hasChildren && open && (
+                              <ul className="pb-1.5">
+                                {item.children.map((child) => (
+                                  <li key={child}>
+                                    <Link
+                                      href={item.href}
+                                      onClick={() => setMobileOpen(false)}
+                                      className="block py-[7px] pl-5 pr-5 text-sm font-normal text-[#555]"
+                                    >
+                                      {child}
+                                    </Link>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Close */}
               <button
                 type="button"
                 aria-label="Close"
                 onClick={() => setMobileOpen(false)}
-                className="absolute right-3 top-3 text-lg text-[#555]"
+                className="absolute right-0 top-0 p-2.5 text-lg text-[#555]"
               >
                 ✕
               </button>
-              <nav className="h-full overflow-y-auto p-5 pt-12">
-                <p className="mb-2 text-xs font-semibold text-[#999]">
-                  CATEGORY
-                </p>
-                {categoryNav.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="block py-2 text-sm text-[#555] hover:text-black"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-                <p className="mb-2 mt-6 text-xs font-semibold text-[#999]">
-                  MY PAGE
-                </p>
-                {myPageLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="block py-2 text-sm text-[#555] hover:text-black"
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-            </div>
+            </aside>
           </div>
         )}
       </div>
