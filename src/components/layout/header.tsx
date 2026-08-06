@@ -56,7 +56,7 @@ export function Header() {
       <div className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
         <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] items-center justify-between">
           {/* Logo */}
-          <h1 className="relative px-[18px]">
+          <h1 className="relative pl-[18px] pr-10">
             <a href="/">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -151,7 +151,7 @@ export function Header() {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center justify-center">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center">
                 <div className="relative z-[39]">
                   <ul className="flex items-center">
                     {categoryNav.map((item) => (
@@ -167,7 +167,7 @@ export function Header() {
                           href={item.href}
                           className={
                             item.label === "AMBASSADOR"
-                              ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 px-2.5 text-white"
+                              ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white"
                               : "mx-3 pb-1 text-base font-semibold tracking-[-0.1px] text-ink"
                           }
                         >
