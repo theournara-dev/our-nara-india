@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper";
+import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { ThemeProductCard } from "@/components/theme/product-card";
@@ -16,7 +17,8 @@ interface ThemeProductSectionProps {
 /**
  * Homepage product carousel section (Tailwind-native). Swiper's required
  * classes (.swiper / .swiper-wrapper / .swiper-slide) are kept; all layout is
- * Tailwind utilities. Arrows are custom Tailwind buttons.
+ * Tailwind utilities. Arrows are custom Tailwind buttons matching the original
+ * theme's two-bar chevron navigation.
  */
 export function ThemeProductSection({
   sub,
@@ -24,23 +26,47 @@ export function ThemeProductSection({
   products,
 }: ThemeProductSectionProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const paginationRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<Swiper | null>(null);
+  const [ready, setReady] = useState(false);
+  const [canPrev, setCanPrev] = useState(false);
+  const [canNext, setCanNext] = useState(false);
 
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
 
     const swiper = new Swiper(el, {
+      modules: [Pagination],
       slidesPerView: 4,
       spaceBetween: 0,
+      observer: true,
+      observeParents: true,
       pagination: {
-        el: el.querySelector(".swiper-pagination-prd") as HTMLElement,
+        el: paginationRef.current as HTMLElement,
         type: "progressbar",
         clickable: true,
       },
       breakpoints: {
         640: { slidesPerView: 2 },
         1024: { slidesPerView: 4 },
+      },
+      on: {
+        init: (s) => {
+          setReady(true);
+          setCanPrev(!s.isBeginning);
+          setCanNext(!s.isEnd);
+        },
+        slideChange: (s) => {
+          setCanPrev(!s.isBeginning);
+          setCanNext(!s.isEnd);
+        },
+        reachBeginning: () => setCanPrev(false),
+        reachEnd: () => setCanNext(false),
+        fromEdge: (s) => {
+          setCanPrev(!s.isBeginning);
+          setCanNext(!s.isEnd);
+        },
       },
     });
 
@@ -68,7 +94,12 @@ export function ThemeProductSection({
         </div>
 
         <div className="relative">
-          <div className="swiper mx-auto w-full" ref={rootRef}>
+          <div
+            className={`swiper mx-auto w-full transition-opacity duration-300 ${
+              ready ? "opacity-100" : "opacity-0"
+            }`}
+            ref={rootRef}
+          >
             <ul className="swiper-wrapper">
               {products.map((product) => (
                 <li key={product.id} className="swiper-slide">
@@ -80,25 +111,34 @@ export function ThemeProductSection({
 
           {/* Progressbar pagination (below the slider) */}
           <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center">
-            <div className="swiper-pagination swiper-pagination-prd relative h-1 flex-1 bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
+            <div
+              ref={paginationRef}
+              className="swiper-pagination swiper-pagination-prd relative! h-1 flex-1"
+            />
           </div>
 
-          {/* Custom arrows (Tailwind) */}
+          {/* Custom arrows (Tailwind) — two-bar chevron like the original */}
           <button
             type="button"
             aria-label="Previous products"
             onClick={() => swiperRef.current?.slidePrev()}
-            className="absolute left-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
+            className={`absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-opacity duration-200 hover:opacity-50 ${
+              canPrev ? "opacity-100" : "opacity-35"
+            }`}
           >
-            <span className="block h-3.5 w-3.5 -rotate-135 border-t-2 border-r-2 border-zinc-900" />
+            <span className="absolute left-[14px] top-4 h-0.5 w-2.5 rotate-45 bg-zinc-900" />
+            <span className="absolute left-[14px] top-[22px] h-0.5 w-2.5 -rotate-45 bg-zinc-900" />
           </button>
           <button
             type="button"
             aria-label="Next products"
             onClick={() => swiperRef.current?.slideNext()}
-            className="absolute right-0 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm transition-colors hover:bg-zinc-100"
+            className={`absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full transition-opacity duration-200 hover:opacity-50 ${
+              canNext ? "opacity-100" : "opacity-35"
+            }`}
           >
-            <span className="block h-3.5 w-3.5 rotate-45 border-t-2 border-r-2 border-zinc-900" />
+            <span className="absolute left-4 top-4 h-0.5 w-2.5 -rotate-45 bg-zinc-900" />
+            <span className="absolute left-4 top-[22px] h-0.5 w-2.5 rotate-45 bg-zinc-900" />
           </button>
         </div>
       </div>

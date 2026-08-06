@@ -16,7 +16,7 @@ export function ThemeProductCard({ product }: { product: ProductCardType }) {
             <img
               src={product.images[0]}
               alt={product.name}
-              className="w-full object-cover"
+              className="aspect-square w-full object-cover"
             />
           </Link>
         </div>

@@ -5,6 +5,8 @@ import Swiper from "swiper";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+import { HiPause, HiPlay } from "react-icons/hi2";
 
 interface HeroSlide {
   image: string;
@@ -76,30 +78,12 @@ const slides: HeroSlide[] = [
   },
 ];
 
-function Chevron({ direction }: { direction: "left" | "right" }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 fill-none stroke-zinc-900 stroke-2"
-      aria-hidden="true"
-    >
-      {direction === "left" ? (
-        <path d="M15 18l-6-6 6-6" />
-      ) : (
-        <path d="M9 18l6-6-6-6" />
-      )}
-    </svg>
-  );
-}
-
-/**
- * Homepage hero (Tailwind-native). Swiper's required classes are kept; the
- * nav controls sit below the slider in normal flow (no overlap).
- */
 export function HeroCarousel() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const paginationRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<Swiper | null>(null);
   const [paused, setPaused] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -114,13 +98,16 @@ export function HeroCarousel() {
       loop: true,
       autoplay: { delay: 3000, disableOnInteraction: false },
       pagination: {
-        el: el.querySelector(".swiper-pagination-main") as HTMLElement,
+        el: paginationRef.current as HTMLElement,
         type: "progressbar",
         clickable: true,
       },
       breakpoints: {
         768: { slidesPerView: 2.5, spaceBetween: 16 },
         1200: { slidesPerView: 3.7, spaceBetween: 16 },
+      },
+      on: {
+        init: () => setReady(true),
       },
     });
 
@@ -133,7 +120,12 @@ export function HeroCarousel() {
 
   return (
     <div className="mx-auto mt-5 mb-15 w-full">
-      <div className="swiper" ref={rootRef}>
+      <div
+        className={`swiper transition-opacity duration-300 ${
+          ready ? "opacity-100" : "opacity-0 min-h-20"
+        }`}
+        ref={rootRef}
+      >
         <div className="swiper-wrapper">
           {[...slides, ...slides].map((slide, i) => (
             <div
@@ -178,49 +170,44 @@ export function HeroCarousel() {
 
       {/* Nav controls (below the slider) */}
       <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center gap-3">
-        <div className="swiper-pagination swiper-pagination-main relative h-1 flex-1 bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
+        <div
+          ref={paginationRef}
+          className="swiper-pagination swiper-pagination-main relative! h-1 flex-1"
+        />
         <div className="flex items-center">
           <button
             type="button"
             aria-label="Previous"
+            className="cursor-pointer hover:opacity-50 transition-opacity duration-150"
             onClick={() => swiperRef.current?.slidePrev()}
-            className="flex h-10 w-10 items-center justify-center"
           >
-            <Chevron direction="left" />
+            <MdKeyboardArrowLeft size={28} />
           </button>
+          <div className="w-px h-3 bg-gray-200" />
           <button
             type="button"
             aria-label="Next"
+            className="cursor-pointer hover:opacity-50 transition-opacity duration-150"
             onClick={() => swiperRef.current?.slideNext()}
-            className="flex h-10 w-10 items-center justify-center"
           >
-            <Chevron direction="right" />
+            <MdKeyboardArrowRight size={28} />
           </button>
         </div>
         <div className="flex items-center">
           <button
             type="button"
-            className={`start ${paused ? "flex" : "hidden"} h-[34px] w-[34px] items-center justify-center rounded-full`}
-            aria-label="Play"
-            onClick={() => {
-              swiperRef.current?.autoplay.start();
-              setPaused(false);
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/upload/goodymall1/en/layout/play.png" alt="play" />
-          </button>
-          <button
-            type="button"
-            className={`stop ${paused ? "hidden" : "flex"} h-[34px] w-[34px] items-center justify-center rounded-full`}
             aria-label="Pause"
+            className="cursor-pointer hover:opacity-50 transition-opacity duration-150"
             onClick={() => {
-              swiperRef.current?.autoplay.stop();
-              setPaused(true);
+              if (paused) {
+                swiperRef.current?.autoplay.start();
+              } else {
+                swiperRef.current?.autoplay.stop();
+              }
+              setPaused(!paused);
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/upload/goodymall1/en/layout/pause.png" alt="pause" />
+            {paused ? <HiPause size={24} /> : <HiPlay size={24} />}
           </button>
         </div>
       </div>

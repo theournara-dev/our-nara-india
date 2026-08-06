@@ -25,14 +25,27 @@ const categoryNav = [
   {
     label: "Makeup",
     href: "/category/makeup",
-    children: ["Lip", "Face", "Eyes"],
+    children: ["Base Makeup", "Eye Makeup", "Lip Makeup"],
   },
   {
     label: "Hair Care",
     href: "/category/hair-care",
-    children: ["Shampoo", "Treatment"],
+    children: ["Hair Care"],
   },
-  { label: "PRE-ORDER", href: "/category/pre-order", children: [] },
+  {
+    label: "PRE-ORDER",
+    href: "/category/pre-order",
+    children: [
+      "Masks & Patches",
+      "Facial Care",
+      "Cleansing",
+      "Sun Care",
+      "Hair Care",
+      "Base Makeup",
+      "Eye Makeup",
+      "Lip Makeup",
+    ],
+  },
   { label: "BRAND", href: "/brands", children: [] },
   { label: "REVIEW", href: "/review", children: [] },
   { label: "EVENT", href: "/event", children: [] },
@@ -122,31 +135,48 @@ export function Header() {
                       <div className="w-[70%]">
                         <ul className="flex flex-wrap">
                           {categoryNav.map((item) => (
-                            <li key={item.href} className="w-1/5 py-1.5">
+                            <li
+                              key={item.href}
+                              className="group mb-[30px] w-1/5 align-top"
+                            >
                               <a
                                 href={item.href}
-                                className="text-sm text-[#555] hover:text-black"
+                                className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                               >
                                 {item.label}
                               </a>
+                              {item.children.length > 0 && (
+                                <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
+                                  {item.children.map((child) => (
+                                    <li key={child}>
+                                      <a
+                                        href={item.href}
+                                        className="block text-sm font-light leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
+                                      >
+                                        {child}
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </li>
                           ))}
                         </ul>
                       </div>
                       <div className="flex w-[30%] border-l border-[#ddd] pl-[2%] text-left">
-                        <div className="w-1/2">
+                        <div className="group w-1/2">
                           <a
                             href="/community"
-                            className="mx-2.5 mb-2.5 block text-base font-semibold leading-[22px] text-[#222]"
+                            className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                           >
                             COMMUNITY
                           </a>
-                          <ul>
+                          <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                             {communityLinks.map((link) => (
                               <li key={link.href}>
                                 <a
                                   href={link.href}
-                                  className="block px-2.5 py-1 text-sm text-[#555] hover:text-black"
+                                  className="block text-sm font-normal leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                 >
                                   {link.label}
                                 </a>
@@ -154,19 +184,19 @@ export function Header() {
                             ))}
                           </ul>
                         </div>
-                        <div className="w-1/2">
+                        <div className="group w-1/2">
                           <a
                             href="/account"
-                            className="mx-2.5 mb-2.5 block text-base font-semibold leading-[22px] text-[#222]"
+                            className="mx-2.5 block pb-2.5 text-base font-semibold leading-[22px] text-[#222] transition-all duration-500 group-hover:pl-[5px]"
                           >
                             MY PAGE
                           </a>
-                          <ul>
+                          <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                             {myPageLinks.map((link) => (
                               <li key={link.href}>
                                 <a
                                   href={link.href}
-                                  className="block px-2.5 py-1 text-sm text-[#555] hover:text-black"
+                                  className="block text-sm font-normal leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                 >
                                   {link.label}
                                 </a>

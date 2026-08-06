@@ -47,3 +47,17 @@ body {
         margin-top: 3px;
     }
 }
+
+/*
+ * Slider progress bars (hero + product carousels).
+ * Swiper's default fill is blue; the original theme uses a dark track with a
+ * black fill. These unlayered rules override Swiper's defaults.
+ */
+.swiper-pagination-prd,
+.swiper-pagination-main {
+    background: rgba(0, 0, 0, 0.25);
+}
+.swiper-pagination-prd .swiper-pagination-progressbar-fill,
+.swiper-pagination-main .swiper-pagination-progressbar-fill {
+    background: #000 !important;
+}
