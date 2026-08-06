@@ -70,7 +70,10 @@ body {
     color: #666;
 }
 
-/* Hero slider arrows: custom dark chevrons (matching the original theme). */
+/* Hero slider controls: center the row and draw dark chevron arrows. */
+.mainSlide .btns {
+    justify-content: center;
+}
 .mainSlide .swiper-button-prev,
 .mainSlide .swiper-button-next {
     width: 40px;
@@ -83,18 +86,52 @@ body {
 }
 .mainSlide .swiper-button-prev::after,
 .mainSlide .swiper-button-next::after {
-    content: "";
-    font-family: inherit;
+    content: "" !important;
+    font-family: inherit !important;
     width: 10px;
     height: 10px;
     border-top: 1.5px solid #111;
     border-right: 1.5px solid #111;
     background: transparent !important;
+    color: transparent !important;
 }
 .mainSlide .swiper-button-next::after {
     transform: rotate(45deg);
 }
 .mainSlide .swiper-button-prev::after {
+    transform: rotate(-135deg);
+}
+
+/* Product carousel arrows: dark chevrons at the sides (no blue/white boxes). */
+.prdSlide .swiper-button-prev,
+.prdSlide .swiper-button-next {
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    box-shadow: none;
+    border: 0;
+    cursor: pointer;
+}
+.prdSlide .swiper-button-prev::before,
+.prdSlide .swiper-button-next::before {
+    display: none;
+}
+.prdSlide .swiper-button-prev::after,
+.prdSlide .swiper-button-next::after {
+    content: "" !important;
+    font-family: inherit !important;
+    width: 10px;
+    height: 10px;
+    border-top: 1.5px solid #111;
+    border-right: 1.5px solid #111;
+    background: transparent !important;
+    color: transparent !important;
+}
+.prdSlide .swiper-button-next::after {
+    transform: rotate(45deg);
+}
+.prdSlide .swiper-button-prev::after {
     transform: rotate(-135deg);
 }
 
