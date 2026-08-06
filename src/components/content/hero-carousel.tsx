@@ -77,9 +77,8 @@ const slides: HeroSlide[] = [
 ];
 
 /**
- * Homepage hero — faithful port of the original "mainSlide" swiper.
- * Renders the original markup/classes inside .mainSlide (including the .btns
- * control row) and initializes Swiper against the theme's -main elements.
+ * Homepage hero (Tailwind-native). Swiper's required classes are kept; all
+ * layout/styling is Tailwind utilities.
  */
 export function HeroCarousel() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -121,13 +120,16 @@ export function HeroCarousel() {
   }, []);
 
   return (
-    <div className="slideWrap">
-      <div className="swiper mainSlide" ref={rootRef}>
+    <div className="mx-auto mt-5 mb-15 w-full">
+      <div className="swiper" ref={rootRef}>
         <div className="swiper-wrapper">
           {slides.map((slide, i) => (
-            <div key={slide.image + i} className="swiper-slide round">
+            <div
+              key={slide.image + i}
+              className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100"
+            >
               {slide.preorder && (
-                <div className="preorder-badge">
+                <div className="pointer-events-none absolute right-5 top-5 z-10 flex h-20 w-20 items-center justify-center rounded-full bg-point-500 text-center text-[13px] font-semibold leading-tight tracking-wide text-white">
                   PRE
                   <br />
                   ORDER
@@ -138,15 +140,20 @@ export function HeroCarousel() {
                 <img
                   src={slide.image}
                   alt={slide.title ?? "OUR:NARA"}
-                  className="pc"
+                  className="w-full"
                 />
               </a>
               {slide.title && (
-                <div className="txt wt">
-                  <h3>{slide.title}</h3>
-                  <p>{slide.description}</p>
+                <div className="absolute bottom-[8%] left-[10%] text-left tracking-tight text-white">
+                  <h3 className="text-2xl font-semibold leading-8">
+                    {slide.title}
+                  </h3>
+                  <p className="mt-2 text-lg leading-6">{slide.description}</p>
                   {slide.brand && slide.href && (
-                    <a href={slide.href} className="btn">
+                    <a
+                      href={slide.href}
+                      className="mt-6 inline-block rounded-full border border-white bg-white px-5 py-3 text-sm font-medium text-black"
+                    >
                       {slide.brand}
                     </a>
                   )}
@@ -155,16 +162,17 @@ export function HeroCarousel() {
             </div>
           ))}
         </div>
-        <div className="btns justify-center">
-          <div className="swiper-pagination swiper-pagination-main" />
-          <div className="btn_arrow">
+
+        <div className="absolute bottom-0 left-0 right-0 z-10 mx-auto flex w-[56vw] items-center justify-center px-2.5 text-center">
+          <div className="swiper-pagination swiper-pagination-main relative mr-3 inline-block h-1 w-full bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
+          <div className="relative flex items-center">
             <div className="swiper-button-prev swiper-button-prev-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-2.5 after:w-2.5 after:border-t after:border-r after:border-zinc-900 after:bg-transparent! after:rotate-[-135deg]" />
             <div className="swiper-button-next swiper-button-next-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-2.5 after:w-2.5 after:border-t after:border-r after:border-zinc-900 after:bg-transparent! after:rotate-45" />
           </div>
-          <div className={`btn_active${paused ? " active" : ""}`}>
+          <div className={`flex items-center ${paused ? "active" : ""}`}>
             <button
               type="button"
-              className="start"
+              className="start hidden h-[34px] w-[34px] items-center justify-center rounded-full bg-transparent"
               aria-label="Play"
               onClick={() => {
                 swiperRef.current?.autoplay.start();
@@ -176,7 +184,7 @@ export function HeroCarousel() {
             </button>
             <button
               type="button"
-              className="stop"
+              className="stop flex h-[34px] w-[34px] items-center justify-center rounded-full bg-transparent"
               aria-label="Pause"
               onClick={() => {
                 swiperRef.current?.autoplay.stop();

@@ -15,10 +15,9 @@ interface ThemeProductSectionProps {
 }
 
 /**
- * A homepage product carousel section using the original theme markup/classes
- * (.ec-base-product.prdRoll > .prd_inner > .title + .swiper.prdSlide).
- * Arrows are custom Tailwind buttons (Swiper's auto-generated ones can't be
- * styled with utilities and clash with the theme's generic arrow styles).
+ * Homepage product carousel section (Tailwind-native). Swiper's required
+ * classes (.swiper / .swiper-wrapper / .swiper-slide) are kept; all layout is
+ * Tailwind utilities. Arrows are custom Tailwind buttons.
  */
 export function ThemeProductSection({
   sub,
@@ -56,20 +55,24 @@ export function ThemeProductSection({
   if (!products.length) return null;
 
   return (
-    <div className="xans-element- xans-product xans-product-listmain ec-base-product prdRoll mg_60">
-      <div className="prd_inner">
-        <div className="title">
-          <h2>
-            {sub && <span className="sub">{sub}</span>}
+    <div className="w-full">
+      <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
+        <div className="mx-auto mb-2">
+          <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
+            {sub && (
+              <span className="block text-base font-medium leading-6 text-point-500">
+                {sub}
+              </span>
+            )}
             {title}
           </h2>
         </div>
 
         <div className="relative">
-          <div className="swiper prdSlide" ref={rootRef}>
-            <ul className="prdList swiper-wrapper">
+          <div className="swiper mx-auto w-full pb-6" ref={rootRef}>
+            <ul className="swiper-wrapper">
               {products.map((product) => (
-                <li key={product.id} className="swiper-slide xans-record-">
+                <li key={product.id} className="swiper-slide">
                   <ThemeProductCard product={product} />
                 </li>
               ))}
