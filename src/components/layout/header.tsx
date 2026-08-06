@@ -164,7 +164,6 @@ export function Header() {
                         ))}
                       </ul>
                     </div>
-                    <div className="swiper-button-next swiper-button-next-menu" />
                   </div>
                 </div>
               </div>

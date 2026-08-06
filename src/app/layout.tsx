@@ -50,7 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Original fonts + Cafe24 theme CSS, served as static assets. */}
         <link
           rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
         />
         <link rel="stylesheet" href="/css/theme.css" />
       </head>
