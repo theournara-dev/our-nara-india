@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Swiper from "swiper";
 import "swiper/css";
+import "swiper/css/pagination";
 import { ThemeProductCard } from "@/components/theme/product-card";
 import type { ProductCard as ProductCardType } from "@/data/products";
 
@@ -32,6 +33,11 @@ export function ThemeProductSection({
     const swiper = new Swiper(el, {
       slidesPerView: 4,
       spaceBetween: 0,
+      pagination: {
+        el: el.querySelector(".swiper-pagination-prd") as HTMLElement,
+        type: "progressbar",
+        clickable: true,
+      },
       breakpoints: {
         640: { slidesPerView: 2 },
         1024: { slidesPerView: 4 },
@@ -62,7 +68,7 @@ export function ThemeProductSection({
         </div>
 
         <div className="relative">
-          <div className="swiper mx-auto w-full pb-6" ref={rootRef}>
+          <div className="swiper mx-auto w-full" ref={rootRef}>
             <ul className="swiper-wrapper">
               {products.map((product) => (
                 <li key={product.id} className="swiper-slide">
@@ -70,6 +76,11 @@ export function ThemeProductSection({
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Progressbar pagination (below the slider) */}
+          <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center">
+            <div className="swiper-pagination swiper-pagination-prd relative h-1 flex-1 bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
           </div>
 
           {/* Custom arrows (Tailwind) */}
