@@ -45,6 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${poppins.variable} ${playfair.variable} ${notoSansKr.variable} h-full antialiased`}
     >
+      <head>
+        {/* Original Cafe24 theme CSS, served as a static asset (bypasses Tailwind). */}
+        <link rel="stylesheet" href="/css/theme.css" />
+      </head>
       <body className="flex min-h-full flex-col">
         <Header />
         <main className="flex-1">{children}</main>

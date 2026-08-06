@@ -40,3 +40,33 @@ body {
 .font-display {
     font-family: var(--font-display);
 }
+
+/* Homepage review + instagram helper blocks (theme CSS doesn't cover these). */
+.reviewGrid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.reviewCard {
+    border: 1px solid #eee;
+    border-radius: 16px;
+    padding: 20px;
+    background: #fff;
+}
+.reviewStars {
+    color: #f5a623;
+    margin-bottom: 8px;
+}
+.reviewAuthor {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.reviewBody {
+    font-size: 14px;
+    color: #555;
+    line-height: 1.6;
+}
+.instaCta {
+    text-align: center;
+    color: #666;
+}
