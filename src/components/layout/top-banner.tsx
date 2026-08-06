@@ -39,7 +39,7 @@ export function TopBanner() {
   return (
     <div
       className={`relative flex items-center justify-center overflow-hidden text-center text-xs font-medium transition-all duration-500 ease-in-out ${
-        closing ? "h-0 opacity-0" : "h-9 opacity-100"
+        closing ? "h-0 opacity-0" : "h-[34px] opacity-100"
       } ${current.className}`}
     >
       <span>{current.text}</span>

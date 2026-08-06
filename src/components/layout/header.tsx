@@ -198,7 +198,7 @@ export function Header() {
                           className={
                             item.label === "AMBASSADOR"
                               ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white"
-                              : "relative mx-3 pb-1 text-base font-semibold tracking-[-0.1px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full"
                           }
                         >
                           {item.label}
