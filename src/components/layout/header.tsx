@@ -76,11 +76,23 @@ export function Header() {
                   type="button"
                   aria-label="All categories"
                   onClick={() => setAllCateOpen((v) => !v)}
-                  className="relative top-1/2 block h-10 w-full -translate-y-1/2 cursor-pointer"
+                  className={`relative top-1/2 block h-10 w-full -translate-y-1/2 cursor-pointer ${allCateOpen ? "open" : ""}`}
                 >
-                  <span className="absolute left-0 top-[14px] ml-3 block h-0.5 w-[18px] bg-[#222]" />
-                  <span className="absolute left-0 top-[19px] ml-3 block h-0.5 w-[18px] bg-[#222]" />
-                  <span className="absolute left-0 top-[24px] ml-3 block h-0.5 w-[18px] bg-[#222]" />
+                  <span
+                    className={`absolute left-0 ml-3 block h-0.5 w-[18px] bg-[#222] transition-all duration-300 ${
+                      allCateOpen ? "top-[19px] -rotate-45" : "top-[14px]"
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 top-[19px] ml-3 block h-0.5 w-[18px] bg-[#222] transition-all duration-300 ${
+                      allCateOpen ? "opacity-0" : ""
+                    }`}
+                  />
+                  <span
+                    className={`absolute left-0 ml-3 block h-0.5 w-[18px] bg-[#222] transition-all duration-300 ${
+                      allCateOpen ? "top-[19px] rotate-45" : "top-[24px]"
+                    }`}
+                  />
                 </button>
               </div>
 
@@ -168,7 +180,7 @@ export function Header() {
                           className={
                             item.label === "AMBASSADOR"
                               ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white"
-                              : "mx-3 pb-1 text-base font-semibold tracking-[-0.1px] text-ink"
+                              : "relative mx-3 pb-1 text-base font-semibold tracking-[-0.1px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full"
                           }
                         >
                           {item.label}
@@ -220,7 +232,7 @@ export function Header() {
                       <li key={link.label}>
                         <a
                           href={link.href}
-                          className="block truncate px-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:px-3.5 hover:text-black"
+                          className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
                         >
                           {link.label}
                         </a>
@@ -255,6 +267,7 @@ export function Header() {
                   type="button"
                   aria-label="Search"
                   onClick={() => setSearchOpen(true)}
+                  className="flex items-center justify-center"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
