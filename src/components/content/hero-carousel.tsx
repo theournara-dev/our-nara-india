@@ -109,7 +109,7 @@ export function HeroCarousel() {
       },
       breakpoints: {
         768: { slidesPerView: 2.5, spaceBetween: 16 },
-        1200: { slidesPerView: 3.7, spaceBetween: 16 },
+        1200: { slidesPerView: 3, spaceBetween: 16 },
       },
     });
 

@@ -3,7 +3,6 @@
 import { Navigation, Pagination } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
-import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { ProductCard } from "@/components/product/product-card";
 import type { ProductCard as ProductCardType } from "@/data/products";
