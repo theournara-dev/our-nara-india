@@ -69,7 +69,7 @@ export function Header() {
 
           {/* Top category menu */}
           <div className="text-center">
-            <div className="flex">
+            <div className="flex items-center">
               {/* All categories button */}
               <div className="relative h-20 w-[50px] shrink-0">
                 <button
@@ -151,16 +151,16 @@ export function Header() {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)]">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center justify-center">
                 <div className="relative z-[39]">
-                  <ul className="flex">
+                  <ul className="flex items-center">
                     {categoryNav.map((item) => (
                       <li
                         key={item.href}
                         className={
                           item.label === "AMBASSADOR"
                             ? "relative grid place-items-center"
-                            : "relative inline-block leading-20"
+                            : "relative flex items-center"
                         }
                       >
                         <a
@@ -192,18 +192,6 @@ export function Header() {
           {/* Right icons + search */}
           <div className="grid place-items-center">
             <div className="relative flex items-center">
-              {/* Multishop / global */}
-              <div className="relative">
-                <div className="w-8">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/upload/goodymall1/icon/global.svg"
-                    alt="language"
-                    className="w-8"
-                  />
-                </div>
-              </div>
-
               {/* User / log state */}
               <ul className="inline-flex">
                 <li className="group relative min-w-6 px-1">
