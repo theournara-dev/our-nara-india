@@ -90,7 +90,11 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 
 > **Progress:** Phase 0 foundations are in place (app scaffolded, Prisma + Neon DB
 > connected, migration applied). Phase 2 storefront is largely built and matched to
-> the original. Phases 1 (admin/data), 3 (accounts/community), 4 (cart/checkout)
+> the original. The header, hero, and Top Picks sections are fully responsive; the
+> slider progressbar + arrows were extracted into a shared `SliderNav` component, and
+> product cards support a 2-image hover crossfade with wishlist/cart quick actions.
+> (The remaining homepage sections are temporarily commented out while these are
+> finalized.) Phases 1 (admin/data), 3 (accounts/community), 4 (cart/checkout)
 > and 5 (SEO/go-live) remain. See the checklist below.
 
 **Phase 0 — Scaffold & foundations** `≈ done`
@@ -113,10 +117,12 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 
 - [x] Design system matching original (fonts, brand palette as Tailwind tokens)
 - [x] Homepage sections (hero, categories, top picks, brand sections, pre-orders, shorts, reviews, Instagram)
-- [x] Header + product/hero sliders matched to original (nav buttons, progress bars, dropdown hover, no layout flash)
+- [x] Header + product/hero sliders matched to original (shared `SliderNav`: progressbar + arrows; dropdown hover; no layout flash)
+- [x] Product card hover: 2-image crossfade + wishlist/cart quick actions (`hoverImage` data field; any image format incl. gif)
 - [x] Category / brand / product listing + product detail, search
 - [x] TikTok Shorts + Instagram embeds
 - [ ] Product image zoom + remaining JS interactions
+- [ ] Replace placeholder `hoverImage` values on featured products with real on-hover images
 
 **Phase 3 — Customer account & community** `not started`
 

@@ -23,11 +23,22 @@ Done
   mobile menu drawer, all-categories popup, search overlay - real logo.
 - Swiper-powered product carousels and the Shorts Picks reels carousel.
 - Homepage header + product/hero sliders matched closely to the original
-  theme: two-bar chevron nav buttons, progress bars, category dropdown
-  hover/typography, and no layout flash on load.
+  theme: nav arrows + progressbars extracted into a shared `SliderNav`
+  component, category dropdown hover/typography, and no layout flash on load.
+- Responsive header (desktop single row → mobile two-row: logo/icons on row 1,
+  scrollable category nav on row 2) and a mobile slide-out drawer with an
+  accordion category menu; header icons use the original SVG/PNG files.
+- Product cards show a 2-image hover crossfade plus wishlist/add-to-cart quick
+  actions; images serve any format (jpg/png/gif) via an unoptimized `Image`.
+- Top Picks shows 4 items, each with an on-hover image (`hoverImage`).
 
 Still to do
 
+- Replace the placeholder `hoverImage` values on the featured products with the
+  real on-hover images.
+- Re-enable the remaining homepage sections (brands, available-now, pre-orders,
+  shorts, reviews, Instagram) — currently commented out in `app/page.tsx` while
+  the hero + Top Picks sections are finalized.
 - Match remaining pages/components to the original layout more closely
   (the site is Tailwind-native now, not a rule-by-rule port of the minified
   theme CSS).
@@ -111,9 +122,9 @@ src/
   components/
     layout/             # Header, Footer
     product/            # ProductCard, ProductGrid
-    ui/                 # Button, Badge, Container, SectionHeading, PageHeader
+    ui/                 # Button, Badge, Container, SectionHeading, PageHeader, SliderNav
   data/
-    catalog.ts          # static products, brands, categories + lookups
+    catalog.ts          # static products, brands, categories + lookups (incl. hoverImage)
     content.ts          # reviews, events, stores, community posts, shorts
     products.ts         # static product queries (swap for Prisma later)
     categories.ts       # static category queries
