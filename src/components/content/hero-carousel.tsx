@@ -207,7 +207,7 @@ export function HeroCarousel() {
               setPaused(!paused);
             }}
           >
-            {paused ? <HiPause size={24} /> : <HiPlay size={24} />}
+            {!paused ? <HiPause size={24} /> : <HiPlay size={24} />}
           </button>
         </div>
       </div>
