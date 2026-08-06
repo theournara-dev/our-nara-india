@@ -11,15 +11,33 @@ import { TopBanner } from "@/components/layout/top-banner";
  */
 
 const categoryNav = [
-  { label: "Skin Care", href: "/category/skin-care" },
-  { label: "Makeup", href: "/category/makeup" },
-  { label: "Hair Care", href: "/category/hair-care" },
-  { label: "PRE-ORDER", href: "/category/pre-order" },
-  { label: "BRAND", href: "/brands" },
-  { label: "REVIEW", href: "/review" },
-  { label: "EVENT", href: "/event" },
-  { label: "STORES", href: "/stores" },
-  { label: "AMBASSADOR", href: "/ambassador" },
+  {
+    label: "Skin Care",
+    href: "/category/skin-care",
+    children: [
+      "Masks & Patches",
+      "Facial Care",
+      "Cleansing",
+      "Sun Care",
+      "Set",
+    ],
+  },
+  {
+    label: "Makeup",
+    href: "/category/makeup",
+    children: ["Lip", "Face", "Eyes"],
+  },
+  {
+    label: "Hair Care",
+    href: "/category/hair-care",
+    children: ["Shampoo", "Treatment"],
+  },
+  { label: "PRE-ORDER", href: "/category/pre-order", children: [] },
+  { label: "BRAND", href: "/brands", children: [] },
+  { label: "REVIEW", href: "/review", children: [] },
+  { label: "EVENT", href: "/event", children: [] },
+  { label: "STORES", href: "/stores", children: [] },
+  { label: "AMBASSADOR", href: "/ambassador", children: [] },
 ];
 
 const communityLinks = [
@@ -172,7 +190,7 @@ export function Header() {
                         className={
                           item.label === "AMBASSADOR"
                             ? "relative grid place-items-center"
-                            : "relative flex items-center"
+                            : "group relative inline-block leading-20"
                         }
                       >
                         <a
@@ -193,6 +211,20 @@ export function Header() {
                             />
                           )}
                         </a>
+                        {item.children && item.children.length > 0 && (
+                          <ul className="invisible absolute left-1/2 top-[110%] z-20 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[calc(100%-10px)] group-hover:opacity-100">
+                            {item.children.map((child) => (
+                              <li key={child}>
+                                <a
+                                  href={item.href}
+                                  className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
+                                >
+                                  {child}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -217,7 +249,7 @@ export function Header() {
                       />
                     </a>
                   </div>
-                  <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)]">
+                  <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)] animate-[motion_0.6s_linear_0s_infinite_alternate]">
                     <div className="flex h-5 w-[60px] items-center justify-center rounded bg-point-500">
                       <a
                         href="/join"

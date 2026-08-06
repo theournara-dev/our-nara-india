@@ -37,3 +37,13 @@ body {
         "Pretendard", "Poppins", "Noto Sans KR", Verdana, Dotum, sans-serif;
     -webkit-font-smoothing: antialiased;
 }
+
+/* +3,000P bubble bounce (matches the original theme's motion keyframes). */
+@keyframes motion {
+    0% {
+        margin-top: 0;
+    }
+    100% {
+        margin-top: 3px;
+    }
+}
