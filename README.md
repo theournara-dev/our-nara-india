@@ -2,11 +2,11 @@
 
 A frontend replica of the [OUR:NARA](https://our-nara.com/) K-Beauty store.
 
-> **Current scope:** a complete frontend — all pages, layouts and components —
-> built to match the live store. It runs on **static content** (real product
-> names/prices copied from the live site) so it needs **no database, cart or
-> purchases** to work. The database, Razorpay checkout and accounts are scaffolded
-> and can be wired in later.
+> **Current scope:** a complete storefront — all pages, layouts and components —
+> built to match the live store. Pages render from **static content** (real product
+> names/prices copied from the live site), so the UI works without a database.
+> The **PostgreSQL schema (Prisma) is live on Neon**, migrations are applied, and
+> the Razorpay checkout/accounts are scaffolded and ready to be wired up.
 
 ## Port status (from the original static site)
 
@@ -22,28 +22,61 @@ Done
 - Working interactive header (client component): auto-rotating top banner,
   mobile menu drawer, all-categories popup, search overlay - real logo.
 - Swiper-powered product carousels and the Shorts Picks reels carousel.
+- Homepage header + product/hero sliders matched closely to the original
+  theme: two-bar chevron nav buttons, progress bars, category dropdown
+  hover/typography, and no layout flash on load.
 
 Still to do
 
-- Match specific pages/components to the original layout more closely
+- Match remaining pages/components to the original layout more closely
   (the site is Tailwind-native now, not a rule-by-rule port of the minified
   theme CSS).
 - Reimplement remaining JS interactions (product image zoom, etc.).
+- Wire the storefront's `src/data/*` queries to the live Prisma catalog
+  (schema + Neon DB are ready; static queries still serve the UI).
 
 ## Stack
 
 - **Framework:** Next.js 16 (App Router) · TypeScript · React 19
 - **Styling:** Tailwind CSS v4
-- **Data:** static catalog + content modules (`src/data/`)
+- **Data:** PostgreSQL on **Neon** + **Prisma** (schema + migrations); static
+  content modules (`src/data/`) still serve the storefront UI
 - **Payments (scaffolded):** Razorpay server module + webhook handlers
 - **Deployment:** Vercel
+
+## Database (Neon + Prisma)
+
+The app connects to a Neon PostgreSQL instance via Prisma. Env vars live in
+`.env` (local) and must be mirrored in Vercel project settings for deploy:
+
+- `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct)
+- `PGHOST` / `PGUSER` / `PGPASSWORD` / `PGDATABASE` (as exported by Neon)
+- `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_SITE_URL`
+
+Useful commands:
+
+```bash
+npm run db:generate    # generate the Prisma client (also runs on npm install)
+npm run db:migrate     # prisma migrate dev (local, creates new migrations)
+npx prisma migrate deploy   # apply migrations to the deployed DB (Neon)
+npm run db:seed        # seed brands/categories/products (idempotent)
+npm run db:studio      # browse/edit data in Prisma Studio
+```
+
+> The generated client lives in `src/generated/prisma` and is gitignored; a
+> `postinstall` hook runs `prisma generate` so builds (and CI) regenerate it.
 
 ## Run it
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000  (no database required)
+cp .env.example .env   # then fill in your real values (Neon DATABASE_URL, etc.)
+npm install            # runs prisma generate automatically (postinstall)
+npm run dev            # http://localhost:3000
 ```
+
+> The storefront UI renders from static data, so `npm run dev` works without a
+> database. The Neon DB is needed only once you wire up the catalog/checkout.
 
 ## Pages
 
@@ -105,11 +138,16 @@ scripts/import-from-live.ts  # catalog importer from the live store
 | --------------------------------- | ----------------------------------------------------------- |
 | `npm run dev` / `build` / `start` | Dev / build / serve                                         |
 | `npm run lint` / `typecheck`      | Lint / type-check                                           |
+| `npm run db:generate`             | Generate the Prisma client (also runs on `postinstall`)     |
+| `npm run db:migrate`              | `prisma migrate dev` (create/apply migrations locally)      |
+| `npm run db:seed`                 | Seed brands/categories/products (idempotent)                |
+| `npm run db:studio`               | Open Prisma Studio                                          |
 | `npm run import`                  | Import the catalog from the live store (optional, needs DB) |
 
-## Next steps (deferred per current scope)
+## Next steps
 
-1. Wire the catalog to the database (Prisma + importer already scaffolded)
+1. Wire the storefront's `src/data/*` queries to the live Prisma catalog
+   (schema + Neon DB ready)
 2. Cart + auth (accounts, guest cart)
 3. Checkout using the existing Razorpay order/webhook handlers
 4. Mileage (loyalty points) + coupons
