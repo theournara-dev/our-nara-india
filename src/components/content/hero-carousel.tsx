@@ -86,13 +86,18 @@ export function HeroCarousel() {
       <Swiper
         modules={[Autoplay, Navigation, Pagination]}
         slidesPerView={1.2}
-        spaceBetween={0}
+        spaceBetween={16}
         speed={600}
         loop
         centeredSlides
-        autoplay={{ delay: 4000, disableOnInteraction: false }}
+        parallax
+        autoplay={{ delay: 3000, disableOnInteraction: false }}
         navigation
-        pagination={{ clickable: true }}
+        pagination={{ type: "progressbar", clickable: true }}
+        breakpoints={{
+          768: { slidesPerView: 2.5, spaceBetween: 16 },
+          1200: { slidesPerView: 3.7, spaceBetween: 16 },
+        }}
         className="mainSlide"
       >
         {slides.map((slide, i) => (

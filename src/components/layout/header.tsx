@@ -8,7 +8,7 @@ import { TopBanner } from "@/components/layout/top-banner";
 /**
  * Faithful port of the original Cafe24 header (Goody Mall theme).
  * Renders the original markup/classes so the imported theme CSS styles it
- * one-to-one; the menu/search/category interactions are driven by React state.
+ * one-to-one; the menu/search interactions are driven by React state.
  */
 
 const categoryNav = [
@@ -35,6 +35,14 @@ const myPageLinks = [
   { label: "Wish", href: "/account/wishlist" },
   { label: "Mileage", href: "/account/mileage" },
   { label: "Coupon", href: "/account/coupons" },
+];
+
+const logStateLinks = [
+  { label: "Login", href: "/login", className: "log" },
+  { label: "Join", href: "/join" },
+  { label: "Order", href: "/account/orders" },
+  { label: "My page", href: "/account" },
+  { label: "Couponzone", href: "/coupons", className: "couponzoneBanner" },
 ];
 
 export function Header() {
@@ -134,15 +142,15 @@ export function Header() {
                     >
                       <ul className="menu-dp1 swiper-wrapper">
                         {categoryNav.map((item) => (
-                          <li key={item.href} className="swiper-slide">
-                            <a
-                              href={item.href}
-                              className={
-                                item.label === "AMBASSADOR"
-                                  ? "point bbs_none"
-                                  : undefined
-                              }
-                            >
+                          <li
+                            key={item.href}
+                            className={
+                              item.label === "AMBASSADOR"
+                                ? "point bbs_none swiper-slide"
+                                : "swiper-slide"
+                            }
+                          >
+                            <a href={item.href}>
                               {item.label}
                               {item.label === "AMBASSADOR" && (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -165,36 +173,63 @@ export function Header() {
             {/* Right icons + search */}
             <div className="topArea02">
               <div className="shoppinginfo">
+                {/* Multishop / global */}
+                <div className="multi_state pc">
+                  <div className="multi_icon">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/upload/goodymall1/icon/global.svg"
+                      alt="language"
+                    />
+                  </div>
+                </div>
+
+                {/* User / log state */}
                 <ul className="xans-element- xans-layout xans-layout-statelogoff">
-                  <li>
-                    <a href="/account">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/upload/goodymall1/icon/user.svg"
-                        alt="my page"
-                      />
-                    </a>
+                  <li className="pc">
+                    <div>
+                      <a href="/account">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/upload/goodymall1/icon/user.svg"
+                          alt="my page"
+                        />
+                      </a>
+                    </div>
+                    <div className="tong">
+                      <div className="t_bounce">
+                        <a href="/join">+3,000P</a>
+                        <div className="tails" />
+                      </div>
+                    </div>
+                    <ul className="log_state">
+                      {logStateLinks.map((link) => (
+                        <li key={link.label}>
+                          <a href={link.href} className={link.className}>
+                            {link.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
                   </li>
+                  {/* Basket */}
                   <li>
                     <a href="/cart">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src="/upload/goodymall1/icon/basket.svg"
-                        alt="basket"
-                      />
+                      <span className="count EC-Layout_Basket-count-display">
+                        <span className="EC-Layout-Basket-count">0</span>
+                      </span>
+                      <div>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="/upload/goodymall1/icon/basket.svg"
+                          alt="basket"
+                        />
+                      </div>
                     </a>
-                  </li>
-                  <li className="pc">
-                    <button
-                      type="button"
-                      className="log"
-                      onClick={() => setMobileOpen(true)}
-                    >
-                      Menu
-                    </button>
                   </li>
                 </ul>
 
+                {/* Search */}
                 <div className="search">
                   <button
                     type="button"
@@ -212,7 +247,10 @@ export function Header() {
 
                 {/* Search overlay */}
                 {searchOpen && (
-                  <div className="searchWrap round open">
+                  <div
+                    className="searchWrap round"
+                    style={{ display: "block" }}
+                  >
                     <form action="/search" method="get">
                       <fieldset>
                         <legend>Search</legend>
@@ -262,6 +300,16 @@ export function Header() {
             </div>
           </div>
         </div>
+
+        {/* Mobile toggle */}
+        <button
+          type="button"
+          className="mobMenuBtn"
+          aria-label="Open menu"
+          onClick={() => setMobileOpen(true)}
+        >
+          ☰
+        </button>
 
         {/* Mobile drawer */}
         {mobileOpen && (
