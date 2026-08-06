@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper";
-import { Autoplay, Navigation, Pagination } from "swiper/modules";
+import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 
@@ -76,9 +76,25 @@ const slides: HeroSlide[] = [
   },
 ];
 
+function Chevron({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 fill-none stroke-zinc-900 stroke-2"
+      aria-hidden="true"
+    >
+      {direction === "left" ? (
+        <path d="M15 18l-6-6 6-6" />
+      ) : (
+        <path d="M9 18l6-6-6-6" />
+      )}
+    </svg>
+  );
+}
+
 /**
- * Homepage hero (Tailwind-native). Swiper's required classes are kept; all
- * layout/styling is Tailwind utilities.
+ * Homepage hero (Tailwind-native). Swiper's required classes are kept; the
+ * nav controls sit below the slider in normal flow (no overlap).
  */
 export function HeroCarousel() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -90,7 +106,7 @@ export function HeroCarousel() {
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: [Autoplay, Navigation, Pagination],
+      modules: [Autoplay, Pagination],
       speed: 600,
       slidesPerView: 1.2,
       spaceBetween: 16,
@@ -101,10 +117,6 @@ export function HeroCarousel() {
         el: el.querySelector(".swiper-pagination-main") as HTMLElement,
         type: "progressbar",
         clickable: true,
-      },
-      navigation: {
-        nextEl: el.querySelector(".swiper-button-next-main") as HTMLElement,
-        prevEl: el.querySelector(".swiper-button-prev-main") as HTMLElement,
       },
       breakpoints: {
         768: { slidesPerView: 2.5, spaceBetween: 16 },
@@ -121,7 +133,7 @@ export function HeroCarousel() {
 
   return (
     <div className="mx-auto mt-5 mb-15 w-full">
-      <div className="swiper pb-[50px]" ref={rootRef}>
+      <div className="swiper" ref={rootRef}>
         <div className="swiper-wrapper">
           {[...slides, ...slides].map((slide, i) => (
             <div
@@ -162,39 +174,54 @@ export function HeroCarousel() {
             </div>
           ))}
         </div>
+      </div>
 
-        <div className="absolute bottom-0 left-0 right-0 z-10 mx-auto flex w-[56vw] items-center justify-center px-2.5 text-center">
-          <div className="swiper-pagination swiper-pagination-main relative mr-3 inline-block h-1 w-full bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
-          <div className="relative flex items-center">
-            <div className="swiper-button-prev swiper-button-prev-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3.5 after:w-3.5 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-[-135deg]" />
-            <div className="swiper-button-next swiper-button-next-main flex h-10 w-10 cursor-pointer items-center justify-center after:content-['']! after:block after:h-3.5 after:w-3.5 after:border-t-2 after:border-r-2 after:border-zinc-900 after:bg-transparent! after:rotate-45" />
-          </div>
-          <div className={`flex items-center ${paused ? "active" : ""}`}>
-            <button
-              type="button"
-              className="start hidden h-[34px] w-[34px] items-center justify-center rounded-full bg-transparent"
-              aria-label="Play"
-              onClick={() => {
-                swiperRef.current?.autoplay.start();
-                setPaused(false);
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/upload/goodymall1/en/layout/play.png" alt="play" />
-            </button>
-            <button
-              type="button"
-              className="stop flex h-[34px] w-[34px] items-center justify-center rounded-full bg-transparent"
-              aria-label="Pause"
-              onClick={() => {
-                swiperRef.current?.autoplay.stop();
-                setPaused(true);
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/upload/goodymall1/en/layout/pause.png" alt="pause" />
-            </button>
-          </div>
+      {/* Nav controls (below the slider) */}
+      <div className="mx-auto mt-4 flex w-[56vw] items-center justify-center gap-3">
+        <div className="swiper-pagination swiper-pagination-main relative h-1 flex-1 bg-black/10 [&_.swiper-pagination-progressbar-fill]:bg-black" />
+        <div className="flex items-center">
+          <button
+            type="button"
+            aria-label="Previous"
+            onClick={() => swiperRef.current?.slidePrev()}
+            className="flex h-10 w-10 items-center justify-center"
+          >
+            <Chevron direction="left" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next"
+            onClick={() => swiperRef.current?.slideNext()}
+            className="flex h-10 w-10 items-center justify-center"
+          >
+            <Chevron direction="right" />
+          </button>
+        </div>
+        <div className="flex items-center">
+          <button
+            type="button"
+            className={`start ${paused ? "flex" : "hidden"} h-[34px] w-[34px] items-center justify-center rounded-full`}
+            aria-label="Play"
+            onClick={() => {
+              swiperRef.current?.autoplay.start();
+              setPaused(false);
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/upload/goodymall1/en/layout/play.png" alt="play" />
+          </button>
+          <button
+            type="button"
+            className={`stop ${paused ? "hidden" : "flex"} h-[34px] w-[34px] items-center justify-center rounded-full`}
+            aria-label="Pause"
+            onClick={() => {
+              swiperRef.current?.autoplay.stop();
+              setPaused(true);
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/upload/goodymall1/en/layout/pause.png" alt="pause" />
+          </button>
         </div>
       </div>
     </div>

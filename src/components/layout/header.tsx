@@ -67,8 +67,8 @@ export function Header() {
             </a>
           </h1>
 
-          {/* Top category menu */}
-          <div className="flex flex-1 justify-center">
+          {/* Top category menu (left-aligned, near the logo) */}
+          <div className="flex flex-1">
             <div className="flex items-center">
               {/* All categories button */}
               <div className="relative h-20 w-[50px] shrink-0">
@@ -206,7 +206,7 @@ export function Header() {
                     </a>
                   </div>
                   <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)]">
-                    <div className="h-5 w-[60px] rounded bg-point-500">
+                    <div className="flex h-5 w-[60px] items-center justify-center rounded bg-point-500">
                       <a
                         href="/join"
                         className="text-[11px] leading-5 text-white"
