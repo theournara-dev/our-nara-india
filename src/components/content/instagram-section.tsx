@@ -1,66 +1,17 @@
-"use client";
-
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import Swiper from "swiper";
-import { Autoplay, FreeMode } from "swiper/modules";
-import "swiper/css";
 import { instagramPosts } from "@/data/instagram";
-import { toLoopable } from "@/lib/carousel";
-
-// Largest slidesPerView in the breakpoints below (6 at desktop).
-const MAX_SLIDES_PER_VIEW = 6;
 
 /**
  * Home Instagram strip, reproducing the original `insta` section: an
- * auto-scrolling marquee of square Instagram images (rounded), headed by the
- * #our__nara title. Not user-draggable — it scrolls continuously.
+ * auto-scrolling marquee of square Instagram images (rounded) under the
+ * #our__nara title. Driven by a CSS animation, so clicking a slide link can
+ * never pause it. Pauses briefly while hovered for easy clicking.
  */
 export function InstagramSection() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
-
-  const slides = useMemo(
-    () => toLoopable(instagramPosts, MAX_SLIDES_PER_VIEW, (p) => p.id),
-    [],
-  );
-
-  useEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-
-    const swiper = new Swiper(el, {
-      modules: [Autoplay, FreeMode],
-      speed: 5000,
-      slidesPerView: 3,
-      spaceBetween: 10,
-      centeredSlides: true,
-      watchOverflow: true,
-      loop: true,
-      freeMode: true,
-      allowTouchMove: false,
-      autoplay: { delay: 0, disableOnInteraction: false },
-      breakpoints: {
-        599: { slidesPerView: 4, spaceBetween: 10 },
-        767: { slidesPerView: 6, spaceBetween: 10 },
-      },
-      on: {
-        init: () => setReady(true),
-      },
-    });
-
-    // Watchdog: touching/clicking can pause Swiper's autoplay (the original
-    // leaves it stopped forever). Periodically restart it so the marquee always
-    // keeps scrolling.
-    const watchdog = setInterval(() => swiper.autoplay.start(), 3000);
-
-    return () => {
-      clearInterval(watchdog);
-      swiper.destroy(true, true);
-    };
-  }, []);
-
   if (instagramPosts.length === 0) return null;
+
+  // Double the list so the marquee can loop seamlessly by translating -50%.
+  const items = [...instagramPosts, ...instagramPosts];
 
   return (
     <section className="insta">
@@ -80,32 +31,26 @@ export function InstagramSection() {
           </h2>
         </div>
 
-        <div
-          ref={rootRef}
-          className={`swiper insta-area transition-opacity duration-300 ${
-            ready ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <ul className="swiper-wrapper">
-            {slides.map(({ key, item }) => (
-              <li key={key} className="item swiper-slide">
-                <a
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Image
-                    src={item.image}
-                    alt={item.alt}
-                    width={400}
-                    height={400}
-                    unoptimized
-                    className="h-auto w-full"
-                  />
-                </a>
-              </li>
+        <div className="insta-marquee">
+          <div className="insta-marquee-track">
+            {items.map((post, i) => (
+              <a
+                key={`${post.id}-${i}`}
+                href={post.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="insta-item"
+              >
+                <Image
+                  src={post.image}
+                  alt={post.alt}
+                  width={400}
+                  height={400}
+                  unoptimized
+                />
+              </a>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
     </section>

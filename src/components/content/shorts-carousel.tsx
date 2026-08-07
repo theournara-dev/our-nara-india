@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swiper from "swiper";
 import { Autoplay, Pagination } from "swiper/modules";
@@ -157,12 +158,22 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
                 className="img_zoom"
                 aria-label={pick.title}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={productImage} alt={pick.title} />
+                <Image
+                  src={productImage}
+                  alt={pick.title}
+                  width={200}
+                  height={200}
+                  unoptimized
+                />
               </Link>
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={productImage} alt={pick.title} />
+              <Image
+                src={productImage}
+                alt={pick.title}
+                width={200}
+                height={200}
+                unoptimized
+              />
             )}
           </div>
         )}

@@ -61,10 +61,13 @@ export function ThemeProductCard({
               aria-label="Add to wishlist"
               className="block cursor-pointer"
             >
-              <img
+              <Image
                 src="/upload/icon_202508271427425900.png"
                 alt="wishlist"
-                className="max-w-[30px] rounded bg-white/60 p-1"
+                width={30}
+                height={30}
+                unoptimized
+                className="rounded bg-white/60 p-1"
               />
             </button>
             <button
@@ -72,10 +75,13 @@ export function ThemeProductCard({
               aria-label="Add to cart"
               className="block cursor-pointer"
             >
-              <img
+              <Image
                 src="/upload/icon_202508271427351600.png"
                 alt="cart"
-                className="max-w-[30px] rounded bg-white/60 p-1"
+                width={30}
+                height={30}
+                unoptimized
+                className="rounded bg-white/60 p-1"
               />
             </button>
           </div>

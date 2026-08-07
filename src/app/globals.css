@@ -604,16 +604,42 @@ body {
     color: #222;
     letter-spacing: -0.5px;
 }
-.insta .insta-area {
+.insta .insta-marquee {
+    overflow: hidden;
     margin: 32px auto 0;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
 }
-.insta .insta-area ul.swiper-wrapper {
-    -webkit-transition-timing-function: linear !important;
-    transition-timing-function: linear !important;
+.insta .insta-marquee-track {
+    display: flex;
+    gap: 10px;
+    width: max-content;
+    animation: insta-scroll 40s linear infinite;
 }
-.insta .insta-area ul li img {
+.insta .insta-marquee:hover .insta-marquee-track {
+    animation-play-state: paused;
+}
+.insta .insta-item {
+    flex-shrink: 0;
+    width: clamp(120px, 20vw, 240px);
+}
+.insta .insta-item img {
+    display: block;
     width: 100%;
     border-radius: 16px;
+}
+@keyframes insta-scroll {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .insta .insta-marquee-track {
+        animation: none;
+    }
 }
 
 /* Scroll-reveal: sections fade/slide in the first time they enter the viewport. */

@@ -134,10 +134,12 @@ function ReviewCard({ review }: { review: Review }) {
         </div>
         <div className="txt-area">
           <span className="point-rate">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/upload/goodymall1/en/layout/star5.png"
               alt={`${review.rating} star rating`}
+              width={70}
+              height={13}
+              unoptimized
             />
             <span className="count">{review.rating}</span>
           </span>

@@ -127,8 +127,13 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
       </div>
 
       <button type="button" className="cart" aria-label="Add to cart">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/upload/icon_202508271427351600.png" alt="" />
+        <Image
+          src="/upload/icon_202508271427351600.png"
+          alt=""
+          width={30}
+          height={30}
+          unoptimized
+        />
       </button>
     </li>
   );
