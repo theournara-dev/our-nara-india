@@ -55,14 +55,12 @@ body {
  */
 .swiper-pagination-prd,
 .swiper-pagination-main,
-.swiper-pagination-shorts,
-.swiper-pagination-triple {
+.swiper-pagination-shorts {
     background: rgba(0, 0, 0, 0.25);
 }
 .swiper-pagination-prd .swiper-pagination-progressbar-fill,
 .swiper-pagination-main .swiper-pagination-progressbar-fill,
-.swiper-pagination-shorts .swiper-pagination-progressbar-fill,
-.swiper-pagination-triple .swiper-pagination-progressbar-fill {
+.swiper-pagination-shorts .swiper-pagination-progressbar-fill {
     background: #000 !important;
 }
 
@@ -205,9 +203,15 @@ body {
 }
 .triple-banner .banner {
     position: relative;
+    overflow: hidden;
+    border-radius: 16px;
 }
 .triple-banner .banner img {
     width: 100%;
+    transition: transform 0.3s ease-in;
+}
+.triple-banner .banner:hover img {
+    transform: scale(1.1);
 }
 .triple-banner .banner-title {
     position: absolute;
@@ -250,10 +254,16 @@ body {
 .triple-banner .product-row .thumb {
     width: 32%;
     flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 16px;
 }
 .triple-banner .product-row .thumb img {
     display: block;
     width: 100%;
+    transition: transform 0.3s ease-in;
+}
+.triple-banner .product-row .thumb:hover img {
+    transform: scale(1.1);
 }
 .triple-banner .product-row .desc {
     width: calc(68% - 64px);
@@ -276,6 +286,17 @@ body {
 }
 .triple-banner .product-row .desc .name a {
     color: inherit;
+}
+.triple-banner .product-row .desc .tags {
+    display: none;
+    font-size: 14px;
+    color: #888888;
+}
+/* Show more product info (tags) on larger screens, keep cards compact on mobile. */
+@media (min-width: 768px) {
+    .triple-banner .product-row .desc .tags {
+        display: block;
+    }
 }
 .triple-banner .product-row .desc .overview {
     display: block;

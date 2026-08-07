@@ -4,13 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Swiper from "swiper";
-import { Pagination } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/pagination";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import type { ResolvedTripleBannerBox } from "@/data/triple-banner";
 import { formatMoney } from "@/lib/money";
-import { SliderNav } from "@/components/ui/slider-nav";
 
 interface TripleBannerProps {
   boxes: ResolvedTripleBannerBox[];
@@ -21,62 +18,42 @@ interface TripleBannerProps {
  * overlay + curated product rows), reproducing the original theme's
  * `tripleBanner` section.
  *
- * Loop is intentionally off: with only 3 panels, Swiper's loop mode warns on
- * the tablet breakpoint (2.5 per view), and the original already disables loop
- * at desktop where all 3 panels fit at once.
+ * The original hides its pagination/arrow bar entirely, so there are no nav
+ * controls at any breakpoint. On small screens the panels loop infinitely
+ * (swipe); on desktop all 3 panels fit at once so loop is switched off.
  */
 export function TripleBanner({ boxes }: TripleBannerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const paginationRef = useRef<HTMLDivElement>(null);
-  const swiperRef = useRef<Swiper | null>(null);
   const [ready, setReady] = useState(false);
-  const [canPrev, setCanPrev] = useState(false);
-  const [canNext, setCanNext] = useState(false);
 
   useEffect(() => {
     const el = rootRef.current;
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: [Pagination],
       speed: 600,
       slidesPerView: 1.2,
       spaceBetween: 16,
-      watchOverflow: true,
+      loop: true,
+      watchOverflow: false,
       observer: true,
       observeParents: true,
-      pagination: {
-        el: paginationRef.current as HTMLElement,
-        type: "progressbar",
-        clickable: true,
-      },
       breakpoints: {
-        768: { slidesPerView: 2.5, spaceBetween: 16 },
-        1200: { slidesPerView: 3, spaceBetween: 0 },
+        768: { slidesPerView: 2, spaceBetween: 16, loop: true },
+        1200: {
+          slidesPerView: 3,
+          spaceBetween: 0,
+          loop: false,
+          watchOverflow: true,
+        },
       },
       on: {
-        init: (s) => {
-          setReady(true);
-          setCanPrev(!s.isBeginning);
-          setCanNext(!s.isEnd);
-        },
-        slideChange: (s) => {
-          setCanPrev(!s.isBeginning);
-          setCanNext(!s.isEnd);
-        },
-        reachBeginning: () => setCanPrev(false),
-        reachEnd: () => setCanNext(false),
-        fromEdge: (s) => {
-          setCanPrev(!s.isBeginning);
-          setCanNext(!s.isEnd);
-        },
+        init: () => setReady(true),
       },
     });
 
-    swiperRef.current = swiper;
     return () => {
       swiper.destroy(true, true);
-      swiperRef.current = null;
     };
   }, []);
 
@@ -116,20 +93,11 @@ export function TripleBanner({ boxes }: TripleBannerProps) {
           ))}
         </ul>
       </div>
-
-      <SliderNav
-        paginationRef={paginationRef}
-        paginationClassName="swiper-pagination-triple"
-        onPrev={() => swiperRef.current?.slidePrev()}
-        onNext={() => swiperRef.current?.slideNext()}
-        canPrev={canPrev}
-        canNext={canNext}
-      />
     </div>
   );
 }
 
-/** A single horizontal product row: thumbnail + brand/name/price + cart. */
+/** A single horizontal product row: thumbnail + brand/name/tags/price + cart. */
 function TripleBannerProduct({ product }: { product: ProductCardType }) {
   return (
     <li className="product-row">
@@ -149,6 +117,7 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
         <strong className="name">
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
+        <span className="tags">{product.shortTags.join(" · ")}</span>
         {product.isPreOrder && (
           <span className="overview">PRE-ORDER/Order now, ships later</span>
         )}
