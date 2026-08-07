@@ -46,14 +46,16 @@ export function InstagramSection() {
       },
       on: {
         init: () => setReady(true),
-        // Restart the marquee after the user drags so it never gets
-        // permanently stuck (the original left autoplay stopped after drag).
-        touchEnd: (s) => s.autoplay.start(),
-        transitionEnd: (s) => s.autoplay.start(),
       },
     });
 
+    // Watchdog: touching/clicking can pause Swiper's autoplay (the original
+    // leaves it stopped forever). Periodically restart it so the marquee always
+    // keeps scrolling.
+    const watchdog = setInterval(() => swiper.autoplay.start(), 3000);
+
     return () => {
+      clearInterval(watchdog);
       swiper.destroy(true, true);
     };
   }, []);

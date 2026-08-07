@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Container } from "@/components/ui/container";
 import { SITE } from "@/lib/constants";
 import {
   FaFacebookF,
@@ -42,7 +41,7 @@ const socialLinks = [
 export function Footer() {
   return (
     <footer className="border-t border-zinc-100 bg-[#f9f9f9]">
-      <Container className="max-w-5xl px-6 py-14 md:px-8">
+      <div className="px-6 py-14 md:px-12">
         <div className="flex flex-col gap-10 md:flex-row md:gap-16">
           {/* CS CENTER */}
           <div className="md:w-[280px] md:shrink-0">
@@ -76,7 +75,7 @@ export function Footer() {
           </div>
 
           {/* Utility links + company address */}
-          <div className="md:flex-1">
+          <div className="md:max-w-[680px] md:flex-1">
             <ul className="flex flex-wrap gap-x-6 gap-y-2">
               {utilLinks.map((link) => (
                 <li key={link.href}>
@@ -127,7 +126,7 @@ export function Footer() {
             </div>
           </div>
         </div>
-      </Container>
+      </div>
     </footer>
   );
 }
