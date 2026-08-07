@@ -8,6 +8,7 @@ import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { SliderNav } from "@/components/ui/slider-nav";
+import { toLoopable } from "@/lib/carousel";
 import { HiPause, HiPlay } from "react-icons/hi2";
 
 interface HeroSlide {
@@ -80,6 +81,11 @@ const slides: HeroSlide[] = [
   },
 ];
 
+// Largest `slidesPerView` in the breakpoints below (1200px → 3.7). `toLoopable`
+// duplicates the slides only if there aren't enough for Swiper's loop mode.
+const MAX_SLIDES_PER_VIEW = 3.7;
+const heroSlides = toLoopable(slides, MAX_SLIDES_PER_VIEW, (s) => s.image);
+
 export function HeroCarousel() {
   const rootRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
@@ -106,7 +112,7 @@ export function HeroCarousel() {
       },
       breakpoints: {
         768: { slidesPerView: 2.5, spaceBetween: 16 },
-        1200: { slidesPerView: 3.7, spaceBetween: 16 },
+        1200: { slidesPerView: MAX_SLIDES_PER_VIEW, spaceBetween: 16 },
       },
       on: {
         init: () => setReady(true),
@@ -129,9 +135,9 @@ export function HeroCarousel() {
         ref={rootRef}
       >
         <div className="swiper-wrapper">
-          {[...slides, ...slides].map((slide, i) => (
+          {heroSlides.map(({ key, item: slide }) => (
             <div
-              key={`${slide.image}-${i}`}
+              key={key}
               className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100 [&.swiper-slide-prev]:opacity-100 [&.swiper-slide-next]:opacity-100"
             >
               {slide.preorder && (

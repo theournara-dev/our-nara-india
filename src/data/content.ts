@@ -44,19 +44,6 @@ export const reviews: Review[] = [
   },
 ];
 
-export interface ShortsPick {
-  id: string;
-  title: string;
-  tiktokUrl: string;
-  handle: string;
-}
-
-export const shortsPicks: ShortsPick[] = [
-  { id: "s1", title: "Prestige73 Teatree Mask", tiktokUrl: "https://www.tiktok.com/@nowater_us/video/7621994499614559501", handle: "@nowater_us" },
-  { id: "s2", title: "No Pore Cleansing Oil", tiktokUrl: "https://www.tiktok.com/@nowater_us/video/7634338763455401246", handle: "@nowater_us" },
-  { id: "s3", title: "T1 Prestige73 Collagen Mask", tiktokUrl: "https://www.tiktok.com/@nowater_us/video/7626215536791162143", handle: "@nowater_us" },
-];
-
 export interface EventItem {
   id: string;
   title: string;

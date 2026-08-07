@@ -1,0 +1,99 @@
+/**
+ * "Shorts Picks" content: short-form product videos (YouTube Shorts, TikTok,
+ * Instagram Reels) shown on the home page.
+ *
+ * Like `products.ts`, this is a static (DB-free) data layer whose function
+ * signatures mirror what a future database-backed implementation would return.
+ * Swap the internals for Prisma queries later without touching the UI.
+ */
+
+export type ShortsPlatform = "youtube" | "tiktok" | "instagram";
+
+export interface ShortsPick {
+  id: string;
+  /** Display title (usually the featured product name). */
+  title: string;
+  /**
+   * Source URL for the short. Any of:
+   *   YouTube Shorts  – youtube.com/shorts/{id}
+   *   TikTok          – tiktok.com/@user/video/{id}
+   *   Instagram Reel  – instagram.com/reel/{id}
+   * The platform is auto-detected unless `platform` is set explicitly.
+   */
+  videoUrl: string;
+  /** Optional explicit platform. Auto-detected from `videoUrl` when omitted. */
+  platform?: ShortsPlatform;
+  /** Poster image shown before the video loads (e.g. the product image). */
+  posterUrl?: string;
+  /** Optional cached thumbnail override (e.g. a saved oembed thumbnail). */
+  thumbnailUrl?: string;
+
+  // Optional product link + meta shown in the bottom info bar.
+  productHref?: string;
+  productImage?: string;
+  brand?: string;
+  shortTags?: string[];
+  priceCents?: number;
+  currency?: string;
+
+  // Admin controls.
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export const shortsPicks: ShortsPick[] = [
+  {
+    id: "s1",
+    title: "Prestige73 Teatree Mask 70g",
+    videoUrl: "https://www.tiktok.com/@nowater_us/video/7621994499614559501",
+    posterUrl: "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Teatree+Mask",
+    productHref: "/products/prestige73-teatree-mask-70g",
+    productImage:
+      "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Teatree+Mask",
+    brand: "NOWATER",
+    shortTags: ["Soothing", "NaturallyDerived", "PoreCare"],
+    priceCents: 210000,
+    currency: "INR",
+    sortOrder: 0,
+    isActive: true,
+  },
+  {
+    id: "s2",
+    title: "No Pore Cleansing Oil",
+    videoUrl: "https://www.tiktok.com/@nowater_us/video/7634338763455401246",
+    posterUrl: "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Cleansing+Oil",
+    productHref: "/products/no-pore-cleansing-oil",
+    productImage:
+      "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Cleansing+Oil",
+    brand: "NOWATER",
+    shortTags: ["DeepClean", "OilControl", "BlackheadCare"],
+    priceCents: 177333,
+    currency: "INR",
+    sortOrder: 1,
+    isActive: true,
+  },
+  {
+    id: "s3",
+    title: "T1 Prestige73 Collagen Mask 70g",
+    videoUrl: "https://www.tiktok.com/@nowater_us/video/7626215536791162143",
+    posterUrl: "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Collagen+Mask",
+    productImage:
+      "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Collagen+Mask",
+    brand: "NOWATER",
+    shortTags: ["CreamMask", "GlowBoost", "DeepHydration"],
+    priceCents: 346667,
+    currency: "INR",
+    sortOrder: 2,
+    isActive: true,
+  },
+];
+
+/**
+ * Active shorts ordered by admin sort order. Mirrors a future DB-backed
+ * query (e.g. `SELECT * FROM shorts WHERE is_active ORDER BY sort_order`).
+ */
+export async function getShortsPicks(): Promise<ShortsPick[]> {
+  return shortsPicks
+    .filter((s) => s.isActive)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+}

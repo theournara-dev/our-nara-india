@@ -54,10 +54,124 @@ body {
  * black fill. These unlayered rules override Swiper's defaults.
  */
 .swiper-pagination-prd,
-.swiper-pagination-main {
+.swiper-pagination-main,
+.swiper-pagination-shorts {
     background: rgba(0, 0, 0, 0.25);
 }
 .swiper-pagination-prd .swiper-pagination-progressbar-fill,
-.swiper-pagination-main .swiper-pagination-progressbar-fill {
+.swiper-pagination-main .swiper-pagination-progressbar-fill,
+.swiper-pagination-shorts .swiper-pagination-progressbar-fill {
     background: #000 !important;
+}
+
+/*
+ * Shorts Picks — replica of the original theme's `shortsRoll` section.
+ * Portrait video cards where only the active slide embeds a player; inactive
+ * slides are dimmed and the active one expands (9/14 -> 9/16).
+ */
+.shorts-section .swiper-slide {
+    position: relative;
+    margin-top: 24px;
+    box-sizing: border-box;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    opacity: 0.5;
+}
+/* Keep the edge (prev/next) cards fully visible, like the hero carousel;
+   only slides further out stay dimmed so they never look "missing". */
+.shorts-section .swiper-slide.swiper-slide-active,
+.shorts-section .swiper-slide.swiper-slide-prev,
+.shorts-section .swiper-slide.swiper-slide-next {
+    opacity: 1;
+}
+.shorts-section .shorts-slide {
+    position: relative;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    background: #fff;
+}
+.shorts-section .video-wrap {
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    aspect-ratio: 9 / 14;
+    background-size: cover;
+    background-position: center;
+    background-color: #000;
+    transition: transform 0.4s ease, opacity 0.4s ease;
+    z-index: 2;
+}
+.shorts-section .swiper-slide-active .video-wrap {
+    aspect-ratio: 9 / 16;
+}
+.shorts-section .video-wrap iframe {
+    position: absolute;
+    width: 100%;
+    height: 124%;
+    top: -12%;
+    left: 0;
+    border: 0;
+}
+.shorts-section .info-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    box-sizing: border-box;
+    background: #fff;
+    border-top: 1px solid #ccc;
+    padding: 16px;
+    z-index: 3;
+}
+.shorts-section .info-bar .thumb {
+    width: 72px;
+    flex-shrink: 0;
+}
+.shorts-section .info-bar .thumb img {
+    display: block;
+    width: 100%;
+}
+/* Product thumbnail hover zoom (matches the original .img_zoom effect). */
+.shorts-section .info-bar .thumb .img_zoom {
+    display: block;
+    overflow: hidden;
+}
+.shorts-section .info-bar .thumb .img_zoom img {
+    transition: transform 0.3s ease-in;
+}
+.shorts-section .info-bar .thumb .img_zoom:hover img {
+    transform: scale(1.1);
+}
+.shorts-section .info-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.shorts-section .info-text .brand {
+    font-size: 14px;
+    color: #000;
+}
+.shorts-section .info-text .name {
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #000;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.shorts-section .info-text .name a {
+    color: inherit;
+}
+.shorts-section .info-text .tags {
+    font-size: 14px;
+    color: #888888;
+}
+.shorts-section .info-text .price {
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
 }
