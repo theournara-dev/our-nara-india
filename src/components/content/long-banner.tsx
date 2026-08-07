@@ -20,8 +20,9 @@ interface LongBannerProps {
 
 /**
  * Full-width, rounded banner carousel reproducing the original `longBanner01`
- * section: autoplay, hover-reveal arrows, bullet pagination, and a desktop /
- * mobile image per banner (swapped responsively).
+ * section. Always loops (even with a single banner), has hover-reveal chevron
+ * arrows, bullet pagination (when there are 2+ banners), and a grab cursor for
+ * dragging. Renders nothing when there are no banners.
  */
 export function LongBanner({ banners }: LongBannerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,7 @@ export function LongBanner({ banners }: LongBannerProps) {
   const paginationRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
+  const hasMultiple = banners.length > 1;
   const slides = useMemo(
     () => toLoopable(banners, MAX_SLIDES_PER_VIEW, (b) => b.id),
     [banners],
@@ -40,16 +42,16 @@ export function LongBanner({ banners }: LongBannerProps) {
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: [Autoplay, Navigation, Pagination],
+      modules: hasMultiple ? [Autoplay, Navigation, Pagination] : [Autoplay, Navigation],
       speed: 600,
       spaceBetween: 0,
       centeredSlides: true,
       loop: true,
+      grabCursor: true,
       autoplay: { delay: 3000, disableOnInteraction: false },
-      pagination: {
-        el: paginationRef.current as HTMLElement,
-        clickable: true,
-      },
+      ...(hasMultiple
+        ? { pagination: { el: paginationRef.current as HTMLElement, clickable: true } }
+        : {}),
       navigation: {
         prevEl: prevRef.current as HTMLElement,
         nextEl: nextRef.current as HTMLElement,
@@ -62,37 +64,9 @@ export function LongBanner({ banners }: LongBannerProps) {
     return () => {
       swiper.destroy(true, true);
     };
-  }, []);
+  }, [hasMultiple]);
 
   if (banners.length === 0) return null;
-
-  // A single banner is shown as a static rounded image (no pointless carousel
-  // chrome). The Swiper carousel below activates once there are 2+ banners.
-  if (banners.length === 1) {
-    const banner = banners[0];
-    return (
-      <div className="long-banner">
-        <Link href={banner.href ?? "/"} className="long-banner-single">
-          <Image
-            src={banner.image}
-            alt={banner.alt}
-            width={2172}
-            height={260}
-            unoptimized
-            className="hidden w-full md:block"
-          />
-          <Image
-            src={banner.mobileImage}
-            alt={banner.alt}
-            width={800}
-            height={210}
-            unoptimized
-            className="w-full md:hidden"
-          />
-        </Link>
-      </div>
-    );
-  }
 
   return (
     <div className="long-banner">
@@ -133,7 +107,7 @@ export function LongBanner({ banners }: LongBannerProps) {
           className="long-banner-arrow long-banner-prev"
           aria-label="Previous"
         >
-          <MdKeyboardArrowLeft size={28} />
+          <MdKeyboardArrowLeft size={40} />
         </button>
         <button
           ref={nextRef}
@@ -141,10 +115,12 @@ export function LongBanner({ banners }: LongBannerProps) {
           className="long-banner-arrow long-banner-next"
           aria-label="Next"
         >
-          <MdKeyboardArrowRight size={28} />
+          <MdKeyboardArrowRight size={40} />
         </button>
 
-        <div ref={paginationRef} className="swiper-pagination long-banner-pagination" />
+        {hasMultiple && (
+          <div ref={paginationRef} className="swiper-pagination long-banner-pagination" />
+        )}
       </div>
     </div>
   );
