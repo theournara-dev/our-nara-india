@@ -1,4 +1,5 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
+import { InstagramSection } from "@/components/content/instagram-section";
 import { LongBanner } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
@@ -98,30 +99,8 @@ export default async function HomePage() {
       {/* Reviews */}
       <ReviewsSection />
 
-      {/* Available now */}
-      {/*<ThemeProductSection
-        sub="AVAILABLE NOW"
-        title="In Stock"
-        products={availableNow}
-      />*/}
-
       {/* Instagram */}
-      {/*<div className="w-full">
-        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
-          <div className="mx-auto mb-2">
-            <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
-              <span className="block text-base font-medium leading-6 text-point-500">
-                INSTAGRAM #our__nara
-              </span>
-              Influencer story · 10,000+ reviews
-            </h2>
-          </div>
-          <p className="text-center text-zinc-600">
-            Follow the community and tag <strong>#our__nara</strong> to get
-            featured.
-          </p>
-        </div>
-      </div>*/}
+      <InstagramSection />
     </div>
   );
 }

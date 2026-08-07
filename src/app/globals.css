@@ -565,3 +565,53 @@ body {
     color: #222;
     background: transparent;
 }
+
+/*
+ * Instagram strip — replica of the original theme's `insta` section: an
+ * auto-scrolling marquee of rounded square posts under the #our__nara title.
+ */
+.insta {
+    position: relative;
+    margin: 0 auto;
+    padding: 100px 0;
+    background: #fff;
+}
+.insta .insta-inner {
+    position: relative;
+    width: 94%;
+    margin: 0 auto;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+.insta .sub-title {
+    text-align: center;
+}
+.insta .sub-title .sub {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    color: #6f2dbd;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+}
+.insta .sub-title .sub a {
+    color: inherit;
+}
+.insta .sub-title h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: -0.5px;
+}
+.insta .insta-area {
+    margin: 32px auto 0;
+}
+.insta .insta-area ul.swiper-wrapper {
+    -webkit-transition-timing-function: linear !important;
+    transition-timing-function: linear !important;
+}
+.insta .insta-area ul li img {
+    width: 100%;
+    border-radius: 16px;
+}
