@@ -78,26 +78,20 @@ export const events: EventItem[] = [
 export interface Store {
   id: string;
   name: string;
-  city: string;
-  address: string;
-  hours: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  hours?: string;
 }
 
 export const stores: Store[] = [
   {
     id: "st1",
-    name: "OUR:NARA Mumbai",
-    city: "Mumbai, IN",
-    address: "One World, S.V. Road, Malad West, Mumbai, Maharashtra 400064",
-    hours: "Mon–Fri 09:00–18:00",
-  },
-  {
-    id: "st2",
-    name: "OUR:NARA Incheon",
-    city: "Incheon, KR",
-    address:
-      "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu",
-    hours: "Mon–Fri 09:00–18:00",
+    name: "OURNARA",
+    address: "-",
+    phone: "-",
+    email: "noahpet153@naver.com",
+    hours: "Mon–Fri 09:00–18:00 / Closed on weekends and public holidays",
   },
 ];
 

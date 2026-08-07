@@ -1,41 +1,50 @@
 import type { Metadata } from "next";
-import { MapPin, Clock } from "lucide-react";
 import { Container } from "@/components/ui/container";
-import { PageHeader } from "@/components/ui/page-header";
 import { stores } from "@/data/content";
 
 export const metadata: Metadata = { title: "Stores" };
 
+/** Stores page matching the original: a STORES heading and a store info
+ *  table (Address / Phone / Email / Business Hours). */
 export default function StoresPage() {
+  const store = stores[0];
+
   return (
     <div>
-      <PageHeader
-        eyebrow="Find Us"
-        title="Stores"
-        subtitle="Visit OUR:NARA at our India and South Korea offices."
-      />
-      <Container className="pb-16">
-        <div className="grid gap-4 md:grid-cols-2">
-          {stores.map((store) => (
-            <div
-              key={store.id}
-              className="rounded-2xl border border-zinc-100 bg-white p-6"
-            >
-              <p className="text-lg font-semibold text-zinc-900">
-                {store.name}
-              </p>
-              <p className="mt-1 text-sm text-zinc-400">{store.city}</p>
-              <p className="mt-4 flex items-start gap-2 text-sm text-zinc-600">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
-                {store.address}
-              </p>
-              <p className="mt-2 flex items-center gap-2 text-sm text-zinc-600">
-                <Clock className="h-4 w-4 shrink-0 text-zinc-400" />
-                {store.hours}
-              </p>
-            </div>
-          ))}
-        </div>
+      <Container className="py-12">
+        <h1 className="mb-8 text-center font-display text-3xl font-semibold text-ink">
+          STORES
+        </h1>
+
+        {store && (
+          <div className="mx-auto max-w-xl border border-[#e9e9e9] bg-white">
+            <p className="border-b border-[#e9e9e9] px-6 py-3 font-display text-lg font-semibold text-ink">
+              {store.name}
+            </p>
+            <table className="w-full text-sm">
+              <tbody>
+                {(
+                  [
+                    ["Address", store.address],
+                    ["Phone", store.phone],
+                    ["Email", store.email],
+                    ["Business Hours", store.hours],
+                  ] as const
+                ).map(([label, value]) => (
+                  <tr
+                    key={label}
+                    className="border-b border-[#eee] last:border-b-0"
+                  >
+                    <th className="w-32 px-6 py-3 text-left align-top font-semibold text-[#222]">
+                      {label}
+                    </th>
+                    <td className="px-6 py-3 align-top text-[#555]">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Container>
     </div>
   );
