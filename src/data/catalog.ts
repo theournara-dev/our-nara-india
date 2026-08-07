@@ -644,6 +644,12 @@ export const products: StaticProduct[] = [
 for (const product of products) {
   const real = PRODUCT_IMAGES[product.slug];
   if (real) product.images = [real];
+  // Give every product a distinct hover image so the card crossfade shows a
+  // visible change. Real per-product hover shots aren't imported yet, so use a
+  // placeholder variant (same as the existing products that already set one).
+  if (!product.hoverImage) {
+    product.hoverImage = image(product.name, "d6c7ff");
+  }
 }
 
 // ── Lookups (used by the static data layer) ────────────────────────────────
