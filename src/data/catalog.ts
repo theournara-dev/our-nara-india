@@ -301,6 +301,21 @@ export const products: StaticProduct[] = [
     images: [image("Neck Cream")],
     variants: [],
   },
+  {
+    id: "p-31",
+    slug: "centella-moist-soothing-gel-cream-ex",
+    brandSlug: "dr-pepti",
+    categorySlug: "pre-order",
+    name: "Centella Moist Soothing Gel Cream EX",
+    summary: "Calm · Cool · Brighten · Anti-wrinkle",
+    shortTags: ["Calm", "Cool", "Brighten", "Anti-Wrinkle"],
+    priceCents: 233333,
+    currency: "INR",
+    isPreOrder: true,
+    preOrderNotice: pre,
+    images: [image("Gel Cream")],
+    variants: [],
+  },
 
   // ── HEVVY MAKEUP ─────────────────────────────────────────────────────────
   {

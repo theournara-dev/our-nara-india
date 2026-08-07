@@ -14,7 +14,7 @@ export function ThemeProductCard({
   index,
 }: {
   product: ProductCardType;
-  index: number;
+  index?: number;
 }) {
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
@@ -22,9 +22,11 @@ export function ThemeProductCard({
   return (
     <>
       <div className="relative text-center">
-        <span className="absolute left-1 -top-5 z-[10] text-[48px] font-semibold italic leading-none text-point-500 max-[767px]:text-[36px]">
-          {index + 1}
-        </span>
+        {index !== undefined && (
+          <span className="absolute left-1 -top-5 z-[10] text-[48px] font-semibold italic leading-none text-point-500 max-[767px]:text-[36px]">
+            {index + 1}
+          </span>
+        )}
 
         <div className="group relative aspect-square w-full overflow-hidden rounded-2xl">
           <Link
@@ -87,6 +89,11 @@ export function ThemeProductCard({
             {product.name}
           </Link>
         </strong>
+        {product.isPreOrder && (
+          <span className="block text-[13px] font-medium text-[#702dbd]">
+            PRE-ORDER/Order now, ships later
+          </span>
+        )}
         <ul className="space-y-0.5">
           <li className="text-sm text-[#888888]">
             {product.shortTags.join(" · ")}

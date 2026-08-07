@@ -1,6 +1,7 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
+import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
 import { getFeaturedProducts, getProductsBySlugs } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
@@ -15,6 +16,13 @@ export default async function HomePage() {
       products: await getProductsBySlugs(box.productSlugs),
     })),
   );
+  const preOrder = await getProductsBySlugs([
+    "centella-dark-spot-solution-ampoule-pro",
+    "peptide-volume-neck-cream",
+    "peptide-volume-lifting-pro-essence-30ml",
+    "centella-moist-soothing-gel-cream-ex",
+    "peptide-volume-lifting-pro-essence-100ml",
+  ]);
 
   return (
     <div>
@@ -49,6 +57,14 @@ export default async function HomePage() {
       {/* Triple banner (banner + curated products) */}
       <TripleBanner boxes={tripleBoxes} />
 
+      {/* Pre-orders */}
+      <ProductGridSection
+        sub="AVAILABLE NOW"
+        title="PRE-ORDER"
+        products={preOrder}
+        moreHref="/category/pre-order"
+      />
+
       {/* Brand sections */}
       {/*{brandList.slice(0, 6).map((brand) => (
         <ThemeProductSection
@@ -64,13 +80,6 @@ export default async function HomePage() {
         sub="AVAILABLE NOW"
         title="In Stock"
         products={availableNow}
-      />*/}
-
-      {/* Pre-orders */}
-      {/*<ThemeProductSection
-        sub="PRE-ORDER"
-        title="Order now, ships later"
-        products={preOrder}
       />*/}
 
       {/* Reviews */}
