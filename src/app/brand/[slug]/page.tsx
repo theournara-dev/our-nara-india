@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
-import { ProductGrid } from "@/components/product/product-grid";
+import { CategoryProductList } from "@/components/product/category-product-list";
 import { getBrandBySlug } from "@/data/brands";
 import { getProductsByBrandSlug } from "@/data/products";
 
@@ -34,8 +35,22 @@ export default async function BrandPage({
   if (!brand) notFound();
 
   return (
-    <Container className="py-10">
-      <div className="mb-8 flex items-center gap-5">
+    <Container className="py-8">
+      {/* Breadcrumb, matching the original .path */}
+      <nav className="mb-6 text-xs text-[#888]">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          <li>
+            <Link href="/" className="hover:text-point-500">
+              HOME
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li className="font-medium text-[#222]">{brand.name}</li>
+        </ol>
+      </nav>
+
+      {/* Brand header */}
+      <div className="mb-6 flex items-center gap-5">
         {brand.logoUrl && (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-100">
             <Image
@@ -48,18 +63,22 @@ export default async function BrandPage({
           </div>
         )}
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-            Brand
-          </p>
-          <h1 className="font-display text-3xl font-semibold text-zinc-900">
+          <h1 className="font-display text-3xl font-semibold text-ink">
             {brand.name}
           </h1>
           {brand.description && (
-            <p className="mt-2 max-w-xl text-zinc-600">{brand.description}</p>
+            <p className="mt-2 max-w-xl text-sm text-[#666]">
+              {brand.description}
+            </p>
           )}
         </div>
       </div>
-      <ProductGrid products={products} />
+
+      {/* Sort toolbar (brand pages add Manufacture Company + Product Review) */}
+      <CategoryProductList
+        products={products}
+        extraSort={["manufacturer", "review"]}
+      />
     </Container>
   );
 }
