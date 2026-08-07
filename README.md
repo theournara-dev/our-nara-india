@@ -31,14 +31,20 @@ Done
 - Product cards show a 2-image hover crossfade plus wishlist/add-to-cart quick
   actions; images serve any format (jpg/png/gif) via an unoptimized `Image`.
 - Top Picks shows 4 items, each with an on-hover image (`hoverImage`).
+- **All homepage sections reproduced from the original:** Hero, Top Picks,
+  Shorts Picks (multi-platform embeds), Triple Banner, PRE-ORDER grid, Long
+  Banner, 10 brand grids, Real Reviews (cards link to per-review pages),
+  Instagram (CSS marquee), and the footer (CS center + address + socials).
+- Home-only floating actions (recently viewed + smooth scroll-to-top) that fade
+  in after scrolling, plus session-based recently-viewed tracking with a
+  `/recent-view` page (most recent first).
+- Scroll-reveal on first scroll (`Reveal` + IntersectionObserver); PNG images
+  use `next/image`, internal links use `next/link`.
 
 Still to do
 
 - Replace the placeholder `hoverImage` values on the featured products with the
   real on-hover images.
-- Re-enable the remaining homepage sections (brands, available-now, pre-orders,
-  shorts, reviews, Instagram) — currently commented out in `app/page.tsx` while
-  the hero + Top Picks sections are finalized.
 - Match remaining pages/components to the original layout more closely
   (the site is Tailwind-native now, not a rule-by-rule port of the minified
   theme CSS).

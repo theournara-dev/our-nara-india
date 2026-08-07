@@ -89,13 +89,15 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 ## 6. Milestones
 
 > **Progress:** Phase 0 foundations are in place (app scaffolded, Prisma + Neon DB
-> connected, migration applied). Phase 2 storefront is largely built and matched to
-> the original. The header, hero, and Top Picks sections are fully responsive; the
-> slider progressbar + arrows were extracted into a shared `SliderNav` component, and
-> product cards support a 2-image hover crossfade with wishlist/cart quick actions.
-> (The remaining homepage sections are temporarily commented out while these are
-> finalized.) Phases 1 (admin/data), 3 (accounts/community), 4 (cart/checkout)
-> and 5 (SEO/go-live) remain. See the checklist below.
+> connected, migration applied). **Phase 2 (storefront) is complete and matches the
+> original homepage.** All home sections are implemented and production-hardened:
+> hero, Top Picks, Shorts Picks, Triple Banner, PRE-ORDER grid, Long Banner, 10
+> brand grids, Real Reviews, Instagram (CSS marquee), and the footer. Shared
+> `SliderNav` (progressbar + arrows) drives the carousels; product cards crossfade
+> to a second image on hover. Home-only floating buttons (recently viewed +
+> scroll-to-top) and session-based recently-viewed tracking with a `/recent-view`
+> page are also in. Phases 1 (admin/data), 3 (accounts/community), 4
+> (cart/checkout) and 5 (SEO/go-live) remain. See the checklist below.
 
 **Phase 0 — Scaffold & foundations** `≈ done`
 
@@ -113,20 +115,25 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 - [ ] Admin CRUD: brands, categories, products (+ options, images, pre-order), coupons, inventory, community, review moderation
 - [ ] Seed / import real catalog from Cafe24 (seed script scaffolded, not yet run)
 
-**Phase 2 — Storefront catalog** `largely done`
+**Phase 2 — Storefront catalog** `done`
 
 - [x] Design system matching original (fonts, brand palette as Tailwind tokens)
-- [x] Homepage sections (hero, categories, top picks, brand sections, pre-orders, shorts, reviews, Instagram)
+- [x] Homepage sections — all reproduced from the original: hero, Top Picks, Shorts Picks (multi-platform embeds), Triple Banner, PRE-ORDER grid, Long Banner, 10 brand grids, Real Reviews (cards link to per-review pages), Instagram (CSS marquee), footer (CS center + address)
 - [x] Header + product/hero sliders matched to original (shared `SliderNav`: progressbar + arrows; dropdown hover; no layout flash)
 - [x] Product card hover: 2-image crossfade + wishlist/cart quick actions (`hoverImage` data field; any image format incl. gif)
 - [x] Category / brand / product listing + product detail, search
 - [x] TikTok Shorts + Instagram embeds
+- [x] Floating actions (home only): recently-viewed → `/recent-view`, smooth scroll-to-top; hidden at top, fade in on scroll
+- [x] Session-based recently-viewed tracking (`src/lib/recent-view.ts`) + `/recent-view` page (most recent first)
+- [x] Scroll-reveal on first scroll (`Reveal` + IntersectionObserver, respects reduced motion)
+- [x] Production hygiene: PNG images use `next/image`, internal links use `next/link`
 - [ ] Product image zoom + remaining JS interactions
 - [ ] Replace placeholder `hoverImage` values on featured products with real on-hover images
 
-**Phase 3 — Customer account & community** `not started`
+**Phase 3 — Customer account & community** `in progress`
 
-- [ ] Register/login, My Page (orders, mileage, coupons, wishlist, recent)
+- [x] Recently-viewed page (session-based, guest) — see Phase 2
+- [ ] Register/login, My Page (orders, mileage, coupons, wishlist, recent — DB-backed)
 - [ ] Address book, community (notice/QA/FAQ), reviews submission
 - [ ] Ambassador / stores pages polish
 
