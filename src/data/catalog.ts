@@ -180,6 +180,21 @@ export const products: StaticProduct[] = [
     variants: [],
   },
   {
+    id: "p-30",
+    slug: "skin-booster-collagen-mask-50g",
+    brandSlug: "nowater",
+    categorySlug: "pre-order",
+    name: "Skin Booster Collagen Mask 50g",
+    summary: "Low-Molecular · Low-Irritation · EWG Green",
+    shortTags: ["LowMolecular", "LowIrritation", "EWGGreen"],
+    priceCents: 212667,
+    currency: "INR",
+    isPreOrder: true,
+    preOrderNotice: pre,
+    images: [image("Collagen Mask")],
+    variants: [],
+  },
+  {
     id: "p-3",
     slug: "prestige73-teatree-mask-70g",
     brandSlug: "nowater",
@@ -658,4 +673,12 @@ export function productsByCategory(slug: string): StaticProduct[] {
 
 export function productsByBrand(slug: string): StaticProduct[] {
   return products.filter((p) => p.brandSlug === slug);
+}
+
+/** Products matching the given slugs, in the given order (missing slugs skipped). */
+export function productsBySlugs(slugs: string[]): StaticProduct[] {
+  const bySlug = new Map(products.map((p) => [p.slug, p]));
+  return slugs
+    .map((slug) => bySlug.get(slug))
+    .filter((p): p is StaticProduct => Boolean(p));
 }

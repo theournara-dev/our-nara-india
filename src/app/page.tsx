@@ -1,12 +1,20 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
+import { TripleBanner } from "@/components/content/triple-banner";
 import { ThemeProductSection } from "@/components/theme/product-section";
-import { getFeaturedProducts } from "@/data/products";
+import { getFeaturedProducts, getProductsBySlugs } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
+import { tripleBannerBoxes } from "@/data/triple-banner";
 
 export default async function HomePage() {
   const featured = await getFeaturedProducts(4);
   const shorts = await getShortsPicks();
+  const tripleBoxes = await Promise.all(
+    tripleBannerBoxes.map(async (box) => ({
+      ...box,
+      products: await getProductsBySlugs(box.productSlugs),
+    })),
+  );
 
   return (
     <div>
@@ -37,6 +45,9 @@ export default async function HomePage() {
           <ShortsCarousel picks={shorts} />
         </div>
       </div>
+
+      {/* Triple banner (banner + curated products) */}
+      <TripleBanner boxes={tripleBoxes} />
 
       {/* Brand sections */}
       {/*{brandList.slice(0, 6).map((brand) => (

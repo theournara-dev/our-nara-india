@@ -2,6 +2,7 @@ import {
   products,
   productsByBrand,
   productsByCategory,
+  productsBySlugs,
   toCardView,
   type ProductCardView,
   type StaticProduct,
@@ -70,6 +71,13 @@ export async function getProductsByBrandSlug(
   take: number,
 ): Promise<ProductCard[]> {
   return productsByBrand(slug).slice(0, take).map(toCardView);
+}
+
+/** Products for the given slugs, preserving slug order. */
+export async function getProductsBySlugs(
+  slugs: string[],
+): Promise<ProductCard[]> {
+  return productsBySlugs(slugs).map(toCardView);
 }
 
 export async function getProductBySlug(
