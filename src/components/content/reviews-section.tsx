@@ -100,6 +100,7 @@ export function ReviewsSection() {
           onNext={() => swiperRef.current?.slideNext()}
           canPrev={canPrev}
           canNext={canNext}
+          className="md:hidden"
         />
 
         <div className="btn">
@@ -113,7 +114,7 @@ export function ReviewsSection() {
 /** A single review card: BEST badge, photo, rating, writer, and content. */
 function ReviewCard({ review }: { review: Review }) {
   return (
-    <div className="review-card">
+    <Link href={`/review/${review.id}`} className="review-card">
       <span className="best-badge">BEST</span>
 
       <div className="review-img img-zoom">
@@ -144,6 +145,6 @@ function ReviewCard({ review }: { review: Review }) {
         </div>
         <p className="cont">{review.body}</p>
       </div>
-    </div>
+    </Link>
   );
 }

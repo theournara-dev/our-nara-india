@@ -38,7 +38,6 @@ export function InstagramSection() {
       watchOverflow: true,
       loop: true,
       freeMode: true,
-      allowTouchMove: false,
       autoplay: { delay: 0, disableOnInteraction: false },
       breakpoints: {
         599: { slidesPerView: 4, spaceBetween: 10 },
@@ -46,6 +45,10 @@ export function InstagramSection() {
       },
       on: {
         init: () => setReady(true),
+        // Restart the marquee after the user drags so it never gets
+        // permanently stuck (the original left autoplay stopped after drag).
+        touchEnd: (s) => s.autoplay.start(),
+        transitionEnd: (s) => s.autoplay.start(),
       },
     });
 

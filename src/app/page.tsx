@@ -4,6 +4,7 @@ import { LongBanner } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
+import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
 import { longBanners } from "@/data/banners";
@@ -101,6 +102,9 @@ export default async function HomePage() {
 
       {/* Instagram */}
       <InstagramSection />
+
+      {/* Floating actions (home only): recent views + scroll to top */}
+      <FloatingButtons />
     </div>
   );
 }

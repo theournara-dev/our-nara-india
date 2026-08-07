@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { Badge } from "@/components/ui/badge";
 import { ProductGrid } from "@/components/product/product-grid";
+import { TrackRecentView } from "@/components/product/track-recent-view";
 import { getProductBySlug, getProductsByBrandSlug } from "@/data/products";
 import { formatMoney } from "@/lib/money";
 
@@ -48,6 +49,7 @@ export default async function ProductPage({
 
   return (
     <Container className="py-10">
+      <TrackRecentView slug={product.slug} />
       <div className="grid gap-10 lg:grid-cols-2">
         {/* Gallery */}
         <div className="flex flex-col gap-4">

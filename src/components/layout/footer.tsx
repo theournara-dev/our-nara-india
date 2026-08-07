@@ -42,14 +42,14 @@ const socialLinks = [
 export function Footer() {
   return (
     <footer className="border-t border-zinc-100 bg-[#f9f9f9]">
-      <Container className="py-16">
-        <div className="flex flex-col gap-10 md:flex-row">
+      <Container className="px-6 py-14 md:px-8">
+        <div className="flex flex-col gap-10 md:flex-row md:gap-0">
           {/* CS CENTER */}
-          <div className="md:w-[25%] md:max-w-[316px]">
+          <div className="md:w-[300px] md:shrink-0 md:pr-8">
             <h3 className="text-[15px] font-medium tracking-tight text-black">
               CS CENTER
             </h3>
-            <p className="mt-2 text-[32px] font-semibold leading-10 tracking-tight text-black">
+            <p className="mt-2 text-[28px] font-semibold leading-9 tracking-tight text-black">
               {SITE.supportPhone}
             </p>
             <p className="text-[13px] font-medium text-[#777]">
@@ -76,7 +76,7 @@ export function Footer() {
           </div>
 
           {/* Utility links + company address */}
-          <div className="md:w-[75%]">
+          <div className="md:flex-1">
             <ul className="flex flex-wrap gap-x-5 gap-y-2">
               {utilLinks.map((link) => (
                 <li key={link.href}>
@@ -90,7 +90,7 @@ export function Footer() {
               ))}
             </ul>
 
-            <div className="mt-4 text-[15px] leading-[30px]">
+            <div className="mt-4 text-[14px] leading-[26px]">
               <span className="text-[#777]">Company : {SITE.name} </span>
               <span className="text-[#777]">
                 A Brand of : Seoulveda Trading LLP &amp; The First Team{" "}
