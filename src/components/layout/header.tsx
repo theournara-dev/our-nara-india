@@ -217,8 +217,8 @@ export function Header() {
               {/* Category nav */}
               <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
                 <div className="relative z-[39] max-md:w-full max-md:min-w-0">
-                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-md:h-9 max-md:w-full max-md:overflow-y-hidden">
-                    {categoryNav.map((item) => (
+                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-x-clip max-md:h-9 max-md:w-full max-md:overflow-y-hidden">
+                    {categoryNav.map((item, index) => (
                       <li
                         key={item.href}
                         className={
@@ -245,7 +245,13 @@ export function Header() {
                           )}
                         </Link>
                         {item.children && item.children.length > 0 && (
-                          <ul className="invisible absolute left-1/2 top-[110%] z-20 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[calc(100%-10px)] group-hover:opacity-100 max-lg:hidden">
+                          <ul
+                            className={`invisible absolute top-[110%] z-20 w-[140px] rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[calc(100%-10px)] group-hover:opacity-100 max-lg:hidden ${
+                              index === 0
+                                ? "left-0"
+                                : "left-1/2 -translate-x-1/2"
+                            }`}
+                          >
                             {item.children.map((child) => (
                               <li key={child}>
                                 <Link
@@ -447,7 +453,10 @@ export function Header() {
                 {/* Account quick links */}
                 <div className="mt-6 flex w-4/5 flex-wrap gap-x-4 gap-y-2 text-[13px]">
                   <span>
-                    <Link href="/account" className="text-[#555] hover:text-black">
+                    <Link
+                      href="/account"
+                      className="text-[#555] hover:text-black"
+                    >
                       My page
                     </Link>
                   </span>
@@ -473,12 +482,18 @@ export function Header() {
                     </Link>
                   </span>
                   <span>
-                    <Link href="/account" className="text-[#555] hover:text-black">
+                    <Link
+                      href="/account"
+                      className="text-[#555] hover:text-black"
+                    >
                       Recent (0)
                     </Link>
                   </span>
                   <span>
-                    <Link href="/coupons" className="text-[#555] hover:text-black">
+                    <Link
+                      href="/coupons"
+                      className="text-[#555] hover:text-black"
+                    >
                       Couponzone
                     </Link>
                   </span>
