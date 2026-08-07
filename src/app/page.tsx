@@ -5,6 +5,7 @@ import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
 import { FloatingButtons } from "@/components/layout/floating-buttons";
+import { Reveal } from "@/components/ui/reveal";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
 import { longBanners } from "@/data/banners";
@@ -45,63 +46,80 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <HeroCarousel />
+      <Reveal>
+        <HeroCarousel />
+      </Reveal>
 
       {/* Top picks */}
-      <ThemeProductSection
-        sub="TOP PICKS"
-        title="BEST PRODUCT"
-        products={featured}
-      />
+      <Reveal>
+        <ThemeProductSection
+          sub="TOP PICKS"
+          title="BEST PRODUCT"
+          products={featured}
+        />
+      </Reveal>
 
       {/* Shorts reels */}
-      <div className="mb-5 mt-[60px] w-full">
-        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2 max-[767px]:w-[96%]">
-          <div className="mx-auto mb-2">
-            <h2 className="flex items-center justify-center gap-2 text-2xl font-bold leading-8 tracking-tight text-ink">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/upload/goodymall1/en/main/shorts.png"
-                alt=""
-                className="inline-block h-auto w-7"
-              />
-              Shorts Picks
-            </h2>
+      <Reveal>
+        <div className="mb-5 mt-[60px] w-full">
+          <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2 max-[767px]:w-[96%]">
+            <div className="mx-auto mb-2">
+              <h2 className="flex items-center justify-center gap-2 text-2xl font-bold leading-8 tracking-tight text-ink">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/upload/goodymall1/en/main/shorts.png"
+                  alt=""
+                  className="inline-block h-auto w-7"
+                />
+                Shorts Picks
+              </h2>
+            </div>
+            <ShortsCarousel picks={shorts} />
           </div>
-          <ShortsCarousel picks={shorts} />
         </div>
-      </div>
+      </Reveal>
 
       {/* Triple banner (banner + curated products) */}
-      <TripleBanner boxes={tripleBoxes} />
+      <Reveal>
+        <TripleBanner boxes={tripleBoxes} />
+      </Reveal>
 
       {/* Pre-orders */}
-      <ProductGridSection
-        sub="AVAILABLE NOW"
-        title="PRE-ORDER"
-        products={preOrder}
-        moreHref="/category/pre-order"
-      />
+      <Reveal>
+        <ProductGridSection
+          sub="AVAILABLE NOW"
+          title="PRE-ORDER"
+          products={preOrder}
+          moreHref="/category/pre-order"
+        />
+      </Reveal>
 
       {/* Long banner */}
-      <LongBanner banners={longBanners} />
+      <Reveal>
+        <LongBanner banners={longBanners} />
+      </Reveal>
 
       {/* Brand sections */}
       {brandSections.map((section) => (
-        <ProductGridSection
-          key={section.slug}
-          sub={section.sub}
-          title={section.title}
-          products={section.products}
-          moreHref={`/brand/${section.slug}`}
-        />
+        <Reveal key={section.slug}>
+          <ProductGridSection
+            sub={section.sub}
+            title={section.title}
+            products={section.products}
+            moreHref={`/brand/${section.slug}`}
+          />
+        </Reveal>
       ))}
 
       {/* Reviews */}
-      <ReviewsSection />
+      <Reveal>
+        <ReviewsSection />
+      </Reveal>
 
       {/* Instagram */}
-      <InstagramSection />
+      <Reveal>
+        <InstagramSection />
+      </Reveal>
 
       {/* Floating actions (home only): recent views + scroll to top */}
       <FloatingButtons />

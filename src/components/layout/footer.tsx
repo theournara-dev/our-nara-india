@@ -42,14 +42,14 @@ const socialLinks = [
 export function Footer() {
   return (
     <footer className="border-t border-zinc-100 bg-[#f9f9f9]">
-      <Container className="px-6 py-14 md:px-8">
-        <div className="flex flex-col gap-10 md:flex-row md:gap-0">
+      <Container className="max-w-5xl px-6 py-14 md:px-8">
+        <div className="flex flex-col gap-10 md:flex-row md:gap-16">
           {/* CS CENTER */}
-          <div className="md:w-[300px] md:shrink-0 md:pr-8">
+          <div className="md:w-[280px] md:shrink-0">
             <h3 className="text-[15px] font-medium tracking-tight text-black">
               CS CENTER
             </h3>
-            <p className="mt-2 text-[28px] font-semibold leading-9 tracking-tight text-black">
+            <p className="mt-2 text-[26px] font-semibold leading-9 tracking-tight text-black">
               {SITE.supportPhone}
             </p>
             <p className="text-[13px] font-medium text-[#777]">
@@ -66,7 +66,7 @@ export function Footer() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={label}
-                    className="block text-[24px] text-[#777] hover:opacity-50"
+                    className="block text-[22px] text-[#777] hover:opacity-50"
                   >
                     <Icon />
                   </a>
@@ -77,12 +77,12 @@ export function Footer() {
 
           {/* Utility links + company address */}
           <div className="md:flex-1">
-            <ul className="flex flex-wrap gap-x-5 gap-y-2">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2">
               {utilLinks.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-[15px] font-medium tracking-tight text-black"
+                    className="text-[14px] font-medium tracking-tight text-black"
                   >
                     {link.label}
                   </Link>
@@ -90,7 +90,7 @@ export function Footer() {
               ))}
             </ul>
 
-            <div className="mt-4 text-[14px] leading-[26px]">
+            <div className="mt-4 text-[13px] leading-[24px]">
               <span className="text-[#777]">Company : {SITE.name} </span>
               <span className="text-[#777]">
                 A Brand of : Seoulveda Trading LLP &amp; The First Team{" "}

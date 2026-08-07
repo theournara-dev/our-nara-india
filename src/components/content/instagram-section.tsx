@@ -38,6 +38,7 @@ export function InstagramSection() {
       watchOverflow: true,
       loop: true,
       freeMode: true,
+      allowTouchMove: false,
       autoplay: { delay: 0, disableOnInteraction: false },
       breakpoints: {
         599: { slidesPerView: 4, spaceBetween: 10 },

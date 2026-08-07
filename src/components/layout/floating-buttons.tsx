@@ -33,7 +33,7 @@ export function FloatingButtons() {
         href="/recent-view"
         aria-label="Recently viewed products"
         title="Recently viewed"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[#222] shadow-md hover:opacity-70"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-black text-white shadow-md hover:opacity-70"
       >
         <MdOutlineHistory size={22} />
       </Link>
