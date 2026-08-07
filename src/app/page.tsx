@@ -5,7 +5,13 @@ import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
 import { longBanners } from "@/data/banners";
-import { getFeaturedProducts, getProductsBySlugs } from "@/data/products";
+import { getBrand } from "@/data/catalog";
+import { homeBrandSections } from "@/data/home-sections";
+import {
+  getFeaturedProducts,
+  getProductsByBrandSlug,
+  getProductsBySlugs,
+} from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
 import { tripleBannerBoxes } from "@/data/triple-banner";
 
@@ -25,6 +31,13 @@ export default async function HomePage() {
     "centella-moist-soothing-gel-cream-ex",
     "peptide-volume-lifting-pro-essence-100ml",
   ]);
+  const brandSections = await Promise.all(
+    homeBrandSections.map(async (section) => ({
+      ...section,
+      title: getBrand(section.slug)?.name ?? section.slug,
+      products: await getProductsByBrandSlug(section.slug, 20),
+    })),
+  );
 
   return (
     <div>
@@ -71,14 +84,15 @@ export default async function HomePage() {
       <LongBanner banners={longBanners} />
 
       {/* Brand sections */}
-      {/*{brandList.slice(0, 6).map((brand) => (
-        <ThemeProductSection
-          key={brand.slug}
-          sub="BRAND"
-          title={brand.name}
-          products={productsByBrand(brand.slug).slice(0, 8).map(toCardView)}
+      {brandSections.map((section) => (
+        <ProductGridSection
+          key={section.slug}
+          sub={section.sub}
+          title={section.title}
+          products={section.products}
+          moreHref={`/brand/${section.slug}`}
         />
-      ))}*/}
+      ))}
 
       {/* Available now */}
       {/*<ThemeProductSection
