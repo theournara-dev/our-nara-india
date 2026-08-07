@@ -367,9 +367,8 @@ body {
     cursor: grabbing;
 }
 /* Chevron arrows, hidden by default and revealed smoothly on hover over the
-   banner (matches the original Swiper-style navigation). A small round
-   background appears on button hover so the arrow stays visible on dark
-   banner artwork. */
+   banner. Always shown with a black chevron on a translucent white round
+   background so they stay visible on any banner artwork. */
 .long-banner .long-banner-arrow {
     position: absolute;
     top: 39%;
@@ -381,16 +380,15 @@ body {
     height: 44px;
     border: 0;
     border-radius: 50%;
-    background: transparent;
-    color: #fff;
+    background: rgba(255, 255, 255, 0.75);
+    color: #222;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+    transition: opacity 0.3s ease, background-color 0.3s ease;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 .long-banner .long-banner-arrow:hover {
-    background: #fff;
-    color: #222;
+    background: rgba(255, 255, 255, 0.95);
 }
 .long-banner .long-banner-prev {
     left: 16px;
