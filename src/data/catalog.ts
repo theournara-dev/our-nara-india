@@ -157,8 +157,8 @@ export const products: StaticProduct[] = [
     priceCents: 180000,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Vitamin Serum")],
-    hoverImage: image("Vitamin Serum", "d6c7ff"), // TODO: replace with the real on-hover image
+    images: ["/product/big/202607/897d56d4173f800b07d425659cd53f54.jpg"],
+    hoverImage: "/product/big/202607/897d56d4173f800b07d425659cd53f54.jpg", // TODO: replace with the real on-hover image
     variants: variantsFor("brightening-vitamin-serum", [
       { label: "Size", value: "30ml" },
       { label: "Size", value: "50ml" },
@@ -175,8 +175,8 @@ export const products: StaticProduct[] = [
     priceCents: 160000,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Collagen Cream")],
-    hoverImage: image("Collagen Cream", "d6c7ff"), // TODO: replace with the real on-hover image
+    images: ["/product/big/202607/52af7154d134bed9a28f0d53583bba3e.jpg"],
+    hoverImage: "/product/big/202607/52af7154d134bed9a28f0d53583bba3e.jpg", // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -191,7 +191,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Collagen Mask")],
+    images: ["/product/big/202607/673b687aecfcefefd1698b28bce0867a.jpg"],
     variants: [],
   },
   {
@@ -205,8 +205,8 @@ export const products: StaticProduct[] = [
     priceCents: 210000,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Teatree Mask")],
-    hoverImage: image("Teatree Mask", "d6c7ff"), // TODO: replace with the real on-hover image
+    images: ["/product/big/202607/d1537ec89bdd366be8532aa8cfd88af5.jpg"],
+    hoverImage: "/product/big/202607/d1537ec89bdd366be8532aa8cfd88af5.jpg", // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -220,8 +220,8 @@ export const products: StaticProduct[] = [
     priceCents: 90000,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Eye Cream")],
-    hoverImage: image("Eye Cream", "d6c7ff"), // TODO: replace with the real on-hover image
+    images: ["/product/big/202607/788d00c52907b78f839eb1aa3cf2cea4.jpg"],
+    hoverImage: "/product/big/202607/788d00c52907b78f839eb1aa3cf2cea4.jpg", // TODO: replace with the real on-hover image
     variants: [],
   },
   {
@@ -236,7 +236,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Cleansing Oil")],
+    images: ["/product/big/202607/91cd52ec2b891f77901b173187b5d1f2.jpg"],
     variants: [],
   },
 
@@ -253,7 +253,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Pro Essence 30ml")],
+    images: ["/product/big/202607/c29fe8cc9c8058c5b7c85f067779590b.jpg"],
     variants: [],
   },
   {
@@ -268,7 +268,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Pro Essence 100ml")],
+    images: ["/product/big/202607/426b6497113eeb5b73cf211408850157.jpg"],
     variants: [],
   },
   {
@@ -283,7 +283,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Centella Ampoule")],
+    images: ["/product/big/202607/f78dee177b89960e83ea53a7daa37e93.jpg"],
     variants: [],
   },
   {
@@ -298,7 +298,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Neck Cream")],
+    images: ["/product/big/202607/07846889c6586ddf2b3a4a5a7e43cd8a.jpg"],
     variants: [],
   },
   {
@@ -313,7 +313,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Gel Cream")],
+    images: ["/product/big/202607/af01464dacb1ea5a40d5b705390f4e5f.jpg"],
     variants: [],
   },
 
@@ -330,7 +330,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Lip Cheek")],
+    images: ["/product/big/202607/c5ab639dbd28d42930f0859ff8bf174d.jpg"],
     variants: variantsFor("lipcheek", [
       { label: "Shade", value: "01" },
       { label: "Shade", value: "02" },
@@ -349,7 +349,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Glow Tint")],
+    images: ["/product/big/202607/db6bc81e57d5514b32f997321524dc9b.jpg"],
     variants: [],
   },
   {
@@ -364,7 +364,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Skin Cushion")],
+    images: ["/product/big/202607/1e306810a38aad7b07fd35fd437d268a.jpg"],
     variants: [],
   },
 
@@ -381,7 +381,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Gold Collagen")],
+    images: ["/product/big/202607/99b4cbdfe4164ce4f94d9b4f8135a071.jpg"],
     variants: [],
   },
   {
@@ -396,7 +396,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("PDRN Ampoule")],
+    images: ["/product/big/202607/02428235c369b38c3582a02a33a54345.jpg"],
     variants: [],
   },
 
@@ -413,7 +413,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Cica Mask")],
+    images: ["/product/big/202607/cf3baffbae52c4cc9d176c6094d59eae.jpg"],
     variants: [],
   },
   {
@@ -428,7 +428,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Collagen Mask")],
+    images: ["/product/big/202607/d487b4053cef6cdcefbc498a30731007.jpg"],
     variants: [],
   },
   {
@@ -443,7 +443,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Cica Cream")],
+    images: ["/product/big/202608/14f2a5478a9ca6597a4f6f27b428ec40.jpg"],
     variants: [],
   },
 
@@ -460,7 +460,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Cream")],
+    images: ["/product/big/202607/ce2288b222167237420ab79ac734999f.jpg"],
     variants: [],
   },
   {
@@ -475,7 +475,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Toner")],
+    images: ["/product/big/202607/ebae0371596bd47a260b0dd8fac8a9bb.jpg"],
     variants: [],
   },
   {
@@ -490,7 +490,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Sunscreen")],
+    images: ["/product/big/202607/75e89c931a62fe7ad00cec2612b917e2.jpg"],
     variants: [],
   },
 
@@ -506,7 +506,7 @@ export const products: StaticProduct[] = [
     priceCents: 153000,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Vegan Sun")],
+    images: ["/product/big/202608/bd1356fb8bf414e96a87b47d26129072.jpg"],
     variants: [],
   },
   {
@@ -521,7 +521,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Cleansing Balm")],
+    images: ["/product/big/202608/5f33ffc9edd18df3d25be0a88fc5f16c.jpg"],
     variants: [],
   },
 
@@ -538,7 +538,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Protein Ampoule")],
+    images: ["/product/big/202608/f787e350aae232cbfd4dcd558cb898a2.jpg"],
     variants: [],
   },
   {
@@ -553,7 +553,7 @@ export const products: StaticProduct[] = [
     currency: "INR",
     isPreOrder: true,
     preOrderNotice: pre,
-    images: [image("Protein Cream")],
+    images: ["/product/big/202608/86846747cc8a5c13c403056d4500ec5e.jpg"],
     variants: [],
   },
 
@@ -569,7 +569,7 @@ export const products: StaticProduct[] = [
     priceCents: 53333,
     currency: "INR",
     isPreOrder: false,
-    images: [image("HA Mist")],
+    images: ["/product/big/202608/184982ed9919070bab8fba52ae82377a.jpg"],
     variants: [],
   },
   {
@@ -583,7 +583,7 @@ export const products: StaticProduct[] = [
     priceCents: 53333,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Vita C Mist")],
+    images: ["/product/big/202608/b161cea7c212e4f6336154c0eeb6a52a.jpg"],
     variants: [],
   },
 
@@ -599,7 +599,7 @@ export const products: StaticProduct[] = [
     priceCents: 52667,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Water Tint")],
+    images: ["/product/big/202608/16d8165240393fbee4550621474ccaad.jpg"],
     variants: variantsFor("water-tint", [
       { label: "Shade", value: "01" },
       { label: "Shade", value: "05" },
@@ -617,7 +617,7 @@ export const products: StaticProduct[] = [
     priceCents: 39333,
     currency: "INR",
     isPreOrder: false,
-    images: [image("Dewy Tint")],
+    images: ["/product/big/202608/5c492f81339c5848cff374f7c6254b3d.jpg"],
     variants: [],
   },
 
@@ -644,11 +644,12 @@ export const products: StaticProduct[] = [
 for (const product of products) {
   const real = PRODUCT_IMAGES[product.slug];
   if (real) product.images = [real];
-  // Give every product a distinct hover image so the card crossfade shows a
-  // visible change. Real per-product hover shots aren't imported yet, so use a
-  // placeholder variant (same as the existing products that already set one).
+  // Give every product a hover image. Prefer a real second shot when one is
+  // explicitly set; otherwise reuse the (now real) primary image so the card
+  // never flashes a placeholder. True per-product hover shots aren't imported
+  // yet, so the crossfade stays on the same image in that case.
   if (!product.hoverImage) {
-    product.hoverImage = image(product.name, "d6c7ff");
+    product.hoverImage = product.images[0] ?? image(product.name, "d6c7ff");
   }
 }
 
