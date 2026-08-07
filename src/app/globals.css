@@ -55,15 +55,16 @@ body {
  */
 .swiper-pagination-prd,
 .swiper-pagination-main,
-.swiper-pagination-shorts {
+.swiper-pagination-shorts,
+.swiper-pagination-review {
     background: rgba(0, 0, 0, 0.25);
 }
 .swiper-pagination-prd .swiper-pagination-progressbar-fill,
 .swiper-pagination-main .swiper-pagination-progressbar-fill,
-.swiper-pagination-shorts .swiper-pagination-progressbar-fill {
+.swiper-pagination-shorts .swiper-pagination-progressbar-fill,
+.swiper-pagination-review .swiper-pagination-progressbar-fill {
     background: #000 !important;
 }
-
 /*
  * Shorts Picks — replica of the original theme's `shortsRoll` section.
  * Portrait video cards where only the active slide embeds a player; inactive
@@ -411,4 +412,156 @@ body {
 }
 .long-banner .long-banner-pagination .swiper-pagination-bullet-active {
     background: #fff;
+}
+
+/*
+ * Real Reviews — replica of the original theme's `mainReview` board carousel.
+ * Review cards (photo + BEST badge + rating + content) on a beige band.
+ */
+.main-review {
+    position: relative;
+    margin: 60px auto 20px;
+    background: #f5f0e9;
+}
+.main-review .inner {
+    position: relative;
+    width: 92%;
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 60px 0 70px;
+    box-sizing: border-box;
+}
+.main-review .sub-title {
+    text-align: center;
+}
+.main-review .sub-title .sub {
+    display: block;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    color: #6f2dbd;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+}
+.main-review .sub-title h2 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+    color: #222;
+    letter-spacing: -0.5px;
+}
+.main-review .review-slide {
+    width: 100%;
+    margin: 32px 0 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+.main-review .review-card {
+    position: relative;
+    overflow: hidden;
+    font-size: 12px;
+    box-sizing: border-box;
+}
+.main-review .best-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    background: #6f2dbd;
+    border-radius: 100%;
+}
+.main-review .review-img {
+    border-radius: 16px;
+    overflow: hidden;
+}
+.main-review .review-img img {
+    width: 100%;
+    transition: transform 0.3s ease-in;
+}
+.main-review .review-img:hover img {
+    transform: scale(1.1);
+}
+.main-review .txt {
+    padding: 12px 0;
+    box-sizing: border-box;
+}
+.main-review .txt .info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 12px;
+    margin: 0 auto 15px;
+    border-bottom: 1px solid #ddd;
+}
+.main-review .txt .info .product {
+    font-size: 14px;
+    font-weight: 500;
+    color: #000;
+}
+.main-review .txt .txt-area {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 0 8px;
+}
+.main-review .txt .point-rate {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.main-review .txt .point-rate img {
+    max-width: 62px;
+}
+.main-review .txt .point-rate .count {
+    font-size: 13px;
+    color: #222;
+    font-weight: 600;
+}
+.main-review .txt .writer {
+    font-size: 13px;
+    color: #888888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.main-review .txt .cont {
+    font-size: 14px;
+    color: #222;
+    line-height: 1.5em;
+    height: 3em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.main-review .btn {
+    margin: 56px auto 0;
+    text-align: center;
+}
+.main-review .btn a {
+    display: inline-block;
+    position: relative;
+    padding: 0.8rem 4rem;
+    font-size: 0.9rem;
+    line-height: 0.9rem;
+    color: #fff;
+    font-weight: 500;
+    border: 1px solid #222;
+    background: #222;
+    border-radius: 30px;
+    transition: all 0.3s;
+}
+.main-review .btn a:hover {
+    color: #222;
+    background: transparent;
 }

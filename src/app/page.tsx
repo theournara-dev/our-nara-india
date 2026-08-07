@@ -1,5 +1,6 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { LongBanner } from "@/components/content/long-banner";
+import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
@@ -94,44 +95,15 @@ export default async function HomePage() {
         />
       ))}
 
+      {/* Reviews */}
+      <ReviewsSection />
+
       {/* Available now */}
       {/*<ThemeProductSection
         sub="AVAILABLE NOW"
         title="In Stock"
         products={availableNow}
       />*/}
-
-      {/* Reviews */}
-      {/*<div className="w-full">
-        <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2">
-          <div className="mx-auto mb-2">
-            <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
-              <span className="block text-base font-medium leading-6 text-point-500">
-                REAL REVIEWS
-              </span>
-              What Our Customers Say
-            </h2>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {reviews.map((review) => (
-              <figure
-                key={review.id}
-                className="rounded-2xl border border-zinc-100 bg-white p-5"
-              >
-                <div className="mb-2 text-amber-500">
-                  {"★".repeat(review.rating)}
-                </div>
-                <figcaption className="mb-2 font-semibold text-zinc-900">
-                  {review.author}
-                </figcaption>
-                <p className="text-sm leading-relaxed text-zinc-600">
-                  {review.body}
-                </p>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </div>*/}
 
       {/* Instagram */}
       {/*<div className="w-full">

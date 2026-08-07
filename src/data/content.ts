@@ -12,6 +12,8 @@ export interface Review {
   title?: string;
   body: string;
   date: string;
+  /** Review photo shown in the card's square image area. */
+  image: string;
 }
 
 export const reviews: Review[] = [
@@ -23,6 +25,7 @@ export const reviews: Review[] = [
     title: "Beautiful packaging, lovely textures",
     body: "I'd been seeing Nowater everywhere lately, so I finally decided to get the full set. Honest, opening everything at once felt like such a treat! The packaging is beautiful, and the textures feel really nice and not too heavy on my skin.",
     date: "2026-07-28",
+    image: "https://placehold.co/600x600/e7c6a0/2a2a2a?text=Review",
   },
   {
     id: "r2",
@@ -32,6 +35,7 @@ export const reviews: Review[] = [
     title: "Skin looks brighter",
     body: "The cleansing oil and vitamin serum are the ones I keep reaching for the most. Hoping to come back with clearer, healthier-looking skin soon.",
     date: "2026-07-19",
+    image: "https://placehold.co/600x600/d6c7ff/2a2a2a?text=Review",
   },
   {
     id: "r3",
@@ -41,6 +45,7 @@ export const reviews: Review[] = [
     title: "Soothing and cooling",
     body: "Very soothing on breakout-prone skin. Leaves a nice clean feel without being drying.",
     date: "2026-07-10",
+    image: "https://placehold.co/600x600/c9e2ff/2a2a2a?text=Review",
   },
 ];
 
