@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
-import { ProductGrid } from "@/components/product/product-grid";
+import { CategoryProductList } from "@/components/product/category-product-list";
 import { getCategoryBySlug } from "@/data/categories";
 import { getProductsByCategorySlug } from "@/data/products";
 
@@ -33,16 +34,27 @@ export default async function CategoryPage({
   if (!category) notFound();
 
   return (
-    <Container className="py-10">
-      <div className="mb-8">
-        <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-          Category
-        </p>
-        <h1 className="font-display text-3xl font-semibold text-zinc-900">
+    <Container className="py-8">
+      {/* Breadcrumb, matching the original .path */}
+      <nav className="mb-6 text-xs text-[#888]">
+        <ol className="flex flex-wrap items-center gap-1.5">
+          <li>
+            <Link href="/" className="hover:text-point-500">
+              HOME
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li className="font-medium text-[#222]">{category.name}</li>
+        </ol>
+      </nav>
+
+      <div className="mb-6">
+        <h1 className="font-display text-3xl font-semibold text-ink">
           {category.name}
         </h1>
       </div>
-      <ProductGrid products={products} />
+
+      <CategoryProductList products={products} />
     </Container>
   );
 }
