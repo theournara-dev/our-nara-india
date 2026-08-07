@@ -1,8 +1,10 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
+import { LongBanner } from "@/components/content/long-banner";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
+import { longBanners } from "@/data/banners";
 import { getFeaturedProducts, getProductsBySlugs } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
 import { tripleBannerBoxes } from "@/data/triple-banner";
@@ -64,6 +66,9 @@ export default async function HomePage() {
         products={preOrder}
         moreHref="/category/pre-order"
       />
+
+      {/* Long banner */}
+      <LongBanner banners={longBanners} />
 
       {/* Brand sections */}
       {/*{brandList.slice(0, 6).map((brand) => (
