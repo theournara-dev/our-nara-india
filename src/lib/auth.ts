@@ -81,6 +81,10 @@ export const auth = betterAuth({
       roles,
       defaultRole: "normal",
       adminRoles: ["admin"],
+      // Shown to a blocked user when they try to sign in (the admin plugin
+      // throws this from the session.create hook).
+      bannedUserMessage:
+        "Your account has been blocked. If you believe this is a mistake, please contact support.",
     }),
     emailOTP({
       // Send the 6-digit code via the shared email template.

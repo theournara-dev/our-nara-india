@@ -2,8 +2,15 @@
 
 import { useAccountUser } from "./account-provider";
 
+const ROLE_LABELS: Record<string, string> = {
+  normal: "Member",
+  manager: "Manager",
+  admin: "Admin",
+};
+
 export default function AccountOverviewPage() {
   const user = useAccountUser();
+  const roleLabel = ROLE_LABELS[user.role ?? "normal"] ?? user.role ?? "Member";
 
   return (
     <div>
@@ -11,6 +18,10 @@ export default function AccountOverviewPage() {
         Welcome back, {user.name.split(" ")[0]}
       </h1>
       <p className="mb-6 text-sm text-zinc-500">{user.email}</p>
+      <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-600">
+        <span className="text-zinc-400">Role</span>
+        <span className="font-medium text-zinc-900">{roleLabel}</span>
+      </p>
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-2xl border border-zinc-100 bg-white p-5">
           <p className="text-sm text-zinc-500">Orders</p>

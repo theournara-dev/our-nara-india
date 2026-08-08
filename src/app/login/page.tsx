@@ -65,6 +65,12 @@ export default function LoginPage() {
           );
           return;
         }
+        // Account blocked by an admin — surface the banned message clearly.
+        if (res.error.code === "BANNED_USER") {
+          setError(res.error.message ?? "Your account has been blocked.");
+          notify.error(id, "Account blocked", res.error.message);
+          return;
+        }
         setError(res.error.message ?? "Invalid ID/email or password.");
         notify.error(id, "Sign in failed", res.error.message);
         return;

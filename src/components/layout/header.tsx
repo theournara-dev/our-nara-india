@@ -98,7 +98,13 @@ export function Header() {
   const user = session?.user;
   // While the session is still loading, don't flash the logged-out dropdown —
   // show no menu until we know the real auth state.
-  const links = user ? loggedInLinks : isPending ? null : logStateLinks;
+  const links = user
+    ? user.role === "admin"
+      ? [{ label: "Dashboard", href: "/admin" }, ...loggedInLinks]
+      : loggedInLinks
+    : isPending
+      ? null
+      : logStateLinks;
 
   return (
     <div>
