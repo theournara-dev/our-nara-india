@@ -1,21 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 // Force dynamic rendering so the session + role guard always runs, even if a
 // future admin page has no server data fetching.
 export const dynamic = "force-dynamic";
-
-const nav = [
-  { label: "Overview", href: "/admin" },
-  { label: "Users & Permissions", href: "/admin/users" },
-  { label: "Products", href: "/admin/products" },
-  { label: "Orders", href: "/admin/orders" },
-  { label: "Coupons", href: "/admin/coupons" },
-  { label: "Reviews", href: "/admin/reviews" },
-  { label: "Banners & Popups", href: "/admin/banners" },
-];
 
 export default async function AdminLayout({
   children,
@@ -41,24 +31,33 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <div className="mx-auto flex max-w-[1400px] gap-8 px-6 py-8">
-        <aside className="w-56 shrink-0">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+      {/* Mobile notice — the dashboard is desktop-only. */}
+      <div className="flex min-h-screen items-center justify-center p-6 md:hidden">
+        <div className="max-w-sm text-center">
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-400">
             Admin
           </p>
-          <nav className="space-y-1" aria-label="Admin">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="block rounded-lg px-3 py-2 text-sm text-zinc-600 transition-colors hover:bg-white hover:text-zinc-900"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+          <h1 className="mb-2 text-xl font-semibold text-zinc-900">
+            Admin dashboard
+          </h1>
+          <p className="text-sm text-zinc-500">
+            The admin dashboard is designed for desktop. Please open it on a
+            desktop or tablet for the best experience.
+          </p>
+        </div>
+      </div>
+
+      {/* Desktop dashboard */}
+      <div className="hidden md:block">
+        <div className="mx-auto flex max-w-[1400px] gap-8 px-6 py-8">
+          <aside className="w-56 shrink-0">
+            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+              Admin
+            </p>
+            <AdminNav />
+          </aside>
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
       </div>
     </div>
   );
