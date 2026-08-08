@@ -56,7 +56,7 @@ export function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl"
+        className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
       >
         <h3 className="text-left text-lg font-semibold text-zinc-900">
           {title}
@@ -64,7 +64,7 @@ export function ConfirmDialog({
         {message && (
           <p className="mt-2 text-left text-sm text-zinc-500">{message}</p>
         )}
-        <div className="mt-6 flex flex-wrap justify-start gap-2">
+        <div className="mt-6 flex items-center gap-2">
           <button
             type="button"
             onClick={onCancel}
@@ -73,16 +73,6 @@ export function ConfirmDialog({
           >
             Cancel
           </button>
-          {secondaryLabel && onSecondary && (
-            <button
-              type="button"
-              onClick={onSecondary}
-              disabled={busy}
-              className="h-9 rounded border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
-            >
-              {secondaryLabel}
-            </button>
-          )}
           <button
             type="button"
             onClick={onConfirm}
@@ -91,6 +81,16 @@ export function ConfirmDialog({
           >
             {busy ? "Please wait…" : confirmLabel}
           </button>
+          {secondaryLabel && onSecondary && (
+            <button
+              type="button"
+              onClick={onSecondary}
+              disabled={busy}
+              className="ml-auto h-9 rounded border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+            >
+              {secondaryLabel}
+            </button>
+          )}
         </div>
       </div>
     </div>
