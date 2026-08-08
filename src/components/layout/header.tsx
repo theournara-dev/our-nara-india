@@ -7,6 +7,7 @@ import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { getSubcategorySlugByName } from "@/data/subcategories";
 import { authClient } from "@/lib/auth-client";
+import { notify } from "@/lib/toast";
 
 /**
  * Header (Tailwind-native). Faithful port of the original Cafe24 header,
@@ -340,9 +341,23 @@ export function Header() {
                             <button
                               type="button"
                               onClick={async () => {
-                                await authClient.signOut();
-                                router.push("/");
-                                router.refresh();
+                                const id = notify.loading("Signing out…");
+                                try {
+                                  await authClient.signOut();
+                                  notify.success(
+                                    id,
+                                    "Signed out",
+                                    "See you soon!",
+                                  );
+                                  router.push("/");
+                                  router.refresh();
+                                } catch {
+                                  notify.error(
+                                    id,
+                                    "Sign out failed",
+                                    "Please try again.",
+                                  );
+                                }
                               }}
                               className="block w-full truncate pl-2 pt-0.5 text-left text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
                             >
