@@ -237,9 +237,12 @@ export function Header() {
                         >
                           {item.label}
                           {item.label === "AMBASSADOR" && (
-                            <img
+                            <Image
                               src="/upload/goodymall1/icon/right_extra_bold.svg"
                               alt="arrow"
+                              width={20}
+                              height={20}
+                              unoptimized
                               className="w-5 brightness-0 invert"
                             />
                           )}
@@ -280,9 +283,12 @@ export function Header() {
                 <li className="group relative min-w-6 px-1 max-md:hidden">
                   <div>
                     <Link href="/account">
-                      <img
+                      <Image
                         src="/upload/goodymall1/icon/user.svg"
                         alt="my page"
+                        width={32}
+                        height={32}
+                        unoptimized
                         className="w-8"
                       />
                     </Link>
@@ -320,9 +326,12 @@ export function Header() {
                       0
                     </span>
                     <div>
-                      <img
+                      <Image
                         src="/upload/goodymall1/icon/basket.svg"
                         alt="basket"
+                        width={32}
+                        height={32}
+                        unoptimized
                         className="w-8 max-md:w-7"
                       />
                     </div>
@@ -338,9 +347,12 @@ export function Header() {
                   onClick={() => setSearchOpen(true)}
                   className="flex items-center justify-center"
                 >
-                  <img
+                  <Image
                     src="/upload/goodymall1/icon/search.svg"
                     alt="search"
+                    width={32}
+                    height={32}
+                    unoptimized
                     className="mx-auto block w-8 max-md:w-7"
                   />
                 </button>
@@ -354,9 +366,12 @@ export function Header() {
                   onClick={() => setMobileOpen(true)}
                   className="block h-full w-full cursor-pointer"
                 >
-                  <img
+                  <Image
                     src="/upload/goodymall1/icon/option.svg"
                     alt="menu"
+                    width={28}
+                    height={28}
+                    unoptimized
                     className="h-7 w-7"
                   />
                 </button>
@@ -528,9 +543,12 @@ export function Header() {
                                   }
                                   className="absolute right-0 top-0 flex h-10 w-10 cursor-pointer items-center justify-center"
                                 >
-                                  <img
+                                  <Image
                                     src="/upload/goodymall1/en/layout/bg_snb_1depth_on.gif"
                                     alt=""
+                                    width={30}
+                                    height={18}
+                                    unoptimized
                                     className={`h-[18px] w-[30px] transition-transform duration-300 ${
                                       open ? "rotate-180" : ""
                                     }`}
