@@ -6,44 +6,33 @@ import type { ProductCard } from "@/data/products";
 
 interface CategoryProductListProps {
   products: ProductCard[];
+  /** Columns on large screens (default 5 for category pages). */
+  columns?: 3 | 4 | 5;
 }
 
 type SortKey =
   "new" | "name" | "lowest" | "highest" | "manufacturer" | "review";
 
-/** Sort options matching the original category toolbar. */
+/** Sort options matching the original category/brand toolbar. */
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "new", label: "New Item" },
   { key: "name", label: "Product Name" },
   { key: "lowest", label: "Lowest Price" },
   { key: "highest", label: "Highest Price" },
+  { key: "manufacturer", label: "Manufacture Company" },
+  { key: "review", label: "Product Review" },
 ];
-
-interface CategoryProductListProps {
-  products: ProductCard[];
-  /** Extra sort options shown on brand pages (kept in list order). */
-  extraSort?: Exclude<SortKey, "new" | "name" | "lowest" | "highest">[];
-}
 
 /**
  * Category product list mirroring the original toolbar: a sort dropdown and a
- * product count above the grid. Sorting is local (temporary static catalog).
+ * "N items were found." count above the grid. Sorting is local (temporary
+ * static catalog). No top/bottom borders on the toolbar.
  */
 export function CategoryProductList({
   products,
-  extraSort = [],
+  columns = 5,
 }: CategoryProductListProps) {
   const [sort, setSort] = useState<SortKey>("new");
-
-  const options = [
-    ...SORT_OPTIONS,
-    ...(extraSort.includes("manufacturer")
-      ? [{ key: "manufacturer" as const, label: "Manufacture Company" }]
-      : []),
-    ...(extraSort.includes("review")
-      ? [{ key: "review" as const, label: "Product Review" }]
-      : []),
-  ];
 
   const sorted = useMemo(() => {
     const arr = [...products];
@@ -65,12 +54,13 @@ export function CategoryProductList({
 
   return (
     <div>
-      <div className="flex items-center justify-between border-y border-[#e9e9e9] py-3">
+      <div className="flex items-center justify-between py-3">
         <span className="text-sm text-[#555]">
           <strong className="font-semibold text-[#222]">
             {products.length}
           </strong>{" "}
-          item{products.length !== 1 ? "s" : ""}
+          item{products.length !== 1 ? "s" : ""}{" "}
+          {products.length === 1 ? "was" : "were"} found.
         </span>
         <label className="flex items-center gap-2">
           <span className="text-xs text-[#888]">Sort</span>
@@ -79,7 +69,7 @@ export function CategoryProductList({
             onChange={(e) => setSort(e.target.value as SortKey)}
             className="h-9 cursor-pointer rounded border border-[#e9e9e9] bg-white px-2 text-sm text-[#222] outline-none focus:border-point-500"
           >
-            {options.map((o) => (
+            {SORT_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>
                 {o.label}
               </option>
@@ -89,7 +79,7 @@ export function CategoryProductList({
       </div>
 
       <div className="mt-6">
-        <ProductGrid products={sorted} />
+        <ProductGrid products={sorted} columns={columns} />
       </div>
     </div>
   );

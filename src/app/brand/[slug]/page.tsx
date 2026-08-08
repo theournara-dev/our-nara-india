@@ -74,11 +74,8 @@ export default async function BrandPage({
         </div>
       </div>
 
-      {/* Sort toolbar (brand pages add Manufacture Company + Product Review) */}
-      <CategoryProductList
-        products={products}
-        extraSort={["manufacturer", "review"]}
-      />
+      {/* Sort toolbar (all 6 options incl. Manufacture Company + Product Review) */}
+      <CategoryProductList products={products} columns={5} />
     </Container>
   );
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
+import { getSubcategorySlugByName } from "@/data/subcategories";
 
 /**
  * Header (Tailwind-native). Faithful port of the original Cafe24 header,
@@ -255,16 +256,25 @@ export function Header() {
                                 : "left-1/2 -translate-x-1/2"
                             }`}
                           >
-                            {item.children.map((child) => (
-                              <li key={child}>
-                                <Link
-                                  href={item.href}
-                                  className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
-                                >
-                                  {child}
-                                </Link>
-                              </li>
-                            ))}
+                            {item.children.map((child) => {
+                              const subSlug = getSubcategorySlugByName(
+                                item.href.split("/").pop() ?? "",
+                                child,
+                              );
+                              const childHref = subSlug
+                                ? `${item.href}?sub=${subSlug}`
+                                : item.href;
+                              return (
+                                <li key={child}>
+                                  <Link
+                                    href={childHref}
+                                    className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
+                                  >
+                                    {child}
+                                  </Link>
+                                </li>
+                              );
+                            })}
                           </ul>
                         )}
                       </li>
@@ -558,17 +568,26 @@ export function Header() {
                             </div>
                             {hasChildren && open && (
                               <ul className="pb-1.5">
-                                {item.children.map((child) => (
-                                  <li key={child}>
-                                    <Link
-                                      href={item.href}
-                                      onClick={() => setMobileOpen(false)}
-                                      className="block py-[7px] pl-5 pr-5 text-sm font-normal text-[#555]"
-                                    >
-                                      {child}
-                                    </Link>
-                                  </li>
-                                ))}
+                                {item.children.map((child) => {
+                                  const subSlug = getSubcategorySlugByName(
+                                    item.href.split("/").pop() ?? "",
+                                    child,
+                                  );
+                                  const childHref = subSlug
+                                    ? `${item.href}?sub=${subSlug}`
+                                    : item.href;
+                                  return (
+                                    <li key={child}>
+                                      <Link
+                                        href={childHref}
+                                        onClick={() => setMobileOpen(false)}
+                                        className="block py-[7px] pl-5 pr-5 text-sm font-normal text-[#555]"
+                                      >
+                                        {child}
+                                      </Link>
+                                    </li>
+                                  );
+                                })}
                               </ul>
                             )}
                           </li>
