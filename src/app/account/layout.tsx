@@ -23,9 +23,19 @@ export default async function AccountLayout({
 }: LayoutProps<"/account">) {
   // Authoritative server-side check: the proxy only verifies a cookie exists,
   // so we validate the actual session here and redirect if it's missing,
-  // expired, or revoked.
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  // expired, or revoked. A corrupt cookie must not 500 the page — treat it as
+  // no session so it gets cleared and the user is sent to login.
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    session = null;
+  }
+  if (!session) {
+    // ?session=expired tells the middleware to clear the stale cookie so this
+    // doesn't bounce login → account → login forever.
+    redirect("/login?session=expired");
+  }
 
   const user = {
     id: session.user.id,

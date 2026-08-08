@@ -22,10 +22,21 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  // A corrupt/unreadable session cookie must not 500 the page — treat it as
+  // no session so it gets cleared and the user is sent to login.
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    session = null;
+  }
   const role = session?.user?.role;
 
-  if (!session) redirect("/login");
+  if (!session) {
+    // ?session=expired tells the middleware to clear the stale cookie so this
+    // doesn't bounce login → account → login forever.
+    redirect("/login?session=expired");
+  }
   if (role !== "admin") redirect("/account");
 
   return (

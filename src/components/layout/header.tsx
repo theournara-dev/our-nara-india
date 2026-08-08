@@ -93,9 +93,11 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openCate, setOpenCate] = useState<string | null>(null);
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
-  const links = user ? loggedInLinks : logStateLinks;
+  // While the session is still loading, don't flash the logged-out dropdown —
+  // show no menu until we know the real auth state.
+  const links = user ? loggedInLinks : isPending ? null : logStateLinks;
 
   return (
     <div>
@@ -318,42 +320,46 @@ export function Header() {
                       />
                     </Link>
                   </div>
-                  <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)] animate-[motion_0.6s_linear_0s_infinite_alternate]">
-                    <div className="flex h-5 w-[60px] items-center justify-center rounded bg-point-500">
-                      <Link
-                        href="/join"
-                        className="text-[11px] leading-5 text-white"
-                      >
-                        +3,000P
-                      </Link>
+                  {!user && (
+                    <div className="absolute -top-5 left-1/2 z-[99] h-5 -translate-x-1/2 text-center shadow-[1px_1px_10px_rgba(0,0,0,0.1)] animate-[motion_0.6s_linear_0s_infinite_alternate]">
+                      <div className="flex h-5 w-[60px] items-center justify-center rounded bg-point-500">
+                        <Link
+                          href="/join"
+                          className="text-[11px] leading-5 text-white"
+                        >
+                          +3,000P
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                  <ul className="invisible absolute left-1/2 top-[70px] z-40 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[45px] group-hover:opacity-100">
-                    {links.map((link) => (
-                      <li key={link.label}>
-                        {link.label === "Logout" ? (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              await authClient.signOut();
-                              router.push("/");
-                              router.refresh();
-                            }}
-                            className="block w-full truncate pl-2 pt-0.5 text-left text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
-                          >
-                            {link.label}
-                          </button>
-                        ) : (
-                          <Link
-                            href={link.href}
-                            className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
-                          >
-                            {link.label}
-                          </Link>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  )}
+                  {links && (
+                    <ul className="invisible absolute left-1/2 top-[70px] z-40 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[45px] group-hover:opacity-100">
+                      {links.map((link) => (
+                        <li key={link.label}>
+                          {link.label === "Logout" ? (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await authClient.signOut();
+                                router.push("/");
+                                router.refresh();
+                              }}
+                              className="block w-full truncate pl-2 pt-0.5 text-left text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
+                            >
+                              {link.label}
+                            </button>
+                          ) : (
+                            <Link
+                              href={link.href}
+                              className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
+                            >
+                              {link.label}
+                            </Link>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
                 {/* Basket */}
                 <li className="relative min-w-6 px-1">
