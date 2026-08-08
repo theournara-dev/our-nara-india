@@ -9,7 +9,7 @@ import { Reveal } from "@/components/ui/reveal";
 import Image from "next/image";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
-import { longBanners } from "@/data/banners";
+import { getLongBanners } from "@/data/banners";
 import { getBrand } from "@/data/catalog";
 import { homeBrandSections } from "@/data/home-sections";
 import {
@@ -23,6 +23,7 @@ import { tripleBannerBoxes } from "@/data/triple-banner";
 export default async function HomePage() {
   const featured = await getFeaturedProducts(4);
   const shorts = await getShortsPicks();
+  const longBanners = await getLongBanners();
   const tripleBoxes = await Promise.all(
     tripleBannerBoxes.map(async (box) => ({
       ...box,
@@ -66,15 +67,15 @@ export default async function HomePage() {
           <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2 max-[767px]:w-[96%]">
             <div className="mx-auto mb-2">
               <h2 className="flex items-center justify-center gap-2 text-2xl font-bold leading-8 tracking-tight text-ink">
-              <Image
-                src="/upload/goodymall1/en/main/shorts.png"
-                alt=""
-                width={41}
-                height={51}
-                unoptimized
-                className="inline-block h-auto w-7"
-              />
-              Shorts Picks
+                <Image
+                  src="/upload/goodymall1/en/main/shorts.png"
+                  alt=""
+                  width={41}
+                  height={51}
+                  unoptimized
+                  className="inline-block h-auto w-7"
+                />
+                Shorts Picks
               </h2>
             </div>
             <ShortsCarousel picks={shorts} />

@@ -324,8 +324,144 @@ async function main() {
     }
   }
 
+  console.log("Seeding banners & popups…");
+  // Content seeds are wiped and recreated on each run so re-seeding always
+  // matches this baseline. Only the original long banner is active (keeps the
+  // homepage visually identical); everything else ships inactive so you can
+  // enable it from the admin dashboard (`/admin/banners`, `/admin/popups`).
+  const banners = [
+    {
+      title: "OUR:NARA",
+      placement: "long",
+      image: "/upload/goodymall1/en/main/long__banner01.jpg",
+      mobileImage: "/upload/goodymall1/en/main/m_long__banner01.jpg",
+      alt: "OUR:NARA banner",
+      href: "/",
+      sortOrder: 0,
+      isActive: true,
+    },
+    {
+      title: "Sunscreen Edit · LA THEORIE",
+      placement: "long",
+      image: "/upload/goodymall1/en/main/main_box_img01_2.jpg",
+      mobileImage: "/upload/goodymall1/en/main/main_box_img01_2.jpg",
+      alt: "Sunscreen care from LA THEORIE",
+      href: "/brand/la-theorie",
+      sortOrder: 1,
+      isActive: false,
+    },
+    {
+      title: "Cica Panthenol Soothing Cream",
+      placement: "long",
+      image: "/upload/goodymall1/en/main/main_box_img02_1.jpg",
+      mobileImage: "/upload/goodymall1/en/main/main_box_img02_1.jpg",
+      alt: "Cica panthenol soothing cream from HE:ARIM",
+      href: "/brand/hearim",
+      sortOrder: 2,
+      isActive: false,
+    },
+    {
+      title: "Peptide Volume Master Essence",
+      placement: "hero",
+      image: "/upload/goodymall1/en/main/main_box_img03_1.jpg",
+      mobileImage: null,
+      alt: "Peptide volume master essence from DR.PEPTI",
+      href: "/brand/dr-pepti",
+      sortOrder: 0,
+      isActive: false,
+    },
+    {
+      title: "Stem Cell Peptide Retinol",
+      placement: "hero",
+      image: "/upload/goodymall1/en/main/main_box_img04_1.jpg",
+      mobileImage: null,
+      alt: "Stem cell peptide retinol from FABYOU",
+      href: "/brand/fabyou",
+      sortOrder: 1,
+      isActive: false,
+    },
+    {
+      title: "Brightening Glow Care",
+      placement: "triple",
+      image: "/upload/goodymall1/en/main/prd_banner_01.jpg",
+      mobileImage: null,
+      alt: "Brightening glow care",
+      href: "/category/skin-care",
+      sortOrder: 0,
+      isActive: false,
+    },
+    {
+      title: "Firm, Plump & Glow",
+      placement: "triple",
+      image: "/upload/goodymall1/en/main/prd_banner_02.jpg",
+      mobileImage: null,
+      alt: "Collagen care for firmer-looking skin",
+      href: "/category/skin-care",
+      sortOrder: 1,
+      isActive: false,
+    },
+    {
+      title: "Lifting · Anti-Aging",
+      placement: "triple",
+      image: "/upload/goodymall1/en/main/prd_banner__03.jpg",
+      mobileImage: null,
+      alt: "Lifting and anti-aging care",
+      href: "/category/pre-order",
+      sortOrder: 2,
+      isActive: false,
+    },
+  ];
+
+  const popups = [
+    {
+      title: "Welcome to OUR:NARA",
+      body: "Create your account to get 10% off your first order and earn Mileage on every purchase.",
+      image: null,
+      ctaLabel: "Join now",
+      ctaHref: "/join",
+      placement: "center",
+      frequency: "once",
+      isActive: false,
+    },
+    {
+      title: "Pre-orders now open",
+      body: "Order now, ships later. Pre-orders are billed at checkout and dispatched when stock arrives.",
+      image: null,
+      ctaLabel: "Shop pre-orders",
+      ctaHref: "/category/pre-order",
+      placement: "center",
+      frequency: "once",
+      isActive: false,
+    },
+    {
+      title: "Worldwide shipping",
+      body: "We ship from India & Korea to customers worldwide.",
+      image: null,
+      ctaLabel: "Shop now",
+      ctaHref: "/",
+      placement: "bottom",
+      frequency: "every",
+      isActive: false,
+    },
+    {
+      title: "Summer Glow Event",
+      body: "Brightening and glow-boosting picks for warmer days.",
+      image: "/upload/goodymall1/en/main/prd_banner_01.jpg",
+      ctaLabel: "Shop now",
+      ctaHref: "/search",
+      placement: "center",
+      frequency: "once",
+      isActive: false,
+    },
+  ];
+
+  await db.banner.deleteMany({});
+  await db.banner.createMany({ data: banners });
+  await db.popup.deleteMany({});
+  await db.popup.createMany({ data: popups });
+
   console.log(
-    `Done. ${brands.length} brands, ${categories.length} categories, ${products.length} products.`,
+    `Done. ${brands.length} brands, ${categories.length} categories, ${products.length} products, ${banners.length} banners, ${popups.length} popups.`,
   );
 }
 

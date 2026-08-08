@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
 import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { PopupHost } from "@/components/layout/popup-host";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="flex-1">{children}</main>
         <Footer />
         <Toaster richColors position="top-center" />
+        <PopupHost />
       </body>
     </html>
   );

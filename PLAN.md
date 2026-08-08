@@ -112,7 +112,8 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 
 - [x] Finalize schema (users, catalog, orders, payments, coupons, mileage, reviews…)
 - [x] Migrations + Prisma Studio available
-- [x] Admin dashboard shell (`/admin`, admin-only) + overview stats + **user permission management** (`/admin/users`: role + per-user permission matrix). Products/orders/coupons/reviews/banners pages are placeholders in the nav.
+- [x] Admin dashboard shell (`/admin`, admin-only) + overview stats + **user permission management** (`/admin/users`: role + per-user permission matrix).
+- [x] **Banners & Popups** admin (`/admin/banners` + `/admin/popups`: list/new/edit mirroring products) — DB-backed `Banner` + `Popup` models, image upload, scheduling, active toggles. Long banners render on the homepage (DB with static fallback); active popups render via a client host + `/api/popups`.
 - [ ] Seed / import real catalog from Cafe24 (seed script scaffolded, not yet run)
 
 **Phase 2 — Storefront catalog** `done`

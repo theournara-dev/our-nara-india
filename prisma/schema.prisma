@@ -421,3 +421,51 @@ model RecentView {
   @@index([userId, viewedAt])
   @@map("recent_views")
 }
+
+// ---------------------------------------------------------------------------
+// Content: banners & popups (managed from the admin dashboard)
+// ---------------------------------------------------------------------------
+
+// A promotional image banner rendered in a storefront section. `placement`
+// selects which section it belongs to (long banner, hero carousel, triple
+// banner) — the long-banner placement is currently rendered on the homepage.
+model Banner {
+  id          String    @id @default(cuid())
+  title       String // admin label, e.g. "Summer Sale"
+  placement   String    @default("long") // "long" | "hero" | "triple"
+  image       String // desktop image URL
+  mobileImage String?   @map("mobile_image") // taller mobile variant; falls back to image
+  alt         String?
+  href        String? // optional link target
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  startsAt    DateTime? @map("starts_at")
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive, placement, sortOrder])
+  @@map("banners")
+}
+
+// A promotional overlay shown to visitors (e.g. a sale announcement or
+// newsletter signup). `frequency` controls whether it appears once per browser
+// session ("once") or on every page load ("every").
+model Popup {
+  id        String    @id @default(cuid())
+  title     String? // headline
+  body      String? // supporting text
+  image     String? // optional image
+  ctaLabel  String?   @map("cta_label") // button label
+  ctaHref   String?   @map("cta_href") // button link target
+  placement String    @default("center") // "center" | "bottom"
+  frequency String    @default("once") // "once" | "every"
+  isActive  Boolean   @default(true) @map("is_active")
+  startsAt  DateTime? @map("starts_at")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive, placement])
+  @@map("popups")
+}
