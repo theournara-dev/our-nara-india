@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
+import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { SITE } from "@/lib/constants";
@@ -56,6 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

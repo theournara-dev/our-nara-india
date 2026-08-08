@@ -15,18 +15,43 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Accounts
+// Accounts (Better Auth)
 // ---------------------------------------------------------------------------
+// The User model is the Better Auth user. Passwords are stored in the Account
+// model (providerId = "credential"), not on the user. `role` is one of
+// normal | manager | admin; `permissions` holds per-user permission overrides
+// merged on top of the role defaults (see src/lib/permissions.ts).
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  name         String
-  phone        String?
-  isAdmin      Boolean  @default(false) @map("is_admin")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id              String    @id @default(cuid())
+  name            String
+  email           String    @unique
+  emailVerified   Boolean   @default(false) @map("email_verified")
+  image           String?
+  username        String?   @unique // member ID (lowercase a-z0-9, 4-16)
+  displayUsername String?   @map("display_username")
+  role            String    @default("normal")
+  banned          Boolean?  @default(false)
+  banReason       String?   @map("ban_reason")
+  banExpires      DateTime? @map("ban_expires")
+
+  // Custom signup fields
+  firstName     String? @map("first_name")
+  lastName      String? @map("last_name")
+  country       String?
+  addressLine1  String? @map("address_line1")
+  addressLine2  String? @map("address_line2")
+  city          String?
+  state         String?
+  postal        String?
+  telephoneCode String? @map("telephone_code")
+  telephone     String?
+  mobileCode    String? @map("mobile_code")
+  mobile        String?
+  permissions   Json? // per-user permission overrides, e.g. { product: ["create"] }
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   addresses         Address[]
   orders            Order[]
@@ -35,8 +60,60 @@ model User {
   recentViews       RecentView[]
   mileage           MileageLedger[]
   couponRedemptions CouponRedemption[]
+  sessions          Session[]
+  accounts          Account[]
 
   @@map("users")
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  expiresAt      DateTime @map("expires_at")
+  token          String   @unique
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  userId         String   @map("user_id")
+  impersonatedBy String?  @map("impersonated_by")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([identifier])
+  @@map("verifications")
 }
 
 model Address {

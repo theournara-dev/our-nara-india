@@ -58,6 +58,10 @@ Still to do
 - **Styling:** Tailwind CSS v4
 - **Data:** PostgreSQL on **Neon** + **Prisma** (schema + migrations); static
   content modules (`src/data/`) still serve the storefront UI
+- **Auth:** **Better Auth** (email/password + username id-or-email login, Google
+  OAuth, DB sessions via the Prisma adapter); admin dashboard at `/admin`
+- **Email:** **Resend** (verification OTPs, transactional mail)
+- **Toasts:** **Sonner** (loading-first toasts via `src/lib/toast.ts`)
 - **Payments (scaffolded):** Razorpay server module + webhook handlers
 - **Deployment:** Vercel
 
@@ -68,6 +72,9 @@ The app connects to a Neon PostgreSQL instance via Prisma. Env vars live in
 
 - `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct)
 - `PGHOST` / `PGUSER` / `PGPASSWORD` / `PGDATABASE` (as exported by Neon)
+- `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL` (the public site URL; `http://localhost:3000` in dev)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` (Google OAuth — empty until configured)
+- `RESEND_API_KEY` / `EMAIL_FROM` / `RESEND_TEST_TO` (transactional email)
 - `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` / `RAZORPAY_WEBHOOK_SECRET`
 - `NEXT_PUBLIC_SITE_URL`
 
@@ -83,6 +90,11 @@ npm run db:studio      # browse/edit data in Prisma Studio
 
 > The generated client lives in `src/generated/prisma` and is gitignored; a
 > `postinstall` hook runs `prisma generate` so builds (and CI) regenerate it.
+>
+> **Email verification** is gated behind `EMAIL_VERIFICATION_ENABLED` in
+> `src/lib/config.ts` and is currently **off** until the Resend sending domain
+> (`our-nara.com`) is verified. When on, sign-up is a 3-step wizard
+> (policies → profile → verify email).
 
 ## Run it
 
@@ -110,8 +122,9 @@ npm run dev            # http://localhost:3000
 | `/stores`                                                      | Store locations                                                                                |
 | `/community`, `/community/[board]`                             | Community (Notice / Q&A / FAQ)                                                                 |
 | `/ambassador`                                                  | Ambassador program                                                                             |
-| `/account` · `/orders` · `/wishlist` · `/mileage` · `/coupons` | My Page area                                                                                   |
-| `/login` · `/join`                                             | Auth pages (static forms)                                                                      |
+| `/account` · `/orders` · `/wishlist` · `/mileage` · `/coupons` | My Page area (requires login)                                                                  |
+| `/login` · `/join`                                             | Auth: sign in (id-or-email), sign-up wizard                                                    |
+| `/admin`                                                       | Admin dashboard (admin-only; users/permissions page)                                           |
 | `/cart` · `/coupons`                                           | Cart + Couponzone                                                                              |
 | `/about` · `/help`                                             | Company + Help/FAQ                                                                             |
 | `/policies/terms` · `/policies/refund` · `/policies/privacy`   | Legal pages                                                                                    |
@@ -165,7 +178,8 @@ scripts/import-from-live.ts  # catalog importer from the live store
 
 1. Wire the storefront's `src/data/*` queries to the live Prisma catalog
    (schema + Neon DB ready)
-2. Cart + auth (accounts, guest cart)
+2. Verify the Resend sending domain, then enable email verification
+   (`EMAIL_VERIFICATION_ENABLED = true`) and configure Google OAuth
 3. Checkout using the existing Razorpay order/webhook handlers
 4. Mileage (loyalty points) + coupons
 5. Multi-currency pricing

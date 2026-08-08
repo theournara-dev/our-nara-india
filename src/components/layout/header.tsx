@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { getSubcategorySlugByName } from "@/data/subcategories";
+import { authClient } from "@/lib/auth-client";
 
 /**
  * Header (Tailwind-native). Faithful port of the original Cafe24 header,
@@ -76,11 +78,24 @@ const logStateLinks = [
   { label: "Couponzone", href: "/coupons", className: "couponzoneBanner" },
 ];
 
+const loggedInLinks = [
+  { label: "My page", href: "/account" },
+  { label: "Order", href: "/account/orders" },
+  { label: "Wish", href: "/account/wishlist" },
+  { label: "Mileage", href: "/account/mileage" },
+  { label: "Coupon", href: "/account/coupons" },
+  { label: "Logout", href: "/api/auth/sign-out", className: "log" },
+];
+
 export function Header() {
+  const router = useRouter();
   const [allCateOpen, setAllCateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openCate, setOpenCate] = useState<string | null>(null);
+  const { data: session } = authClient.useSession();
+  const user = session?.user;
+  const links = user ? loggedInLinks : logStateLinks;
 
   return (
     <div>
@@ -314,14 +329,28 @@ export function Header() {
                     </div>
                   </div>
                   <ul className="invisible absolute left-1/2 top-[70px] z-40 w-[120px] -translate-x-1/2 rounded-md border border-[#e9e9e9] bg-white p-2.5 text-left opacity-0 shadow-[1px_1px_10px_rgba(0,0,0,0.1)] transition-all duration-500 group-hover:visible group-hover:top-[45px] group-hover:opacity-100">
-                    {logStateLinks.map((link) => (
+                    {links.map((link) => (
                       <li key={link.label}>
-                        <Link
-                          href={link.href}
-                          className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
-                        >
-                          {link.label}
-                        </Link>
+                        {link.label === "Logout" ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await authClient.signOut();
+                              router.push("/");
+                              router.refresh();
+                            }}
+                            className="block w-full truncate pl-2 pt-0.5 text-left text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
+                          >
+                            {link.label}
+                          </button>
+                        ) : (
+                          <Link
+                            href={link.href}
+                            className="block truncate pl-2 pt-0.5 text-[13px] leading-5 text-[#787878] hover:pl-[13px] hover:pr-2 hover:text-black"
+                          >
+                            {link.label}
+                          </Link>
+                        )}
                       </li>
                     ))}
                   </ul>

@@ -47,3 +47,7 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated/prisma
+
+# Zed agent skills / editor tooling (not part of the app)
+/.agents/
+/skills-lock.json

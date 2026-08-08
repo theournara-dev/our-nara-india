@@ -105,14 +105,14 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 - [x] Prisma schema + Neon PostgreSQL connection (env vars in `.env`)
 - [x] Migration `20260805153535_init` applied to Neon (all tables created)
 - [x] Deployment: build fixed (client generated via `postinstall`; lazy DB client)
-- [ ] Auth.js (Auth.js v5) — credentials + OAuth, sessions in DB
+- [x] Auth — **Better Auth** (email/password + username for id-or-email login, Google OAuth, DB sessions via Prisma adapter). Roles: `normal`/`manager`/`admin` with per-user permission overrides (`src/lib/permissions.ts`). Login/join wired, `/account` protected via `proxy.ts`. Email verification is behind a feature flag (`src/lib/config.ts` → `EMAIL_VERIFICATION_ENABLED`) — currently **off** until the Resend sending domain (`our-nara.com`) is verified. Rate limits are relaxed from Better Auth's strict defaults via `rateLimit.customRules` in `src/lib/auth.ts` (sign-in/sign-up `10/60s`, OTP sends `5/60s`); branded `error.tsx`/`global-error.tsx` pages and per-action 429 toasts replace the bare “This page couldn’t load” screen.
 - [ ] CI (optional)
 
 **Phase 1 — Data & admin** `in progress`
 
 - [x] Finalize schema (users, catalog, orders, payments, coupons, mileage, reviews…)
 - [x] Migrations + Prisma Studio available
-- [ ] Admin CRUD: brands, categories, products (+ options, images, pre-order), coupons, inventory, community, review moderation
+- [x] Admin dashboard shell (`/admin`, admin-only) + overview stats + **user permission management** (`/admin/users`: role + per-user permission matrix). Products/orders/coupons/reviews/banners pages are placeholders in the nav.
 - [ ] Seed / import real catalog from Cafe24 (seed script scaffolded, not yet run)
 
 **Phase 2 — Storefront catalog** `done`
@@ -154,7 +154,9 @@ CountryRate   countryCode, name, enabled, shippingCents, currency, lang
 - **Cafe24 migration:** Check if the client can export products/orders. If not, plan a content entry effort.
 - **Payment provider availability in India** (Razorpay vs PayU/Cashfree/Instamojo) and **international** (Stripe) must be confirmed — affects Phase 4 significantly.
 - **KYC/legal:** Accepting payments requires the merchant to have the right PG accounts/KYC; we just integrate.
-- Keep secrets out of repo; use Vercel env vars per environment.
+- **Rate limiting:** Better Auth enables rate limiting in production by default with very tight limits (auth endpoints `3/10s`) that lock users out during normal use. We override these in `src/lib/auth.ts` (`rateLimit.customRules`). Per-client IP buckets apply via Next.js `x-forwarded-for`. If deploying behind a proxy, add your proxy IPs to `advanced.ipAddress.trustedProxies` so each real client gets its own bucket.
+- **Error UX:** `src/app/error.tsx` + `src/app/global-error.tsx` provide a branded recovery page, and login/join detect HTTP 429 to show a clear “too many attempts” toast instead of a generic failure.
+- **Keep secrets out of repo;** use Vercel env vars per environment.
 
 ## 8. Immediate Next Step
 
