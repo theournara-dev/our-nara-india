@@ -10,11 +10,12 @@ import {
 } from "@/lib/page-builder/types";
 import { updateSection } from "@/app/admin/pages/actions";
 import { ADMIN_SECTION_TYPES } from "./admin-registry";
+import { Sheet } from "./sheet";
 import { TextField, inputCls, type SectionFormOptions } from "./fields";
 
 /**
- * Modal for editing a section: admin label, type-specific settings, and
- * visibility/schedule. Saves via a server action and reports the saved row
+ * Right-side sheet for editing a section: admin label, type-specific settings,
+ * and visibility/schedule. Saves via a server action and reports the saved row
  * back so the builder can sync its list.
  */
 export function SectionEditDialog({
@@ -64,110 +65,95 @@ export function SectionEditDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {meta?.label ?? section.type}
-          </h2>
+    <Sheet
+      title={meta?.label ?? section.type}
+      subtitle={section.title ?? "Untitled section"}
+      onClose={onClose}
+      wide
+      footer={
+        <div className="flex items-center gap-3">
+          <button
+            onClick={save}
+            disabled={pending}
+            className="h-10 flex-1 rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
+          >
+            {pending ? "Saving…" : "Save changes"}
+          </button>
           <button
             onClick={onClose}
-            aria-label="Close"
-            className="text-zinc-400 hover:text-zinc-600"
+            className="h-10 rounded border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
           >
-            ✕
+            Cancel
           </button>
         </div>
-
-        <div className="space-y-5">
+      }
+    >
+      <div className="space-y-6">
+        <div>
           <TextField
             label="Admin label"
             value={title}
             onChange={setTitle}
             hint="Internal name shown in the builder."
           />
+        </div>
 
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-              Settings
-            </h3>
-            {AdminForm ? (
-              <AdminForm
-                config={config}
-                onChange={setConfig}
-                options={options}
-              />
-            ) : (
-              <p className="text-sm text-zinc-400">
-                No settings for this section.
-              </p>
-            )}
-          </div>
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            Settings
+          </h3>
+          {AdminForm ? (
+            <AdminForm
+              config={config}
+              onChange={setConfig}
+              options={options}
+            />
+          ) : (
+            <p className="text-sm text-zinc-400">
+              No settings for this section.
+            </p>
+          )}
+        </div>
 
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-              Visibility
-            </h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-zinc-500">
-                  Starts at
-                </span>
-                <input
-                  type="datetime-local"
-                  value={startsAt}
-                  onChange={(e) => setStartsAt(e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-zinc-500">
-                  Expires at
-                </span>
-                <input
-                  type="datetime-local"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-            </div>
-            <label className="mt-3 flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-300 accent-point-500"
-              />
-              <span className="text-sm text-zinc-700">
-                Active on storefront
+        <div>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            Visibility
+          </h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-zinc-500">
+                Starts at
               </span>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(e) => setStartsAt(e.target.value)}
+                className={inputCls}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-zinc-500">
+                Expires at
+              </span>
+              <input
+                type="datetime-local"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                className={inputCls}
+              />
             </label>
           </div>
-        </div>
-
-        <div className="mt-6 flex items-center gap-3">
-          <button
-            onClick={save}
-            disabled={pending}
-            className="h-10 rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
-          >
-            {pending ? "Saving…" : "Save changes"}
-          </button>
-          <button
-            onClick={onClose}
-            className="h-10 rounded border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-          >
-            Cancel
-          </button>
+          <label className="mt-3 flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+            />
+            <span className="text-sm text-zinc-700">Active on storefront</span>
+          </label>
         </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

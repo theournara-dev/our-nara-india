@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
+  HeroSlidesField,
   ProductSourceField,
   TextField,
   TripleBannerBoxesField,
@@ -31,8 +32,14 @@ function NoSettings() {
   );
 }
 
-export function HeroForm() {
-  return <NoSettings />;
+export function HeroForm({ config, onChange, options }: FormProps) {
+  return (
+    <HeroSlidesField
+      value={config.slides ?? []}
+      onChange={(slides) => onChange({ ...config, slides })}
+      options={options}
+    />
+  );
 }
 
 export function ShortsForm() {

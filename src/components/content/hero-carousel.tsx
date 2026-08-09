@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Swiper from "swiper";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
@@ -10,88 +10,28 @@ import "swiper/css/pagination";
 import { SliderNav } from "@/components/ui/slider-nav";
 import { toLoopable } from "@/lib/carousel";
 import { HiPause, HiPlay } from "react-icons/hi2";
-
-interface HeroSlide {
-  image: string;
-  title?: string;
-  description?: string;
-  brand?: string;
-  href?: string;
-  preorder?: boolean;
-}
-
-const slides: HeroSlide[] = [
-  {
-    image: "/upload/goodymall1/en/main/main_box_img01_2.jpg",
-    title: "Sunscreen",
-    description:
-      "Strong UV protection without the oily feel\nmade gentle for sensitive, breakout-prone skin",
-    brand: "LA THEORIE",
-    href: "/brand/la-theorie",
-    preorder: true,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img02_1.jpg",
-    title: "Cica Panthenol Soothing Cream",
-    description:
-      "Calms sensitive skin with cica and panthenol\nwhile locking in deep moisture for lasting comfort",
-    brand: "HEARIM",
-    href: "/brand/hearim",
-    preorder: true,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img03_1.jpg",
-    title: "Peptide Volume Master Essence",
-    description:
-      "Multi-peptide care helps revive tired skin\nfor a firmer, healthier, and more vibrant look",
-    brand: "DR.PEPTI",
-    href: "/brand/dr-pepti",
-    preorder: true,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img04_1.jpg",
-    title: "Stem Cell Peptide Retinol",
-    description:
-      "Overnight repair with stem cells, peptide and retinol\nfor firmer, smoother, barrier-strengthened skin",
-    brand: "FABYOU",
-    href: "/brand/fabyou",
-    preorder: true,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img05_1.jpg",
-    title: "Nopore Cleansing Oil",
-    description:
-      "Melts away makeup, blackheads, and excess sebum\nwhile leaving skin clean and hydrated.",
-    brand: "NOWATER",
-    href: "/brand/nowater",
-    preorder: false,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img06_1.jpg",
-    title: "Heavy Blurring Slip Fit Lip Cheek",
-    description:
-      "Airy texture melts into every curve\nfor a naturally toned, soft-matte finish.",
-    brand: "HEVVY MAKEUP",
-    href: "/brand/hevvy-makeup",
-    preorder: true,
-  },
-  {
-    image: "/upload/goodymall1/en/main/main_box_img07.jpg",
-    href: "/",
-  },
-];
+import type { HeroSlide } from "@/lib/page-builder/types";
+import { defaultHeroSlides } from "@/data/hero";
 
 // Largest `slidesPerView` in the breakpoints below (1200px → 3.7). `toLoopable`
 // duplicates the slides only if there aren't enough for Swiper's loop mode.
 const MAX_SLIDES_PER_VIEW = 3.7;
-const heroSlides = toLoopable(slides, MAX_SLIDES_PER_VIEW, (s) => s.image);
 
-export function HeroCarousel() {
+export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<Swiper | null>(null);
   const [paused, setPaused] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // Fall back to the original slides when the section has none, so the
+  // homepage never regresses before content is configured.
+  const items: HeroSlide[] =
+    slides.length > 0 ? slides : defaultHeroSlides;
+  const heroSlides = useMemo(
+    () => toLoopable(items, MAX_SLIDES_PER_VIEW, (s) => s.image),
+    [items],
+  );
 
   useEffect(() => {
     const el = rootRef.current;
@@ -148,15 +88,7 @@ export function HeroCarousel() {
                 </div>
               )}
               <Link href={slide.href ?? "/"}>
-                <Image
-                  src={slide.image}
-                  alt={slide.title ?? "OUR:NARA"}
-                  width={830}
-                  height={1100}
-                  sizes="(min-width: 1200px) 27vw, (min-width: 768px) 40vw, 85vw"
-                  loading="eager" // carousel slides are translated off-screen; eager avoids blank slides
-                  className="h-auto w-full"
-                />
+                <HeroImage slide={slide} />
               </Link>
               {slide.title && (
                 <div className="absolute bottom-[8%] left-[10%] text-left tracking-tight text-white max-md:bottom-[6%] max-md:left-[8%]">
@@ -204,6 +136,38 @@ export function HeroCarousel() {
           </button>
         </div>
       </SliderNav>
+    </div>
+  );
+}
+
+/**
+ * Hero slide image with a loading state. While the (often large) image is
+ * loading it shows a subtle shimmer placeholder instead of a blank white area,
+ * then fades the image in once it has decoded.
+ */
+function HeroImage({ slide }: { slide: HeroSlide }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative overflow-hidden rounded-xl bg-zinc-100">
+      {!loaded && (
+        <div
+          aria-hidden
+          className="absolute inset-0 animate-pulse bg-zinc-200"
+        />
+      )}
+      <Image
+        src={slide.image}
+        alt={slide.title ?? "OUR:NARA"}
+        width={830}
+        height={1100}
+        sizes="(min-width: 1200px) 27vw, (min-width: 768px) 40vw, 85vw"
+        loading="eager" // carousel slides are translated off-screen; eager avoids blank slides
+        onLoad={() => setLoaded(true)}
+        className={`relative h-auto w-full transition-opacity duration-500 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+      />
     </div>
   );
 }

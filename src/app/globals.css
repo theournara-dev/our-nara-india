@@ -659,3 +659,23 @@ body {
         transition: none;
     }
 }
+
+/*
+ * Admin sheet (right-side settings panel). Slides in from the right edge.
+ */
+@keyframes sheet-in {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+.sheet-in {
+    animation: sheet-in 0.28s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+    .sheet-in {
+        animation: none;
+    }
+}

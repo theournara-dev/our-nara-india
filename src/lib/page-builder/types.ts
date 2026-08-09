@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { defaultHeroSlides } from "@/data/hero";
 
 /**
  * Shared page-builder types + config schemas.
@@ -44,6 +45,23 @@ export const productSourceSchema = z.discriminatedUnion("kind", [
 ]);
 export type ProductSource = z.infer<typeof productSourceSchema>;
 
+// ── Hero slide ──────────────────────────────────────────────────────────────
+
+export const heroSlideSchema = z.object({
+  id: z.string(),
+  image: z.string().min(1, "Image is required"),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  brand: z.string().optional(),
+  href: z.string().optional(),
+  preorder: z.boolean().default(false),
+  // When set, the slide is linked to a product so the editor can pre-fill
+  // (and re-sync) image/name/link from it. The rendered fields above still act
+  // as overrides the user can edit freely.
+  productSlug: z.string().optional(),
+});
+export type HeroSlide = z.infer<typeof heroSlideSchema>;
+
 // ── Triple banner box ───────────────────────────────────────────────────────
 
 export const tripleBannerBoxSchema = z.object({
@@ -59,7 +77,9 @@ export type TripleBannerBox = z.infer<typeof tripleBannerBoxSchema>;
 // ── Per-type config schemas ────────────────────────────────────────────────
 
 export const sectionConfigSchemas = {
-  hero: z.object({}),
+  hero: z.object({
+    slides: z.array(heroSlideSchema).default([]),
+  }),
   "product-carousel": z.object({
     sub: z.string().optional(),
     title: z.string().min(1, "Title is required"),
@@ -104,7 +124,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     label: "Hero carousel",
     description: "Full-width hero slider with autoplay.",
     configSchema: sectionConfigSchemas.hero,
-    defaultConfig: () => ({}),
+    defaultConfig: () => ({ slides: defaultHeroSlides }),
   },
   {
     type: "product-carousel",

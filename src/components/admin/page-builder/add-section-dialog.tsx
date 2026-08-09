@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import {
   SECTION_TYPE_META,
   type SectionType,
 } from "@/lib/page-builder/types";
-import { SelectField } from "./fields";
+import { Sheet } from "./sheet";
 
 /**
- * Modal for adding a new section: pick a type, then it's appended to the end
- * of the page (drag it into place afterwards).
+ * Right-side sheet for adding a section: pick a type, then it's appended to
+ * the end of the page (drag it into place afterwards).
  */
 export function AddSectionDialog({
   onClose,
@@ -19,45 +20,59 @@ export function AddSectionDialog({
   onAdd: (type: SectionType) => void;
 }) {
   const [type, setType] = useState<SectionType>("product-grid");
-  const meta = SECTION_TYPE_META.find((m) => m.type === type);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
+    <Sheet
+      title="Add section"
+      subtitle="Choose what kind of section to add"
+      onClose={onClose}
+      footer={
+        <button
+          onClick={() => onAdd(type)}
+          className="h-10 w-full rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600"
+        >
+          Add section
+        </button>
+      }
     >
-      <div
-        className="w-full max-w-md rounded-2xl bg-white p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-4 text-lg font-semibold text-zinc-900">Add section</h2>
-        <SelectField
-          label="Section type"
-          value={type}
-          onChange={(v) => setType(v as SectionType)}
-          options={SECTION_TYPE_META.map((m) => ({
-            value: m.type,
-            label: m.label,
-          }))}
-        />
-        {meta?.description && (
-          <p className="mt-2 text-sm text-zinc-400">{meta.description}</p>
-        )}
-        <div className="mt-6 flex items-center gap-3">
-          <button
-            onClick={() => onAdd(type)}
-            className="h-10 rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600"
-          >
-            Add section
-          </button>
-          <button
-            onClick={onClose}
-            className="h-10 rounded border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-          >
-            Cancel
-          </button>
-        </div>
+      <div className="space-y-2">
+        {SECTION_TYPE_META.map((meta) => {
+          const selected = meta.type === type;
+          return (
+            <button
+              key={meta.type}
+              type="button"
+              onClick={() => setType(meta.type)}
+              aria-pressed={selected}
+              className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+                selected
+                  ? "border-point-500 bg-point-50"
+                  : "border-zinc-200 hover:border-zinc-300"
+              }`}
+            >
+              <span
+                className={`mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                  selected
+                    ? "border-point-500 bg-point-500 text-white"
+                    : "border-zinc-300"
+                }`}
+              >
+                {selected && <Check size={12} />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-zinc-900">
+                  {meta.label}
+                </span>
+                {meta.description && (
+                  <span className="mt-0.5 block text-xs text-zinc-400">
+                    {meta.description}
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
-    </div>
+    </Sheet>
   );
 }

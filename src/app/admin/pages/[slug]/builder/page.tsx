@@ -23,17 +23,34 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
       orderBy: { name: "asc" },
     }),
     db.product.findMany({
-      select: { slug: true, name: true },
+      select: {
+        slug: true,
+        name: true,
+        images: true,
+        summary: true,
+        isPreOrder: true,
+        brand: { select: { slug: true, name: true } },
+      },
       where: { isActive: true },
       orderBy: { name: "asc" },
       take: 500,
     }),
   ]);
 
+  const productOptions = products.map((p) => ({
+    slug: p.slug,
+    name: p.name,
+    image: p.images[0] ?? "",
+    brandSlug: p.brand.slug,
+    brandName: p.brand.name,
+    isPreOrder: p.isPreOrder,
+    summary: p.summary ?? undefined,
+  }));
+
   return (
     <PageBuilder
       page={page}
-      options={{ brands, categories, products }}
+      options={{ brands, categories, products: productOptions }}
     />
   );
 }

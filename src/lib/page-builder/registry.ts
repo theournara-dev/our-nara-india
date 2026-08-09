@@ -21,6 +21,7 @@ import {
 import { getShortsPicks } from "@/data/shorts";
 import {
   SECTION_TYPE_META_BY_TYPE,
+  type HeroSlide,
   type ProductSource,
   type SectionType,
   type SectionTypeMeta,
@@ -61,7 +62,10 @@ export interface SectionTypeServer {
 export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   hero: {
     meta: SECTION_TYPE_META_BY_TYPE.hero,
-    load: async () => ({}),
+    load: async (config) => {
+      const slides = (config as { slides?: HeroSlide[] })?.slides ?? [];
+      return { slides };
+    },
     component: HeroCarousel,
   },
   "product-carousel": {

@@ -9,6 +9,7 @@ import { db } from "../src/lib/db";
 import { Prisma } from "../src/generated/prisma/client";
 import { homeBrandSections } from "../src/data/home-sections";
 import { tripleBannerBoxes } from "../src/data/triple-banner";
+import { defaultHeroSlides } from "../src/data/hero";
 
 function image(label: string, color = "e7c6a0"): string {
   return `https://placehold.co/600x600/${color}/2a2a2a?text=${encodeURIComponent(label)}`;
@@ -489,7 +490,7 @@ async function seedHomePage() {
   ];
 
   const sections = [
-    { type: "hero", title: "Hero carousel", config: {} },
+    { type: "hero", title: "Hero carousel", config: { slides: defaultHeroSlides } },
     {
       type: "product-carousel",
       title: "Top Picks",
