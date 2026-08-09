@@ -14,4 +14,7 @@ export const notify = {
   error(id: string | number, message: string, description?: string) {
     toast.error(message, { id, description });
   },
+  dismiss(id: string | number) {
+    toast.dismiss(id);
+  },
 };

@@ -1,0 +1,138 @@
+import "server-only";
+import type { ComponentType } from "react";
+import { HeroCarousel } from "@/components/content/hero-carousel";
+import { InstagramSection } from "@/components/content/instagram-section";
+import { LongBanner } from "@/components/content/long-banner";
+import { ReviewsSection } from "@/components/content/reviews-section";
+import { ShortsCarousel } from "@/components/content/shorts-carousel";
+import { TripleBanner } from "@/components/content/triple-banner";
+import { ProductGridSection } from "@/components/theme/product-grid-section";
+import { ThemeProductSection } from "@/components/theme/product-section";
+import { getLongBanners } from "@/data/banners";
+import type { ProductCard } from "@/data/products";
+import {
+  getAvailableNow,
+  getFeaturedProducts,
+  getPreOrderProducts,
+  getProductsByBrandSlug,
+  getProductsByCategorySlug,
+  getProductsBySlugs,
+} from "@/data/products";
+import { getShortsPicks } from "@/data/shorts";
+import {
+  SECTION_TYPE_META_BY_TYPE,
+  type ProductSource,
+  type SectionType,
+  type SectionTypeMeta,
+} from "./types";
+
+/**
+ * Server-side section-type registry. Maps each section type to its renderer
+ * component and a `load(config)` that fetches the props the renderer needs.
+ * The storefront renderer iterates this registry to build a page.
+ */
+
+async function loadProducts(source: ProductSource): Promise<ProductCard[]> {
+  switch (source.kind) {
+    case "featured":
+      return getFeaturedProducts(source.take);
+    case "pre-order":
+      return getPreOrderProducts(source.take);
+    case "available-now":
+      return getAvailableNow(source.take);
+    case "brand":
+      return getProductsByBrandSlug(source.slug, source.take);
+    case "category":
+      return getProductsByCategorySlug(source.slug, source.take);
+    case "slugs":
+      return getProductsBySlugs(source.slugs);
+  }
+}
+
+export interface SectionTypeServer {
+  meta: SectionTypeMeta;
+  load: (config: unknown) => Promise<Record<string, unknown>>;
+  // Dynamic registry: each type's component accepts whatever props its `load`
+  // returns, so the props type can't be narrowed to a single shape.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  component: ComponentType<any>;
+}
+
+export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
+  hero: {
+    meta: SECTION_TYPE_META_BY_TYPE.hero,
+    load: async () => ({}),
+    component: HeroCarousel,
+  },
+  "product-carousel": {
+    meta: SECTION_TYPE_META_BY_TYPE["product-carousel"],
+    load: async (config) => {
+      const c = config as {
+        sub?: string;
+        title: string;
+        source: ProductSource;
+      };
+      return {
+        sub: c.sub,
+        title: c.title,
+        products: await loadProducts(c.source),
+      };
+    },
+    component: ThemeProductSection,
+  },
+  shorts: {
+    meta: SECTION_TYPE_META_BY_TYPE.shorts,
+    load: async () => ({ picks: await getShortsPicks() }),
+    component: ShortsCarousel,
+  },
+  "triple-banner": {
+    meta: SECTION_TYPE_META_BY_TYPE["triple-banner"],
+    load: async (config) => {
+      const c = config as { boxes?: { productSlugs: string[] }[] };
+      return {
+        boxes: await Promise.all(
+          (c.boxes ?? []).map(async (box) => ({
+            ...box,
+            products: await getProductsBySlugs(box.productSlugs),
+          })),
+        ),
+      };
+    },
+    component: TripleBanner,
+  },
+  "product-grid": {
+    meta: SECTION_TYPE_META_BY_TYPE["product-grid"],
+    load: async (config) => {
+      const c = config as {
+        sub?: string;
+        title: string;
+        source: ProductSource;
+        moreHref?: string;
+        moreLabel?: string;
+      };
+      return {
+        sub: c.sub,
+        title: c.title,
+        products: await loadProducts(c.source),
+        moreHref: c.moreHref,
+        moreLabel: c.moreLabel,
+      };
+    },
+    component: ProductGridSection,
+  },
+  "long-banner": {
+    meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
+    load: async () => ({ banners: await getLongBanners() }),
+    component: LongBanner,
+  },
+  reviews: {
+    meta: SECTION_TYPE_META_BY_TYPE.reviews,
+    load: async () => ({}),
+    component: ReviewsSection,
+  },
+  instagram: {
+    meta: SECTION_TYPE_META_BY_TYPE.instagram,
+    load: async () => ({}),
+    component: InstagramSection,
+  },
+};

@@ -10,6 +10,7 @@ const nav = [
   { label: "Orders", href: "/admin/orders" },
   { label: "Coupons", href: "/admin/coupons" },
   { label: "Reviews", href: "/admin/reviews" },
+  { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },
 ];
 

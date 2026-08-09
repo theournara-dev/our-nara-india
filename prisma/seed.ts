@@ -6,6 +6,9 @@
  */
 import "dotenv/config";
 import { db } from "../src/lib/db";
+import { Prisma } from "../src/generated/prisma/client";
+import { homeBrandSections } from "../src/data/home-sections";
+import { tripleBannerBoxes } from "../src/data/triple-banner";
 
 function image(label: string, color = "e7c6a0"): string {
   return `https://placehold.co/600x600/${color}/2a2a2a?text=${encodeURIComponent(label)}`;
@@ -460,9 +463,89 @@ async function main() {
   await db.popup.deleteMany({});
   await db.popup.createMany({ data: popups });
 
+  console.log("Seeding home page…");
+  await seedHomePage();
+
   console.log(
     `Done. ${brands.length} brands, ${categories.length} categories, ${products.length} products, ${banners.length} banners, ${popups.length} popups.`,
   );
+}
+
+/**
+ * Seed the `home` Page with the original homepage's sections, in order, so the
+ * page builder reflects the real structure and edits are meaningful. Idempotent:
+ * the page is upserted and its sections are wiped + recreated on each run.
+ */
+async function seedHomePage() {
+  const brandRows = await db.brand.findMany();
+  const brandName = new Map(brandRows.map((b) => [b.slug, b.name]));
+
+  const preOrderSlugs = [
+    "centella-dark-spot-solution-ampoule-pro",
+    "peptide-volume-neck-cream",
+    "peptide-volume-lifting-pro-essence-30ml",
+    "centella-moist-soothing-gel-cream-ex",
+    "peptide-volume-lifting-pro-essence-100ml",
+  ];
+
+  const sections = [
+    { type: "hero", title: "Hero carousel", config: {} },
+    {
+      type: "product-carousel",
+      title: "Top Picks",
+      config: {
+        sub: "TOP PICKS",
+        title: "BEST PRODUCT",
+        source: { kind: "featured", take: 4 },
+      },
+    },
+    { type: "shorts", title: "Shorts Picks", config: {} },
+    {
+      type: "triple-banner",
+      title: "Triple banner",
+      config: { boxes: tripleBannerBoxes },
+    },
+    {
+      type: "product-grid",
+      title: "PRE-ORDER",
+      config: {
+        sub: "AVAILABLE NOW",
+        title: "PRE-ORDER",
+        source: { kind: "slugs", slugs: preOrderSlugs },
+        moreHref: "/category/pre-order",
+      },
+    },
+    { type: "long-banner", title: "Long banner", config: {} },
+    ...homeBrandSections.map((s) => ({
+      type: "product-grid",
+      title: brandName.get(s.slug) ?? s.slug,
+      config: {
+        sub: s.sub,
+        title: brandName.get(s.slug) ?? s.slug,
+        source: { kind: "brand", slug: s.slug, take: 20 },
+        moreHref: `/brand/${s.slug}`,
+      },
+    })),
+    { type: "reviews", title: "Reviews", config: {} },
+    { type: "instagram", title: "Instagram", config: {} },
+  ];
+
+  const page = await db.page.upsert({
+    where: { slug: "home" },
+    create: { slug: "home", title: "Home", isActive: true },
+    update: { title: "Home", isActive: true },
+  });
+  await db.pageSection.deleteMany({ where: { pageId: page.id } });
+  await db.pageSection.createMany({
+    data: sections.map((s, i) => ({
+      pageId: page.id,
+      type: s.type,
+      title: s.title,
+      config: s.config as Prisma.InputJsonValue,
+      sortOrder: i,
+      isActive: true,
+    })),
+  });
 }
 
 main()
