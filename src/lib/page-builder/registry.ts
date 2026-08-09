@@ -17,13 +17,14 @@ import {
   getProductsByCategorySlug,
   getProductsBySlugs,
 } from "@/data/products";
-import { getShortsPicks } from "@/data/shorts";
 import {
   SECTION_TYPE_META_BY_TYPE,
   type HeroSlide,
+  type InstagramItem,
   type ProductSource,
   type SectionType,
   type SectionTypeMeta,
+  type ShortItem,
 } from "./types";
 
 /**
@@ -93,7 +94,21 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   },
   shorts: {
     meta: SECTION_TYPE_META_BY_TYPE.shorts,
-    load: async () => ({ picks: await getShortsPicks() }),
+    load: async (config) => {
+      const items = (config as { items?: ShortItem[] })?.items ?? [];
+      return {
+        picks: items.map((item, i) => ({
+          id: item.id,
+          title: item.title ?? "",
+          videoUrl: item.videoUrl ?? "",
+          videoFile: item.videoFile,
+          posterUrl: item.posterUrl,
+          productHref: item.productHref,
+          sortOrder: i,
+          isActive: true,
+        })),
+      };
+    },
     component: ShortsCarousel,
   },
   "triple-banner": {
@@ -123,7 +138,17 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   },
   instagram: {
     meta: SECTION_TYPE_META_BY_TYPE.instagram,
-    load: async () => ({}),
+    load: async (config) => {
+      const items = (config as { items?: InstagramItem[] })?.items ?? [];
+      return {
+        posts: items.map((item) => ({
+          id: item.id,
+          image: item.image,
+          alt: item.alt ?? "Instagram post",
+          href: item.href ?? "",
+        })),
+      };
+    },
     component: InstagramSection,
   },
 };

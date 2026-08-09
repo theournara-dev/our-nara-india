@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
+import { notify } from "@/lib/toast";
 import type {
   HeroSlide,
+  InstagramItem,
   ProductSource,
+  ShortItem,
   TripleBannerBox,
 } from "@/lib/page-builder/types";
 
@@ -415,10 +419,7 @@ export function HeroSlidesField({
           (p) => p.slug === slide.productSlug,
         );
         return (
-          <div
-            key={slide.id}
-            className="rounded-lg border border-zinc-200"
-          >
+          <div key={slide.id} className="rounded-lg border border-zinc-200">
             {/* Header — always visible; click to expand/collapse. */}
             <div
               className="flex cursor-pointer items-center gap-2 p-3"
@@ -445,7 +446,10 @@ export function HeroSlidesField({
                   aria-hidden
                 />
               ) : (
-                <div className="h-10 w-10 shrink-0 rounded bg-zinc-100" aria-hidden />
+                <div
+                  className="h-10 w-10 shrink-0 rounded bg-zinc-100"
+                  aria-hidden
+                />
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-zinc-800">
@@ -668,5 +672,397 @@ export function TripleBannerBoxesField({
         + Add panel
       </button>
     </div>
+  );
+}
+
+// ── Collapsible list (shared by shorts / instagram editors) ──────────────────
+
+const listIconBtn =
+  "inline-flex h-7 w-7 items-center justify-center rounded text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-30 disabled:hover:bg-transparent";
+
+/**
+ * A collapsible, reorderable list editor. Each item collapses to a header
+ * (title + subtitle + move/remove) and expands to a body rendered by the
+ * caller. Used by the shorts and instagram section forms.
+ */
+export function CollapsibleList<T extends { id: string }>({
+  items,
+  onChange,
+  getTitle,
+  getSubtitle,
+  renderBody,
+  addLabel,
+  newItem,
+}: {
+  items: T[];
+  onChange: (items: T[]) => void;
+  getTitle: (item: T, index: number) => string;
+  getSubtitle?: (item: T) => string;
+  renderBody: (item: T, update: (patch: Partial<T>) => void) => ReactNode;
+  addLabel: string;
+  newItem: () => Omit<T, "id">;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [expandAll, setExpandAll] = useState(false);
+
+  function update(id: string, patch: Partial<T>) {
+    onChange(items.map((i) => (i.id === id ? { ...i, ...patch } : i)));
+  }
+  function add() {
+    const id = crypto.randomUUID();
+    onChange([...items, { ...newItem(), id } as T]);
+    setExpandAll(false);
+    setOpenId(id);
+  }
+  function remove(id: string) {
+    onChange(items.filter((i) => i.id !== id));
+    if (openId === id) setOpenId(null);
+  }
+  function move(id: string, dir: -1 | 1) {
+    const index = items.findIndex((i) => i.id === id);
+    const target = index + dir;
+    if (index < 0 || target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  }
+  function toggle(id: string) {
+    setExpandAll(false);
+    setOpenId((cur) => (cur === id ? null : id));
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.length > 0 && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setExpandAll((v) => !v);
+              setOpenId(null);
+            }}
+            className="text-xs font-medium text-zinc-500 hover:text-point-500"
+          >
+            {expandAll ? "Collapse all" : "Expand all"}
+          </button>
+        </div>
+      )}
+
+      {items.length === 0 && (
+        <p className="text-sm text-zinc-400">No items yet.</p>
+      )}
+
+      {items.map((item, i) => {
+        const open = expandAll || item.id === openId;
+        return (
+          <div key={item.id} className="rounded-lg border border-zinc-200">
+            <div
+              className="flex cursor-pointer items-center gap-2 p-3"
+              onClick={() => toggle(item.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggle(item.id);
+                }
+              }}
+            >
+              <ChevronRight
+                size={16}
+                className={`shrink-0 text-zinc-400 transition-transform ${
+                  open ? "rotate-90" : ""
+                }`}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-zinc-800">
+                  {getTitle(item, i)}
+                </div>
+                {getSubtitle && (
+                  <div className="truncate text-xs text-zinc-400">
+                    {getSubtitle(item)}
+                  </div>
+                )}
+              </div>
+              <div
+                className="flex shrink-0 items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => move(item.id, -1)}
+                  disabled={i === 0}
+                  aria-label="Move up"
+                  className={listIconBtn}
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(item.id, 1)}
+                  disabled={i === items.length - 1}
+                  aria-label="Move down"
+                  className={listIconBtn}
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(item.id)}
+                  className="ml-1 text-xs font-medium text-red-500 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            {open && (
+              <div className="border-t border-zinc-100 p-3">
+                {renderBody(item, (patch) => update(item.id, patch))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
+      >
+        {addLabel}
+      </button>
+    </div>
+  );
+}
+
+// ── Video source (link or uploaded file) ─────────────────────────────────────
+
+/**
+ * Video source picker: paste a reel link (YouTube / TikTok / Instagram) or
+ * upload a video file. Keeps `videoUrl` and `videoFile` in sync with the
+ * parent form (only one is set at a time).
+ */
+export function VideoField({
+  value,
+  onChange,
+  hint,
+}: {
+  value: { videoUrl?: string; videoFile?: string };
+  onChange: (v: { videoUrl?: string; videoFile?: string }) => void;
+  hint?: string;
+}) {
+  const [mode, setMode] = useState<"link" | "upload">(
+    value.videoFile ? "upload" : "link",
+  );
+  const [urlInput, setUrlInput] = useState(value.videoUrl ?? "");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    const toastId = notify.loading("Uploading video…");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/upload-video", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        url?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.url) {
+        throw new Error(data.error ?? "Upload failed");
+      }
+      onChange({ videoFile: data.url, videoUrl: undefined });
+      notify.success(toastId, "Video uploaded");
+    } catch (err) {
+      notify.error(
+        toastId,
+        "Upload failed",
+        err instanceof Error ? err.message : "Try again.",
+      );
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  const tabCls = (active: boolean) =>
+    `flex-1 rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+      active
+        ? "bg-white text-zinc-900 shadow-sm"
+        : "text-zinc-500 hover:text-zinc-800"
+    }`;
+
+  return (
+    <div className="rounded-xl border border-zinc-100 bg-zinc-50/50 p-3">
+      {hint && <p className="mb-2 text-xs text-zinc-400">{hint}</p>}
+      <div className="mb-2 flex items-center gap-1 rounded-lg bg-zinc-100 p-1">
+        <button
+          type="button"
+          onClick={() => {
+            setMode("link");
+            onChange({ videoUrl: value.videoUrl, videoFile: undefined });
+          }}
+          className={tabCls(mode === "link")}
+        >
+          Link
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("upload");
+            onChange({ videoFile: value.videoFile, videoUrl: undefined });
+          }}
+          className={tabCls(mode === "upload")}
+        >
+          Upload
+        </button>
+      </div>
+      {mode === "link" ? (
+        <div className="flex items-center gap-2">
+          <input
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            placeholder="Paste reel link (YouTube / TikTok / Instagram)…"
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const v = urlInput.trim();
+              if (v) onChange({ videoUrl: v, videoFile: undefined });
+            }}
+            className="inline-flex h-9 shrink-0 items-center rounded border border-zinc-200 bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-100"
+          >
+            Set
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="video/*"
+            onChange={(e) => onFile(e.target.files?.[0])}
+            className="hidden"
+            aria-label="Upload video"
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="inline-flex h-9 shrink-0 items-center rounded bg-point-500 px-3 text-sm font-medium text-white hover:bg-point-600 disabled:opacity-60"
+          >
+            {uploading ? "Uploading…" : "Upload video"}
+          </button>
+          {value.videoFile && (
+            <span className="truncate text-xs text-zinc-400">Uploaded ✓</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Shorts items ─────────────────────────────────────────────────────────────
+
+export function ShortsItemsField({
+  value,
+  onChange,
+}: {
+  value: ShortItem[];
+  onChange: (items: ShortItem[]) => void;
+}) {
+  return (
+    <CollapsibleList<ShortItem>
+      items={value ?? []}
+      onChange={onChange}
+      getTitle={(item, i) => item.title || `Short ${i + 1}`}
+      getSubtitle={(item) =>
+        item.videoFile
+          ? "Uploaded video"
+          : item.videoUrl
+            ? "Reel link"
+            : "No video"
+      }
+      addLabel="+ Add short"
+      newItem={() => ({
+        title: "",
+        videoUrl: "",
+        videoFile: "",
+        posterUrl: "",
+        productHref: "",
+      })}
+      renderBody={(item, update) => (
+        <div className="grid gap-3">
+          <TextField
+            label="Title"
+            value={item.title ?? ""}
+            onChange={(v) => update({ title: v })}
+          />
+          <VideoField
+            value={{ videoUrl: item.videoUrl, videoFile: item.videoFile }}
+            onChange={(v) => update(v)}
+            hint="Paste a reel link or upload a video file."
+          />
+          <ImageField
+            label="Poster image"
+            value={item.posterUrl ?? ""}
+            onChange={(v) => update({ posterUrl: v })}
+          />
+          <TextField
+            label="Product link (optional)"
+            value={item.productHref ?? ""}
+            onChange={(v) => update({ productHref: v })}
+            placeholder="/products/slug"
+          />
+        </div>
+      )}
+    />
+  );
+}
+
+// ── Instagram items ──────────────────────────────────────────────────────────
+
+export function InstagramItemsField({
+  value,
+  onChange,
+}: {
+  value: InstagramItem[];
+  onChange: (items: InstagramItem[]) => void;
+}) {
+  return (
+    <CollapsibleList<InstagramItem>
+      items={value ?? []}
+      onChange={onChange}
+      getTitle={(_item, i) => `Post ${i + 1}`}
+      getSubtitle={(item) => item.href || "No link"}
+      addLabel="+ Add post"
+      newItem={() => ({ image: "", alt: "", href: "" })}
+      renderBody={(item, update) => (
+        <div className="grid gap-3">
+          <ImageField
+            label="Image"
+            value={item.image}
+            onChange={(v) => update({ image: v })}
+          />
+          <TextField
+            label="Alt text"
+            value={item.alt ?? ""}
+            onChange={(v) => update({ alt: v })}
+          />
+          <TextField
+            label="Instagram link"
+            value={item.href ?? ""}
+            onChange={(v) => update({ href: v })}
+            placeholder="https://www.instagram.com/reel/…"
+          />
+        </div>
+      )}
+    />
   );
 }

@@ -21,6 +21,8 @@ export interface ShortsPick {
    * The platform is auto-detected unless `platform` is set explicitly.
    */
   videoUrl: string;
+  /** Uploaded video file URL (Vercel Blob). When set, renders a <video> instead of an embed. */
+  videoFile?: string;
   /** Optional explicit platform. Auto-detected from `videoUrl` when omitted. */
   platform?: ShortsPlatform;
   /** Poster image shown before the video loads (e.g. the product image). */
@@ -94,3 +96,15 @@ export async function getShortsPicks(): Promise<ShortsPick[]> {
     .filter((s) => s.isActive)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 }
+
+/**
+ * Default shorts items for a new Shorts section, projected from the original
+ * static picks into the page-builder config shape.
+ */
+export const defaultShortsItems = shortsPicks.map((s) => ({
+  id: s.id,
+  title: s.title,
+  videoUrl: s.videoUrl,
+  posterUrl: s.posterUrl,
+  productHref: s.productHref,
+}));

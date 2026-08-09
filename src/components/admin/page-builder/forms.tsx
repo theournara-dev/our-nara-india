@@ -6,9 +6,11 @@
 
 import {
   HeroSlidesField,
+  InstagramItemsField,
   NumberField,
   ProductSourceField,
   SelectField,
+  ShortsItemsField,
   TextField,
   TripleBannerBoxesField,
   type SectionFormOptions,
@@ -44,8 +46,13 @@ export function HeroForm({ config, onChange, options }: FormProps) {
   );
 }
 
-export function ShortsForm() {
-  return <NoSettings />;
+export function ShortsForm({ config, onChange }: FormProps) {
+  return (
+    <ShortsItemsField
+      value={config.items ?? []}
+      onChange={(items) => onChange({ ...config, items })}
+    />
+  );
 }
 
 export function LongBannerForm() {
@@ -56,8 +63,13 @@ export function ReviewsForm() {
   return <NoSettings />;
 }
 
-export function InstagramForm() {
-  return <NoSettings />;
+export function InstagramForm({ config, onChange }: FormProps) {
+  return (
+    <InstagramItemsField
+      value={config.items ?? []}
+      onChange={(items) => onChange({ ...config, items })}
+    />
+  );
 }
 
 export function ProductShowcaseForm({ config, onChange, options }: FormProps) {

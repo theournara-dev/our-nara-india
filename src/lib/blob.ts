@@ -43,6 +43,49 @@ export async function uploadImage(file: File): Promise<string> {
   return url;
 }
 
+// ── Video uploads (shorts) ──────────────────────────────────────────────────
+
+/** Video MIME types accepted for short-form videos. */
+const ALLOWED_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime", // .mov
+]);
+
+/** Max upload size for a single video (50MB). */
+export const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
+
+export function isAllowedVideoType(type: string): boolean {
+  return ALLOWED_VIDEO_TYPES.has(type);
+}
+
+export function isAllowedVideoSize(size: number): boolean {
+  return size <= MAX_VIDEO_SIZE;
+}
+
+/**
+ * Upload a short-form video to Vercel Blob and return its public URL.
+ * Validates the MIME type and size before uploading.
+ */
+export async function uploadVideo(file: File): Promise<string> {
+  if (!isAllowedVideoType(file.type)) {
+    throw new Error("Unsupported video type. Use MP4, WebM or MOV.");
+  }
+  if (!isAllowedVideoSize(file.size)) {
+    throw new Error("Video is too large. Maximum size is 50MB.");
+  }
+  const { url } = await put(
+    `shorts/${crypto.randomUUID()}-${file.name}`,
+    file,
+    {
+      access: "public",
+      addRandomSuffix: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    },
+  );
+  return url;
+}
+
 const IMAGE_EXT_RE = /\.(png|jpe?g|gif|webp|avif)$/i;
 
 /**

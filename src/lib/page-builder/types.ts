@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { defaultHeroSlides } from "@/data/hero";
+import { defaultInstagramItems } from "@/data/instagram";
+import { defaultShortsItems } from "@/data/shorts";
 
 /**
  * Shared page-builder types + config schemas.
@@ -74,6 +76,29 @@ export const tripleBannerBoxSchema = z.object({
 });
 export type TripleBannerBox = z.infer<typeof tripleBannerBoxSchema>;
 
+// ── Shorts item ─────────────────────────────────────────────────────────────
+
+export const shortItemSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  // Reel link (YouTube Shorts / TikTok / Instagram Reel) OR an uploaded file.
+  videoUrl: z.string().optional(),
+  videoFile: z.string().optional(),
+  posterUrl: z.string().optional(),
+  productHref: z.string().optional(),
+});
+export type ShortItem = z.infer<typeof shortItemSchema>;
+
+// ── Instagram item ──────────────────────────────────────────────────────────
+
+export const instagramItemSchema = z.object({
+  id: z.string(),
+  image: z.string().min(1, "Image is required"),
+  alt: z.string().optional(),
+  href: z.string().optional(),
+});
+export type InstagramItem = z.infer<typeof instagramItemSchema>;
+
 // ── Per-type config schemas ────────────────────────────────────────────────
 
 export const sectionConfigSchemas = {
@@ -91,13 +116,17 @@ export const sectionConfigSchemas = {
     moreHref: z.string().optional(),
     moreLabel: z.string().optional(),
   }),
-  shorts: z.object({}),
+  shorts: z.object({
+    items: z.array(shortItemSchema).default([]),
+  }),
   "triple-banner": z.object({
     boxes: z.array(tripleBannerBoxSchema).default([]),
   }),
   "long-banner": z.object({}),
   reviews: z.object({}),
-  instagram: z.object({}),
+  instagram: z.object({
+    items: z.array(instagramItemSchema).default([]),
+  }),
 } as const;
 
 export type SectionType = keyof typeof sectionConfigSchemas;
@@ -143,7 +172,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     label: "Shorts picks",
     description: "TikTok / Reels carousel.",
     configSchema: sectionConfigSchemas.shorts,
-    defaultConfig: () => ({}),
+    defaultConfig: () => ({ items: defaultShortsItems }),
   },
   {
     type: "triple-banner",
@@ -171,7 +200,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     label: "Instagram",
     description: "Instagram marquee strip.",
     configSchema: sectionConfigSchemas.instagram,
-    defaultConfig: () => ({}),
+    defaultConfig: () => ({ items: defaultInstagramItems }),
   },
 ];
 

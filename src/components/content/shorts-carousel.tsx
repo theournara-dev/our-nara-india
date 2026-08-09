@@ -144,6 +144,8 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
         data-video-type={parsed?.type}
         data-video-id={parsed?.id}
         data-video-url={pick.videoUrl}
+        data-video-file={pick.videoFile}
+        data-poster-url={pick.posterUrl ?? ""}
         style={{
           backgroundImage: `url("${pick.thumbnailUrl ?? platformThumb ?? pick.posterUrl ?? ""}")`,
         }}
@@ -215,6 +217,26 @@ function playActiveShortsVideo(root: HTMLElement) {
 
   const wrap = active.querySelector<HTMLDivElement>(".video-wrap");
   if (!wrap) return;
+
+  // Uploaded video file → render a native <video> player. Only the active
+  // slide mounts a player, so `preload="metadata"` keeps non-visible videos
+  // from downloading until they're actually played.
+  const file = wrap.dataset.videoFile;
+  if (file) {
+    const video = document.createElement("video");
+    video.src = file;
+    video.setAttribute("autoplay", "");
+    video.setAttribute("muted", "");
+    video.setAttribute("loop", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("controls", "");
+    video.setAttribute("preload", "metadata");
+    video.setAttribute("aria-label", "Shorts video");
+    const poster = wrap.dataset.posterUrl;
+    if (poster) video.setAttribute("poster", poster);
+    wrap.appendChild(video);
+    return;
+  }
 
   const type = wrap.dataset.videoType as ShortsPlatform | undefined;
   const id = wrap.dataset.videoId;

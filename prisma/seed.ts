@@ -10,6 +10,8 @@ import { Prisma } from "../src/generated/prisma/client";
 import { homeBrandSections } from "../src/data/home-sections";
 import { tripleBannerBoxes } from "../src/data/triple-banner";
 import { defaultHeroSlides } from "../src/data/hero";
+import { defaultShortsItems } from "../src/data/shorts";
+import { defaultInstagramItems } from "../src/data/instagram";
 
 function image(label: string, color = "e7c6a0"): string {
   return `https://placehold.co/600x600/${color}/2a2a2a?text=${encodeURIComponent(label)}`;
@@ -490,7 +492,11 @@ async function seedHomePage() {
   ];
 
   const sections = [
-    { type: "hero", title: "Hero carousel", config: { slides: defaultHeroSlides } },
+    {
+      type: "hero",
+      title: "Hero carousel",
+      config: { slides: defaultHeroSlides },
+    },
     {
       type: "product-showcase",
       title: "Top Picks",
@@ -502,7 +508,11 @@ async function seedHomePage() {
         columns: 4,
       },
     },
-    { type: "shorts", title: "Shorts Picks", config: {} },
+    {
+      type: "shorts",
+      title: "Shorts Picks",
+      config: { items: defaultShortsItems },
+    },
     {
       type: "triple-banner",
       title: "Triple banner",
@@ -534,7 +544,11 @@ async function seedHomePage() {
       },
     })),
     { type: "reviews", title: "Reviews", config: {} },
-    { type: "instagram", title: "Instagram", config: {} },
+    {
+      type: "instagram",
+      title: "Instagram",
+      config: { items: defaultInstagramItems },
+    },
   ];
 
   const page = await db.page.upsert({
