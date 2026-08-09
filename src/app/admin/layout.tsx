@@ -30,7 +30,7 @@ export default async function AdminLayout({
   if (role !== "admin") redirect("/account");
 
   return (
-    <div className="relative min-h-screen bg-zinc-50">
+    <div className="relative min-h-screen bg-zinc-50" data-admin-body>
       {/* Mobile notice — the dashboard is desktop-only. */}
       <div className="flex min-h-screen items-center justify-center p-6 md:hidden">
         <div className="max-w-sm text-center">

@@ -29,15 +29,16 @@ export function Sheet({
   /** Wider panel for content-heavy editors (e.g. many slides/panels). */
   wide?: boolean;
 }) {
-  // The admin content starts below the storefront header. Measure the header's
-  // bottom edge (in viewport coords) so the sheet fills the viewport below it.
-  // useLayoutEffect avoids a flash of the sheet at the very top on open.
+  // The admin content starts below the storefront header. Measure the admin
+  // body's top edge (its offset below the header, or 0 once the header scrolls
+  // away) so the sheet fills the viewport below it. useLayoutEffect avoids a
+  // flash of the sheet at the very top on open.
   const [top, setTop] = useState(0);
 
   useLayoutEffect(() => {
     function update() {
-      const header = document.body.firstElementChild as HTMLElement | null;
-      setTop(header ? Math.max(0, header.getBoundingClientRect().bottom) : 0);
+      const body = document.querySelector("[data-admin-body]");
+      setTop(body ? Math.max(0, body.getBoundingClientRect().top) : 0);
     }
     update();
     window.addEventListener("scroll", update, { passive: true });
