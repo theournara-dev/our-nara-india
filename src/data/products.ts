@@ -96,7 +96,7 @@ export async function getFeaturedProducts(
     take,
     orderBy: { createdAt: "desc" },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   return rows.map(toCard);
 }
 
@@ -106,7 +106,7 @@ export async function getAvailableNow(take: number): Promise<ProductCard[]> {
     take,
     orderBy: { createdAt: "desc" },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   return rows.map(toCard);
 }
 
@@ -118,7 +118,7 @@ export async function getPreOrderProducts(
     take,
     orderBy: { createdAt: "desc" },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   return rows.map(toCard);
 }
 
@@ -131,7 +131,7 @@ export async function getProductsByCategorySlug(
     take,
     orderBy: { createdAt: "desc" },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   return rows.map(toCard);
 }
 
@@ -144,7 +144,7 @@ export async function getProductsByBrandSlug(
     take,
     orderBy: { createdAt: "desc" },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   return rows.map(toCard);
 }
 
@@ -156,7 +156,7 @@ export async function getProductsBySlugs(
   const rows = (await db.product.findMany({
     where: { isActive: true, slug: { in: slugs } },
     include,
-  })) as unknown as ProductRow[];
+  })) as ProductRow[];
   const bySlug = new Map(rows.map((p) => [p.slug, p]));
   return slugs
     .map((s) => bySlug.get(s))
@@ -170,6 +170,6 @@ export async function getProductBySlug(
   const row = (await db.product.findFirst({
     where: { slug, isActive: true },
     include,
-  })) as unknown as ProductRow | null;
+  })) as ProductRow | null;
   return row ? toDetail(row) : null;
 }
