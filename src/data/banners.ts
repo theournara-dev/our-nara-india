@@ -31,22 +31,28 @@ const staticLongBanners: LongBanner[] = [
 ];
 
 /**
- * Active long banners from the database, ordered by sort order. Falls back to
- * the static list when none are published/scheduled yet.
+ * Long banners for the homepage long-banner section.
+ *
+ * When `ids` is provided (the admin selected specific banners), returns only
+ * those active/in-schedule banners in their sort order — with no static
+ * fallback, since the selection is explicit. When `ids` is empty, returns all
+ * active `long` placement banners, falling back to the static list if none
+ * exist so the homepage never regresses.
  */
-export async function getLongBanners(): Promise<LongBanner[]> {
+export async function getLongBanners(ids?: string[]): Promise<LongBanner[]> {
   const now = new Date();
+  const explicit = ids && ids.length > 0;
   const rows = await db.banner.findMany({
     where: {
-      placement: "long",
       isActive: true,
+      ...(explicit ? { id: { in: ids } } : { placement: "long" }),
       OR: [{ startsAt: null }, { startsAt: { lte: now } }],
       AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
     },
     orderBy: { sortOrder: "asc" },
   });
 
-  if (rows.length === 0) return staticLongBanners;
+  if (!explicit && rows.length === 0) return staticLongBanners;
 
   return rows.map((b) => ({
     id: b.id,

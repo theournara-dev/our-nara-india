@@ -122,7 +122,11 @@ export const sectionConfigSchemas = {
   "triple-banner": z.object({
     boxes: z.array(tripleBannerBoxSchema).default([]),
   }),
-  "long-banner": z.object({}),
+  "long-banner": z.object({
+    // Specific banners to show (from the Banners admin). Empty = auto: show
+    // all active `long` placement banners.
+    bannerIds: z.array(z.string()).default([]),
+  }),
   reviews: z.object({}),
   instagram: z.object({
     items: z.array(instagramItemSchema).default([]),
@@ -186,7 +190,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     label: "Long banner",
     description: "Full-width banner carousel from the Banners admin.",
     configSchema: sectionConfigSchemas["long-banner"],
-    defaultConfig: () => ({}),
+    defaultConfig: () => ({ bannerIds: [] }),
   },
   {
     type: "reviews",

@@ -30,6 +30,7 @@ export interface SectionFormOptions {
     isPreOrder: boolean;
     summary?: string;
   }[];
+  banners: { id: string; title: string; image: string; placement: string }[];
 }
 
 export const inputCls =
@@ -260,6 +261,81 @@ export function ProductSourceField({
 }
 
 /** Searchable checkbox list for picking specific products by slug. */
+/** Shared searchable multi-select checkbox list. */
+function SearchableCheckboxList<T extends { id: string }>({
+  items,
+  value,
+  onChange,
+  getLabel,
+  getMeta,
+  placeholder,
+  emptyText,
+  label,
+}: {
+  items: T[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  getLabel: (item: T) => string;
+  getMeta?: (item: T) => string;
+  placeholder: string;
+  emptyText: string;
+  label: string;
+}) {
+  const [query, setQuery] = useState("");
+  const selected = new Set(value);
+  const filtered = items.filter((item) =>
+    getLabel(item).toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  function toggle(id: string) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange([...next]);
+  }
+
+  return (
+    <div>
+      <span className={labelCls}>{label}</span>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={placeholder}
+        className={inputCls}
+      />
+      <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-200">
+        {filtered.length === 0 ? (
+          <p className="px-2 py-2 text-xs text-zinc-400">{emptyText}</p>
+        ) : (
+          filtered.map((item) => (
+            <label
+              key={item.id}
+              className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(item.id)}
+                onChange={() => toggle(item.id)}
+                className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+              />
+              <span className="min-w-0 flex-1 truncate">{getLabel(item)}</span>
+              {getMeta && (
+                <span className="shrink-0 text-xs text-zinc-400">
+                  {getMeta(item)}
+                </span>
+              )}
+            </label>
+          ))
+        )}
+      </div>
+      <span className="mt-1 block text-xs text-zinc-400">
+        {value.length} selected
+      </span>
+    </div>
+  );
+}
+
+/** Searchable checkbox list for picking specific products by slug. */
 export function SlugsField({
   value,
   onChange,
@@ -269,52 +345,16 @@ export function SlugsField({
   onChange: (slugs: string[]) => void;
   options: SectionFormOptions;
 }) {
-  const [query, setQuery] = useState("");
-  const selected = new Set(value);
-  const filtered = options.products.filter((p) =>
-    p.name.toLowerCase().includes(query.trim().toLowerCase()),
-  );
-
-  function toggle(slug: string) {
-    const next = new Set(selected);
-    if (next.has(slug)) next.delete(slug);
-    else next.add(slug);
-    onChange([...next]);
-  }
-
   return (
-    <div>
-      <span className={labelCls}>Products</span>
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search products…"
-        className={inputCls}
-      />
-      <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-200">
-        {filtered.length === 0 ? (
-          <p className="px-2 py-2 text-xs text-zinc-400">No products match.</p>
-        ) : (
-          filtered.map((p) => (
-            <label
-              key={p.slug}
-              className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-            >
-              <input
-                type="checkbox"
-                checked={selected.has(p.slug)}
-                onChange={() => toggle(p.slug)}
-                className="h-4 w-4 rounded border-zinc-300 accent-point-500"
-              />
-              <span className="truncate">{p.name}</span>
-            </label>
-          ))
-        )}
-      </div>
-      <span className="mt-1 block text-xs text-zinc-400">
-        {value.length} selected
-      </span>
-    </div>
+    <SearchableCheckboxList
+      items={options.products.map((p) => ({ id: p.slug, name: p.name }))}
+      value={value}
+      onChange={onChange}
+      getLabel={(p) => p.name}
+      placeholder="Search products…"
+      emptyText="No products match."
+      label="Products"
+    />
   );
 }
 
@@ -1063,6 +1103,36 @@ export function InstagramItemsField({
           />
         </div>
       )}
+    />
+  );
+}
+
+// ── Banners (long banner section) ────────────────────────────────────────────
+
+/** Searchable checkbox list for picking which banners to show. */
+export function BannersField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string[];
+  onChange: (ids: string[]) => void;
+  options: SectionFormOptions;
+}) {
+  return (
+    <SearchableCheckboxList
+      items={options.banners.map((b) => ({
+        id: b.id,
+        title: b.title,
+        placement: b.placement,
+      }))}
+      value={value}
+      onChange={onChange}
+      getLabel={(b) => b.title}
+      getMeta={(b) => b.placement}
+      placeholder="Search banners…"
+      emptyText="No banners match."
+      label="Banners"
     />
   );
 }

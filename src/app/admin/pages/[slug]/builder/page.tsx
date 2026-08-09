@@ -12,8 +12,8 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
   const page = await getPage(slug);
   if (!page) notFound();
 
-  // Options for the section forms (brand/category/product pickers).
-  const [brands, categories, products] = await Promise.all([
+  // Options for the section forms (brand/category/product/banner pickers).
+  const [brands, categories, products, banners] = await Promise.all([
     db.brand.findMany({
       select: { slug: true, name: true },
       orderBy: { name: "asc" },
@@ -35,6 +35,10 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
       orderBy: { name: "asc" },
       take: 500,
     }),
+    db.banner.findMany({
+      select: { id: true, title: true, image: true, placement: true },
+      orderBy: [{ placement: "asc" }, { sortOrder: "asc" }],
+    }),
   ]);
 
   const productOptions = products.map((p) => ({
@@ -50,7 +54,7 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
   return (
     <PageBuilder
       page={page}
-      options={{ brands, categories, products: productOptions }}
+      options={{ brands, categories, products: productOptions, banners }}
     />
   );
 }

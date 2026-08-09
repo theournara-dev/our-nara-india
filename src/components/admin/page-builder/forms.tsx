@@ -5,6 +5,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
+  BannersField,
   HeroSlidesField,
   InstagramItemsField,
   NumberField,
@@ -55,8 +56,20 @@ export function ShortsForm({ config, onChange }: FormProps) {
   );
 }
 
-export function LongBannerForm() {
-  return <NoSettings />;
+export function LongBannerForm({ config, onChange, options }: FormProps) {
+  return (
+    <div className="space-y-3">
+      <BannersField
+        value={config.bannerIds ?? []}
+        onChange={(bannerIds) => onChange({ ...config, bannerIds })}
+        options={options}
+      />
+      <p className="text-xs leading-5 text-zinc-400">
+        Leave empty to automatically show all active &quot;Long banner&quot;
+        banners from the Banners admin.
+      </p>
+    </div>
+  );
 }
 
 export function ReviewsForm() {

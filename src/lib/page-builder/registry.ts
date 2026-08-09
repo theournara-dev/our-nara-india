@@ -128,7 +128,10 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   },
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
-    load: async () => ({ banners: await getLongBanners() }),
+    load: async (config) => {
+      const ids = (config as { bannerIds?: string[] })?.bannerIds ?? [];
+      return { banners: await getLongBanners(ids.length ? ids : undefined) };
+    },
     component: LongBanner,
   },
   reviews: {
