@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
 import { notify } from "@/lib/toast";
@@ -268,6 +269,7 @@ function SearchableCheckboxList<T extends { id: string }>({
   onChange,
   getLabel,
   getMeta,
+  getThumbnail,
   placeholder,
   emptyText,
   label,
@@ -277,6 +279,7 @@ function SearchableCheckboxList<T extends { id: string }>({
   onChange: (ids: string[]) => void;
   getLabel: (item: T) => string;
   getMeta?: (item: T) => string;
+  getThumbnail?: (item: T) => string;
   placeholder: string;
   emptyText: string;
   label: string;
@@ -318,6 +321,16 @@ function SearchableCheckboxList<T extends { id: string }>({
                 onChange={() => toggle(item.id)}
                 className="h-4 w-4 rounded border-zinc-300 accent-point-500"
               />
+              {getThumbnail && (
+                <Image
+                  src={getThumbnail(item)}
+                  alt=""
+                  width={40}
+                  height={24}
+                  unoptimized
+                  className="h-6 w-10 shrink-0 rounded object-cover"
+                />
+              )}
               <span className="min-w-0 flex-1 truncate">{getLabel(item)}</span>
               {getMeta && (
                 <span className="shrink-0 text-xs text-zinc-400">
@@ -1125,11 +1138,13 @@ export function BannersField({
         id: b.id,
         title: b.title,
         placement: b.placement,
+        image: b.image,
       }))}
       value={value}
       onChange={onChange}
       getLabel={(b) => b.title}
       getMeta={(b) => b.placement}
+      getThumbnail={(b) => b.image}
       placeholder="Search banners…"
       emptyText="No banners match."
       label="Banners"
