@@ -19,7 +19,7 @@ export function AddSectionDialog({
   onClose: () => void;
   onAdd: (type: SectionType) => void;
 }) {
-  const [type, setType] = useState<SectionType>("product-grid");
+  const [type, setType] = useState<SectionType>("product-showcase");
 
   return (
     <Sheet

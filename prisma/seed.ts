@@ -492,12 +492,14 @@ async function seedHomePage() {
   const sections = [
     { type: "hero", title: "Hero carousel", config: { slides: defaultHeroSlides } },
     {
-      type: "product-carousel",
+      type: "product-showcase",
       title: "Top Picks",
       config: {
         sub: "TOP PICKS",
         title: "BEST PRODUCT",
         source: { kind: "featured", take: 4 },
+        layout: "carousel",
+        columns: 4,
       },
     },
     { type: "shorts", title: "Shorts Picks", config: {} },
@@ -507,23 +509,27 @@ async function seedHomePage() {
       config: { boxes: tripleBannerBoxes },
     },
     {
-      type: "product-grid",
+      type: "product-showcase",
       title: "PRE-ORDER",
       config: {
         sub: "AVAILABLE NOW",
         title: "PRE-ORDER",
         source: { kind: "slugs", slugs: preOrderSlugs },
+        layout: "grid",
+        columns: 5,
         moreHref: "/category/pre-order",
       },
     },
     { type: "long-banner", title: "Long banner", config: {} },
     ...homeBrandSections.map((s) => ({
-      type: "product-grid",
+      type: "product-showcase",
       title: brandName.get(s.slug) ?? s.slug,
       config: {
         sub: s.sub,
         title: brandName.get(s.slug) ?? s.slug,
         source: { kind: "brand", slug: s.slug, take: 20 },
+        layout: "grid",
+        columns: 5,
         moreHref: `/brand/${s.slug}`,
       },
     })),

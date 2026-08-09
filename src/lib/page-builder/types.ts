@@ -80,21 +80,20 @@ export const sectionConfigSchemas = {
   hero: z.object({
     slides: z.array(heroSlideSchema).default([]),
   }),
-  "product-carousel": z.object({
+  // Unified product section: same heading + product cards, rendered as either
+  // a wrapping grid or a scrolling carousel, with configurable columns.
+  "product-showcase": z.object({
     sub: z.string().optional(),
     title: z.string().min(1, "Title is required"),
     source: productSourceSchema,
+    layout: z.enum(["grid", "carousel"]).default("grid"),
+    columns: z.number().int().min(1).max(6).default(5),
+    moreHref: z.string().optional(),
+    moreLabel: z.string().optional(),
   }),
   shorts: z.object({}),
   "triple-banner": z.object({
     boxes: z.array(tripleBannerBoxSchema).default([]),
-  }),
-  "product-grid": z.object({
-    sub: z.string().optional(),
-    title: z.string().min(1, "Title is required"),
-    source: productSourceSchema,
-    moreHref: z.string().optional(),
-    moreLabel: z.string().optional(),
   }),
   "long-banner": z.object({}),
   reviews: z.object({}),
@@ -127,14 +126,16 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     defaultConfig: () => ({ slides: defaultHeroSlides }),
   },
   {
-    type: "product-carousel",
-    label: "Product carousel",
-    description: "Horizontal product slider with a heading.",
-    configSchema: sectionConfigSchemas["product-carousel"],
+    type: "product-showcase",
+    label: "Products",
+    description: "Product grid or carousel with a heading.",
+    configSchema: sectionConfigSchemas["product-showcase"],
     defaultConfig: () => ({
       sub: "",
-      title: "New carousel",
-      source: { kind: "featured", take: 4 },
+      title: "New products",
+      source: { kind: "featured", take: 8 },
+      layout: "grid",
+      columns: 5,
     }),
   },
   {
@@ -150,17 +151,6 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     description: "Banner panels with curated product rows.",
     configSchema: sectionConfigSchemas["triple-banner"],
     defaultConfig: () => ({ boxes: [] }),
-  },
-  {
-    type: "product-grid",
-    label: "Product grid",
-    description: "Responsive product grid with a heading.",
-    configSchema: sectionConfigSchemas["product-grid"],
-    defaultConfig: () => ({
-      sub: "",
-      title: "New grid",
-      source: { kind: "featured", take: 4 },
-    }),
   },
   {
     type: "long-banner",

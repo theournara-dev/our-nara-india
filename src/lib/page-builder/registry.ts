@@ -6,8 +6,7 @@ import { LongBanner } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
-import { ProductGridSection } from "@/components/theme/product-grid-section";
-import { ThemeProductSection } from "@/components/theme/product-section";
+import { ProductShowcase } from "@/components/theme/product-showcase";
 import { getLongBanners } from "@/data/banners";
 import type { ProductCard } from "@/data/products";
 import {
@@ -68,21 +67,29 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
     },
     component: HeroCarousel,
   },
-  "product-carousel": {
-    meta: SECTION_TYPE_META_BY_TYPE["product-carousel"],
+  "product-showcase": {
+    meta: SECTION_TYPE_META_BY_TYPE["product-showcase"],
     load: async (config) => {
       const c = config as {
         sub?: string;
         title: string;
         source: ProductSource;
+        layout?: "grid" | "carousel";
+        columns?: number;
+        moreHref?: string;
+        moreLabel?: string;
       };
       return {
         sub: c.sub,
         title: c.title,
         products: await loadProducts(c.source),
+        layout: c.layout ?? "grid",
+        columns: c.columns ?? 5,
+        moreHref: c.moreHref,
+        moreLabel: c.moreLabel,
       };
     },
-    component: ThemeProductSection,
+    component: ProductShowcase,
   },
   shorts: {
     meta: SECTION_TYPE_META_BY_TYPE.shorts,
@@ -103,26 +110,6 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
       };
     },
     component: TripleBanner,
-  },
-  "product-grid": {
-    meta: SECTION_TYPE_META_BY_TYPE["product-grid"],
-    load: async (config) => {
-      const c = config as {
-        sub?: string;
-        title: string;
-        source: ProductSource;
-        moreHref?: string;
-        moreLabel?: string;
-      };
-      return {
-        sub: c.sub,
-        title: c.title,
-        products: await loadProducts(c.source),
-        moreHref: c.moreHref,
-        moreLabel: c.moreLabel,
-      };
-    },
-    component: ProductGridSection,
   },
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],

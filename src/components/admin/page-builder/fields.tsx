@@ -157,6 +157,16 @@ const SOURCE_KINDS: { value: ProductSource["kind"]; label: string }[] = [
   { value: "slugs", label: "Specific products" },
 ];
 
+/** Short explanation shown under the source selector for the current choice. */
+const SOURCE_HINTS: Record<ProductSource["kind"], string> = {
+  featured: "The most recently added active products.",
+  "pre-order": "Products marked as pre-order.",
+  "available-now": "Products that are not pre-order (in stock).",
+  brand: "All active products from the selected brand.",
+  category: "All active products in the selected category.",
+  slugs: "Only the specific products you select below.",
+};
+
 function defaultSource(
   kind: ProductSource["kind"],
   options: SectionFormOptions,
@@ -196,6 +206,9 @@ export function ProductSourceField({
         }
         options={SOURCE_KINDS.map((k) => ({ value: k.value, label: k.label }))}
       />
+      <p className="text-xs leading-5 text-zinc-400">
+        {SOURCE_HINTS[value.kind]}
+      </p>
 
       {(value.kind === "featured" ||
         value.kind === "pre-order" ||

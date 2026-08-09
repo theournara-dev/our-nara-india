@@ -6,7 +6,9 @@
 
 import {
   HeroSlidesField,
+  NumberField,
   ProductSourceField,
+  SelectField,
   TextField,
   TripleBannerBoxesField,
   type SectionFormOptions,
@@ -58,11 +60,8 @@ export function InstagramForm() {
   return <NoSettings />;
 }
 
-export function ProductCarouselForm({
-  config,
-  onChange,
-  options,
-}: FormProps) {
+export function ProductShowcaseForm({ config, onChange, options }: FormProps) {
+  const layout = config.layout ?? "grid";
   return (
     <div className="space-y-4">
       <TextField
@@ -82,42 +81,38 @@ export function ProductCarouselForm({
         onChange={(source) => onChange({ ...config, source })}
         options={options}
       />
-    </div>
-  );
-}
-
-export function ProductGridForm({ config, onChange, options }: FormProps) {
-  return (
-    <div className="space-y-4">
-      <TextField
-        label="Sub heading"
-        value={config.sub ?? ""}
-        onChange={(sub) => onChange({ ...config, sub })}
-        placeholder="e.g. AVAILABLE NOW"
+      <SelectField
+        label="Layout"
+        value={layout}
+        onChange={(v) => onChange({ ...config, layout: v })}
+        options={[
+          { value: "grid", label: "Grid — wraps into rows" },
+          { value: "carousel", label: "Carousel — scrolls horizontally" },
+        ]}
       />
-      <TextField
-        label="Title"
-        value={config.title ?? ""}
-        onChange={(title) => onChange({ ...config, title })}
-        placeholder="e.g. PRE-ORDER"
+      <NumberField
+        label="Columns"
+        value={config.columns ?? 5}
+        min={1}
+        max={6}
+        onChange={(columns) => onChange({ ...config, columns })}
       />
-      <ProductSourceField
-        value={config.source}
-        onChange={(source) => onChange({ ...config, source })}
-        options={options}
-      />
-      <TextField
-        label="More link (optional)"
-        value={config.moreHref ?? ""}
-        onChange={(moreHref) => onChange({ ...config, moreHref })}
-        placeholder="/category/pre-order"
-      />
-      <TextField
-        label="More label (optional)"
-        value={config.moreLabel ?? ""}
-        onChange={(moreLabel) => onChange({ ...config, moreLabel })}
-        placeholder="MORE PRODUCTS →"
-      />
+      {layout === "grid" && (
+        <>
+          <TextField
+            label="More link (optional)"
+            value={config.moreHref ?? ""}
+            onChange={(moreHref) => onChange({ ...config, moreHref })}
+            placeholder="/category/pre-order"
+          />
+          <TextField
+            label="More label (optional)"
+            value={config.moreLabel ?? ""}
+            onChange={(moreLabel) => onChange({ ...config, moreLabel })}
+            placeholder="MORE PRODUCTS →"
+          />
+        </>
+      )}
     </div>
   );
 }

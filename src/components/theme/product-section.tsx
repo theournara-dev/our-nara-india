@@ -13,12 +13,15 @@ interface ThemeProductSectionProps {
   sub?: string;
   title: string;
   products: ProductCardType[];
+  /** Slides visible on large screens (mobile shows ~1.4). Default 4. */
+  columns?: number;
 }
 
 export function ThemeProductSection({
   sub,
   title,
   products,
+  columns = 4,
 }: ThemeProductSectionProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
@@ -33,7 +36,7 @@ export function ThemeProductSection({
 
     const swiper = new Swiper(el, {
       modules: [Pagination],
-      slidesPerView: 1.4,
+      slidesPerView: Math.min(1.4, columns),
       spaceBetween: 16,
       watchOverflow: true,
       observer: true,
@@ -44,7 +47,7 @@ export function ThemeProductSection({
         clickable: true,
       },
       breakpoints: {
-        768: { slidesPerView: 4 },
+        768: { slidesPerView: columns },
       },
       on: {
         init: (s) => {
@@ -70,7 +73,7 @@ export function ThemeProductSection({
       swiper.destroy(true, true);
       swiperRef.current = null;
     };
-  }, []);
+  }, [columns]);
 
   if (!products.length) return null;
 

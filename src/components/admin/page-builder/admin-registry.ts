@@ -15,8 +15,7 @@ import {
   HeroForm,
   InstagramForm,
   LongBannerForm,
-  ProductCarouselForm,
-  ProductGridForm,
+  ProductShowcaseForm,
   ReviewsForm,
   ShortsForm,
   TripleBannerForm,
@@ -38,18 +37,14 @@ export interface AdminSectionType {
 
 export const ADMIN_SECTION_TYPES: Record<SectionType, AdminSectionType> = {
   hero: { meta: SECTION_TYPE_META_BY_TYPE.hero, adminForm: HeroForm },
-  "product-carousel": {
-    meta: SECTION_TYPE_META_BY_TYPE["product-carousel"],
-    adminForm: ProductCarouselForm,
+  "product-showcase": {
+    meta: SECTION_TYPE_META_BY_TYPE["product-showcase"],
+    adminForm: ProductShowcaseForm,
   },
   shorts: { meta: SECTION_TYPE_META_BY_TYPE.shorts, adminForm: ShortsForm },
   "triple-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["triple-banner"],
     adminForm: TripleBannerForm,
-  },
-  "product-grid": {
-    meta: SECTION_TYPE_META_BY_TYPE["product-grid"],
-    adminForm: ProductGridForm,
   },
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
