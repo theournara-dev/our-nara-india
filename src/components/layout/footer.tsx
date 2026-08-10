@@ -8,7 +8,7 @@ import {
 } from "react-icons/fa";
 
 const utilLinks = [
-  { label: "Terms of use & Privacy Policy", href: "/policies/terms" },
+  { label: "Terms of use & Privacy Policy", href: "/policies/Terms of use & Privacy Policy" },
   { label: "Cancellation & Refund Policy", href: "/policies/refund" },
   { label: "HELP", href: "/help" },
   { label: "COMMUNITY", href: "/community" },
