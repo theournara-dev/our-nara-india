@@ -7,7 +7,9 @@ import Swiper from "swiper";
 import "swiper/css";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import type { ResolvedTripleBannerBox } from "@/data/triple-banner";
+import { addProductToCart } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
+import { notifyAddedToCart } from "@/lib/toast";
 
 interface TripleBannerProps {
   boxes: ResolvedTripleBannerBox[];
@@ -99,6 +101,11 @@ export function TripleBanner({ boxes }: TripleBannerProps) {
 
 /** A single horizontal product row: thumbnail + brand/name/tags/price + cart. */
 function TripleBannerProduct({ product }: { product: ProductCardType }) {
+  function handleAddToCart() {
+    addProductToCart(product);
+    notifyAddedToCart(product.name);
+  }
+
   return (
     <li className="product-row">
       <Link href={`/products/${product.slug}`} className="thumb">
@@ -126,7 +133,12 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
         </span>
       </div>
 
-      <button type="button" className="cart" aria-label="Add to cart">
+      <button
+        type="button"
+        className="cart"
+        aria-label="Add to cart"
+        onClick={handleAddToCart}
+      >
         <Image
           src="/upload/icon_202508271427351600.png"
           alt=""

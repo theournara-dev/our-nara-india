@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ProductDetail } from "@/data/products";
-import { addToCart } from "@/lib/cart";
+import { addProductToCart } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
-import { notify } from "@/lib/toast";
+import { notifyAddedToCart } from "@/lib/toast";
+import { useCartSheet } from "@/components/cart/cart-provider";
 import { PreorderDialog } from "./preorder-dialog";
 
 interface ProductDetailProps {
@@ -18,11 +18,12 @@ interface ProductDetailProps {
  * Product detail area mirroring the original Cafe24 layout:
  * a two-column grid (image gallery / info panel) and a set of
  * DETAIL · INFO · REVIEW · Q&A tabs below. Interactivity (option
- * select, quantity stepper, tab switching) is local state; the
- * buy buttons are present but not wired to checkout yet.
+ * select, quantity stepper, tab switching) is local state; BUY NOW
+ * adds to the cart and opens the quick-purchase sheet (payment is
+ * wired up in the commerce milestone).
  */
 export function ProductDetail({ product }: ProductDetailProps) {
-  const router = useRouter();
+  const { openQuickPurchase } = useCartSheet();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
@@ -42,22 +43,9 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const showBuyNow = product.buyNowEnabled && !product.isPreOrder;
 
   function handleBuyNow() {
-    addToCart({
-      productId: product.id,
-      slug: product.slug,
-      name: product.name,
-      image: product.images[0] ?? "",
-      priceCents: product.priceCents,
-      currency: product.currency,
-      qty,
-      option: option || undefined,
-    });
-    notify.success(
-      "added-to-cart",
-      "Added to cart",
-      `${product.name} added to your cart.`,
-    );
-    router.push("/cart");
+    addProductToCart(product, qty, option || undefined);
+    notifyAddedToCart(product.name, qty);
+    openQuickPurchase();
   }
 
   function handlePreorder() {

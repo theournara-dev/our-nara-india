@@ -23,6 +23,11 @@ export type CartItem = {
 const KEY = "ournara:cart";
 const EVENT = "ournara:cart";
 
+// Stable empty snapshot for server rendering (SSR). Returning a fresh array from
+// getServerSnapshot each render makes React warn about an infinite loop, so we
+// reuse one frozen empty array reference.
+const EMPTY_CART: CartItem[] = [];
+
 // Memoized snapshot so useSyncExternalStore sees a stable reference between
 // changes (avoids infinite re-renders). Cleared on every mutation.
 let cache: CartItem[] | null = null;
@@ -60,6 +65,35 @@ export function getCart(): CartItem[] {
   return read();
 }
 
+/**
+ * Build a CartItem from a catalog product and add it to the cart. Accepts any
+ * object with the fields the cart needs, so product cards and the product
+ * detail page share one code path.
+ */
+export function addProductToCart(
+  product: {
+    id: string;
+    slug: string;
+    name: string;
+    images: string[];
+    priceCents: number;
+    currency: string;
+  },
+  qty = 1,
+  option?: string,
+): CartItem[] {
+  return addToCart({
+    productId: product.id,
+    slug: product.slug,
+    name: product.name,
+    image: product.images[0] ?? "",
+    priceCents: product.priceCents,
+    currency: product.currency,
+    qty,
+    option,
+  });
+}
+
 /** Add an item, merging with an existing line for the same product + option. */
 export function addToCart(item: CartItem): CartItem[] {
   const cart = read();
@@ -79,6 +113,35 @@ export function addToCart(item: CartItem): CartItem[] {
 export function setCart(cart: CartItem[]): void {
   save(cart);
   invalidate();
+}
+
+/**
+ * Update the quantity of a single cart line (product + option), clamped to a
+ * minimum of 1. Shared by the cart page and the quick-purchase sheet.
+ */
+export function updateCartItemQty(
+  productId: string,
+  option: string | undefined,
+  qty: number,
+): void {
+  setCart(
+    read().map((i) =>
+      i.productId === productId && i.option === option
+        ? { ...i, qty: Math.max(1, qty) }
+        : i,
+    ),
+  );
+}
+
+/** Remove a single cart line (product + option). Shared by the cart page and
+ * the quick-purchase sheet. */
+export function removeCartItem(
+  productId: string,
+  option: string | undefined,
+): void {
+  setCart(
+    read().filter((i) => !(i.productId === productId && i.option === option)),
+  );
 }
 
 export function clearCart(): void {
@@ -101,5 +164,5 @@ function subscribe(callback: () => void) {
 
 /** Reactive cart contents; empty on the server (SSR). */
 export function useCart(): CartItem[] {
-  return useSyncExternalStore(subscribe, read, () => []);
+  return useSyncExternalStore(subscribe, read, () => EMPTY_CART);
 }

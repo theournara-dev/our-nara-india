@@ -7,6 +7,7 @@ import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { getSubcategorySlugByName } from "@/data/subcategories";
 import { authClient } from "@/lib/auth-client";
+import { useCart } from "@/lib/cart";
 import { notify } from "@/lib/toast";
 
 /**
@@ -96,6 +97,7 @@ export function Header() {
   const [openCate, setOpenCate] = useState<string | null>(null);
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
+  const cartCount = useCart().reduce((sum, item) => sum + item.qty, 0);
   // While the session is still loading, don't flash the logged-out dropdown —
   // show no menu until we know the real auth state.
   const links = user
@@ -110,7 +112,10 @@ export function Header() {
     <div>
       <TopBanner />
 
-      <div className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
+      <div
+        data-site-header
+        className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]"
+      >
         <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-md:min-h-0 max-md:px-[7px]">
           {/* Logo (row 1, left) */}
           <h1 className="relative order-1 pl-[18px] pr-10 max-md:flex max-md:max-w-[160px] max-md:items-center max-md:p-0">
@@ -388,9 +393,11 @@ export function Header() {
                     href="/cart"
                     className="block text-center text-[13px] font-medium text-[#555]"
                   >
-                    <span className="absolute -right-0.5 top-[9px] flex h-4 w-4 items-center justify-center rounded-full bg-point-500 text-[12px] font-semibold text-white">
-                      0
-                    </span>
+                    {cartCount > 0 && (
+                      <span className="absolute -right-0.5 top-[9px] flex h-4 w-4 items-center justify-center rounded-full bg-point-500 text-[12px] font-semibold text-white">
+                        {cartCount}
+                      </span>
+                    )}
                     <div>
                       <Image
                         src="/upload/goodymall1/icon/basket.svg"
@@ -552,6 +559,11 @@ export function Header() {
                   <span>
                     <Link href="/cart" className="text-[#555] hover:text-black">
                       Cart
+                      {cartCount > 0 && (
+                        <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-point-500 px-1 text-[11px] font-semibold text-white">
+                          {cartCount}
+                        </span>
+                      )}
                     </Link>
                   </span>
                   <span>

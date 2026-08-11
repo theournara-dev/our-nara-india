@@ -1,7 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import type { ProductCard as ProductCardType } from "@/data/products";
+import { addProductToCart } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
+import { notifyAddedToCart } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 /**
@@ -18,6 +22,11 @@ export function ThemeProductCard({
 }) {
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
+
+  function handleAddToCart() {
+    addProductToCart(product);
+    notifyAddedToCart(product.name);
+  }
 
   return (
     <>
@@ -73,6 +82,7 @@ export function ThemeProductCard({
             <button
               type="button"
               aria-label="Add to cart"
+              onClick={handleAddToCart}
               className="block cursor-pointer"
             >
               <Image

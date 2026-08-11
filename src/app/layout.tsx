@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { PopupHost } from "@/components/layout/popup-host";
+import { CartProvider } from "@/components/cart/cart-provider";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -55,9 +56,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col overflow-x-clip">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <CartProvider>
+          <Header />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </CartProvider>
         <Toaster richColors position="top-center" />
         <PopupHost />
       </body>
