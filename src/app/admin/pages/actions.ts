@@ -1,8 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import {
@@ -12,19 +11,6 @@ import {
 } from "@/lib/page-builder/types";
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
-
-async function requireAdmin() {
-  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-  try {
-    session = await auth.api.getSession({ headers: await headers() });
-  } catch {
-    session = null;
-  }
-  if (session?.user?.role !== "admin") {
-    throw new Error("Unauthorized");
-  }
-  return session;
-}
 
 /** Convert an optional `datetime-local` string to a Date or null. */
 function toDate(value: string | undefined): Date | null {

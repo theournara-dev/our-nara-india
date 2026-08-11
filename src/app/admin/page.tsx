@@ -4,23 +4,32 @@ import { db } from "@/lib/db";
 export const metadata: Metadata = { title: "Admin · Overview" };
 
 export default async function AdminOverviewPage() {
-  const [users, products, orders, pendingReviews, activeCoupons, revenue] =
-    await Promise.all([
-      db.user.count(),
-      db.product.count(),
-      db.order.count(),
-      db.review.count({ where: { status: "PENDING" } }),
-      db.coupon.count({ where: { isActive: true } }),
-      db.order.aggregate({
-        _sum: { totalCents: true },
-        where: { status: "PAID" },
-      }),
-    ]);
+  const [
+    users,
+    products,
+    orders,
+    preorders,
+    pendingReviews,
+    activeCoupons,
+    revenue,
+  ] = await Promise.all([
+    db.user.count(),
+    db.product.count(),
+    db.order.count(),
+    db.preorder.count(),
+    db.review.count({ where: { status: "PENDING" } }),
+    db.coupon.count({ where: { isActive: true } }),
+    db.order.aggregate({
+      _sum: { totalCents: true },
+      where: { status: "PAID" },
+    }),
+  ]);
 
   const stats = [
     { label: "Users", value: users.toLocaleString() },
     { label: "Products", value: products.toLocaleString() },
     { label: "Orders", value: orders.toLocaleString() },
+    { label: "Pre-orders", value: preorders.toLocaleString() },
     {
       label: "Revenue (paid)",
       value: `₹${((revenue._sum.totalCents ?? 0) / 100).toLocaleString("en-IN")}`,

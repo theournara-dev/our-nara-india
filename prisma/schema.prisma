@@ -148,9 +148,8 @@ model Brand {
   coverUrl    String?  @map("cover_url")
   description String?
   isActive    Boolean  @default(true) @map("is_active")
-  // Feature rollout: enable Buy Now / popups for every product of this brand.
+  // Feature rollout: enable Buy Now for every product of this brand.
   buyNowEnabled Boolean @default(false) @map("buy_now_enabled")
-  popupEnabled  Boolean @default(false) @map("popup_enabled")
   createdAt   DateTime @default(now()) @map("created_at")
 
   products Product[]
@@ -189,10 +188,9 @@ model Product {
   preOrderNotice String?  @map("pre_order_notice")
   images         String[]
   isActive       Boolean  @default(true) @map("is_active")
-  // Feature rollout: enable Buy Now / popups for this product. Effective value
-  // is `product.flag || brand.flag` (see src/data/products.ts).
+  // Feature rollout: enable Buy Now for this product. Effective value is
+  // `product.flag || brand.flag` (see src/data/products.ts).
   buyNowEnabled  Boolean  @default(false) @map("buy_now_enabled")
-  popupEnabled   Boolean  @default(false) @map("popup_enabled")
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
   createdAt      DateTime @default(now()) @map("created_at")
@@ -203,6 +201,7 @@ model Product {
   variants    ProductVariant[]
   reviews     Review[]
   orderItems  OrderItem[]
+  preorders   Preorder[]
   wishlist    WishlistItem[]
   recentViews RecentView[]
 
@@ -290,6 +289,33 @@ model OrderItem {
 
   @@index([orderId])
   @@map("order_items")
+}
+
+// A pre-order placed from the product page. Kept separate from Order because a
+// pre-order is just a reservation (name/email/quantity) with no payment yet;
+// it can be marked fulfilled once stock arrives.
+model Preorder {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  name      String
+  email     String
+  phone     String?
+  addressLine1 String? @map("address_line1")
+  addressLine2 String? @map("address_line2")
+  city      String?
+  state     String?
+  postal    String?
+  country   String?  @default("IN")
+  quantity  Int      @default(1)
+  status    String   @default("PENDING") // "PENDING" | "FULFILLED"
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([status])
+  @@map("preorders")
 }
 
 enum PaymentStatus {

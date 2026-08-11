@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 
@@ -49,19 +48,6 @@ const productInput = z.object({
 export type ProductInput = z.infer<typeof productInput>;
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
-
-async function requireAdmin() {
-  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-  try {
-    session = await auth.api.getSession({ headers: await headers() });
-  } catch {
-    session = null;
-  }
-  if (session?.user?.role !== "admin") {
-    throw new Error("Unauthorized");
-  }
-  return session;
-}
 
 /** Return a slug that is unique among products, appending -2, -3, … on clash. */
 async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
@@ -208,10 +194,10 @@ export async function toggleProductBuyNow(id: string, enabled: boolean) {
   revalidateCatalog();
 }
 
-/** Enable/disable popups for a single product. */
-export async function toggleProductPopup(id: string, enabled: boolean) {
+/** Mark/unmark a product as a pre-order. */
+export async function toggleProductPreOrder(id: string, enabled: boolean) {
   await requireAdmin();
-  await db.product.update({ where: { id }, data: { popupEnabled: enabled } });
+  await db.product.update({ where: { id }, data: { isPreOrder: enabled } });
   revalidateCatalog();
 }
 
@@ -221,16 +207,6 @@ export async function toggleBrandBuyNow(brandId: string, enabled: boolean) {
   await db.brand.update({
     where: { id: brandId },
     data: { buyNowEnabled: enabled },
-  });
-  revalidateCatalog();
-}
-
-/** Enable/disable popups for every product of a brand. */
-export async function toggleBrandPopup(brandId: string, enabled: boolean) {
-  await requireAdmin();
-  await db.brand.update({
-    where: { id: brandId },
-    data: { popupEnabled: enabled },
   });
   revalidateCatalog();
 }

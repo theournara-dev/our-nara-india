@@ -2,9 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { POPUP_PLACEMENTS, POPUP_FREQUENCIES } from "./lib";
 
@@ -34,19 +33,6 @@ function toDate(value: string | undefined): Date | null {
 }
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
-
-async function requireAdmin() {
-  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-  try {
-    session = await auth.api.getSession({ headers: await headers() });
-  } catch {
-    session = null;
-  }
-  if (session?.user?.role !== "admin") {
-    throw new Error("Unauthorized");
-  }
-  return session;
-}
 
 function revalidateCatalog() {
   revalidatePath("/admin/banners");

@@ -7,9 +7,8 @@ import {
   softDeleteProduct,
   hardDeleteProduct,
   toggleProductBuyNow,
-  toggleProductPopup,
+  toggleProductPreOrder,
   toggleBrandBuyNow,
-  toggleBrandPopup,
 } from "./actions";
 import { ProductRowActions } from "./row-actions";
 import { ProductFilters } from "./filters";
@@ -80,7 +79,12 @@ export default async function AdminProductsPage({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       orderBy: { createdAt: "desc" },
-      include: { brand: true, category: true, variants: true },
+      include: {
+        brand: true,
+        category: true,
+        variants: true,
+        _count: { select: { preorders: true } },
+      },
     }),
     db.product.count({ where }),
     db.brand.findMany({ orderBy: { name: "asc" } }),
@@ -165,15 +169,6 @@ export default async function AdminProductsPage({
                 label={`Buy Now for ${selectedBrand.name}`}
               />
             </label>
-            <label className="flex items-center gap-2 text-sm text-zinc-700">
-              Popup
-              <FeatureToggle
-                id={selectedBrand.id}
-                checked={selectedBrand.popupEnabled}
-                onChange={toggleBrandPopup}
-                label={`Popup for ${selectedBrand.name}`}
-              />
-            </label>
           </div>
         </div>
       )}
@@ -188,9 +183,10 @@ export default async function AdminProductsPage({
               <th className="px-3 py-2.5 font-medium">Category</th>
               <th className="px-3 py-2.5 font-medium">Price</th>
               <th className="px-3 py-2.5 font-medium">Stock</th>
+              <th className="px-3 py-2.5 font-medium">Pre-orders</th>
               <th className="px-3 py-2.5 font-medium">Status</th>
+              <th className="px-3 py-2.5 font-medium">Pre-order</th>
               <th className="px-3 py-2.5 font-medium">Buy Now</th>
-              <th className="px-3 py-2.5 font-medium">Popup</th>
               <th className="px-3 py-2.5 text-right font-medium">Actions</th>
             </tr>
           </thead>
@@ -198,7 +194,7 @@ export default async function AdminProductsPage({
             {products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-3 py-10 text-center text-zinc-500"
                 >
                   No products found.
@@ -251,6 +247,14 @@ export default async function AdminProductsPage({
                     </td>
                     <td className="px-3 py-2.5 text-zinc-600">{stock}</td>
                     <td className="px-3 py-2.5">
+                      <Link
+                        href="/admin/preorders"
+                        className="font-medium text-zinc-900 hover:text-point-500"
+                      >
+                        {p._count.preorders}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2.5">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           p.isActive
@@ -264,17 +268,17 @@ export default async function AdminProductsPage({
                     <td className="px-3 py-2.5">
                       <FeatureToggle
                         id={p.id}
-                        checked={p.buyNowEnabled}
-                        onChange={toggleProductBuyNow}
-                        label={`Buy Now for ${p.name}`}
+                        checked={p.isPreOrder}
+                        onChange={toggleProductPreOrder}
+                        label={`Pre-order for ${p.name}`}
                       />
                     </td>
                     <td className="px-3 py-2.5">
                       <FeatureToggle
                         id={p.id}
-                        checked={p.popupEnabled}
-                        onChange={toggleProductPopup}
-                        label={`Popup for ${p.name}`}
+                        checked={p.buyNowEnabled}
+                        onChange={toggleProductBuyNow}
+                        label={`Buy Now for ${p.name}`}
                       />
                     </td>
                     <td className="px-3 py-2.5 text-right">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 export function ProductFilters({
   search,
@@ -20,6 +20,9 @@ export function ProductFilters({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Which button triggered the current navigation, so only that button shows a
+  // loading label (they share the single `pending` flag from useTransition).
+  const [action, setAction] = useState<"apply" | "clear" | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   function apply(e: React.FormEvent) {
@@ -35,10 +38,12 @@ export function ProductFilters({
     if (c) sp.set("category", c);
     if (a) sp.set("active", a);
     const qs = sp.toString();
+    setAction("apply");
     startTransition(() => router.push(`/admin/products${qs ? `?${qs}` : ""}`));
   }
 
   function clear() {
+    setAction("clear");
     startTransition(() => router.push("/admin/products"));
   }
 
@@ -47,6 +52,7 @@ export function ProductFilters({
 
   return (
     <form
+      key={`${search}|${brand}|${category}|${active}`}
       ref={formRef}
       onSubmit={apply}
       className="mb-4 flex flex-wrap items-end gap-3"
@@ -104,7 +110,7 @@ export function ProductFilters({
         disabled={pending}
         className="inline-flex h-9 items-center justify-center rounded border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60"
       >
-        {pending ? "Applying…" : "Apply"}
+        {pending && action === "apply" ? "Applying…" : "Apply"}
       </button>
       <button
         type="button"
@@ -112,7 +118,7 @@ export function ProductFilters({
         disabled={pending}
         className="inline-flex h-9 items-center justify-center rounded px-3 text-sm text-zinc-500 hover:text-zinc-800 disabled:opacity-60"
       >
-        {pending ? "Clearing…" : "Clear"}
+        {pending && action === "clear" ? "Clearing…" : "Clear"}
       </button>
     </form>
   );

@@ -7,6 +7,7 @@ const nav = [
   { label: "Overview", href: "/admin" },
   { label: "Users & Permissions", href: "/admin/users" },
   { label: "Products", href: "/admin/products" },
+  { label: "Pre-orders", href: "/admin/preorders" },
   { label: "Orders", href: "/admin/orders" },
   { label: "Coupons", href: "/admin/coupons" },
   { label: "Reviews", href: "/admin/reviews" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 import { notify } from "@/lib/toast";
 
 type ToggleAction = (id: string, enabled: boolean) => Promise<void>;
@@ -11,9 +12,11 @@ type ToggleAction = (id: string, enabled: boolean) => Promise<void>;
  *
  * The switch is optimistic: it flips immediately on click instead of waiting
  * for the server component to re-render, so there's no lag between the click
- * and the visual state. The server action updates the DB; on failure the switch
- * reverts. The local value is re-synced from the `checked` prop whenever the
- * server re-renders with fresh data (e.g. after navigating or filtering).
+ * and the visual state. While its action is pending it shows a spinner, so you
+ * can tell which toggle is being applied even when several are toggled at once.
+ * The server action updates the DB; on failure the switch reverts. The local
+ * value is re-synced from the `checked` prop whenever the server re-renders
+ * with fresh data (e.g. after navigating or filtering).
  */
 export function FeatureToggle({
   id,
@@ -74,7 +77,14 @@ export function FeatureToggle({
         className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
           value ? "translate-x-[18px]" : "translate-x-0.5"
         }`}
-      />
+      >
+        {pending && (
+          <Loader2
+            className="h-full w-full animate-spin text-point-500"
+            aria-hidden
+          />
+        )}
+      </span>
     </button>
   );
 }

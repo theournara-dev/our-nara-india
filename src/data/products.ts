@@ -42,12 +42,10 @@ type ProductRow = {
   seoTitle: string | null;
   seoDescription: string | null;
   buyNowEnabled: boolean;
-  popupEnabled: boolean;
   brand: {
     slug: string;
     name: string;
     buyNowEnabled: boolean;
-    popupEnabled: boolean;
   };
   variants: {
     id: string;
@@ -60,7 +58,7 @@ type ProductRow = {
 
 const include = {
   brand: {
-    select: { slug: true, name: true, buyNowEnabled: true, popupEnabled: true },
+    select: { slug: true, name: true, buyNowEnabled: true },
   },
   variants: true,
 } as const;

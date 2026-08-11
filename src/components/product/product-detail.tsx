@@ -2,10 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { ProductDetail } from "@/data/products";
+import { addToCart } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
 import { notify } from "@/lib/toast";
+import { PreorderDialog } from "./preorder-dialog";
 
 interface ProductDetailProps {
   product: ProductDetail;
@@ -19,9 +22,11 @@ interface ProductDetailProps {
  * buy buttons are present but not wired to checkout yet.
  */
 export function ProductDetail({ product }: ProductDetailProps) {
+  const router = useRouter();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
+  const [preorderOpen, setPreorderOpen] = useState(false);
   const [tab, setTab] = useState<"DETAIL" | "INFO" | "REVIEW" | "Q&A">(
     "DETAIL",
   );
@@ -30,11 +35,33 @@ export function ProductDetail({ product }: ProductDetailProps) {
     product.compareAtCents != null &&
     product.compareAtCents > product.priceCents;
   const images = product.images.length ? product.images : [];
+  // Buttons render based on product state. A pre-order shows the pre-order
+  // dialog; available products show Buy Now (when enabled). They're mutually
+  // exclusive — pre-orders aren't eligible for buy-now express checkout.
+  const showPreOrder = product.isPreOrder;
+  const showBuyNow = product.buyNowEnabled && !product.isPreOrder;
 
   function handleBuyNow() {
-    // Checkout isn't wired up yet — acknowledge the click without losing the
-    // gated state. Swap this for the real purchase flow once checkout lands.
-    notify.error("buy-now-coming-soon", "Checkout & payments are coming soon.");
+    addToCart({
+      productId: product.id,
+      slug: product.slug,
+      name: product.name,
+      image: product.images[0] ?? "",
+      priceCents: product.priceCents,
+      currency: product.currency,
+      qty,
+      option: option || undefined,
+    });
+    notify.success(
+      "added-to-cart",
+      "Added to cart",
+      `${product.name} added to your cart.`,
+    );
+    router.push("/cart");
+  }
+
+  function handlePreorder() {
+    setPreorderOpen(true);
   }
 
   return (
@@ -146,63 +173,59 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </div>
           )}
 
-          {/* Quantity + shipping */}
-          <div className="mt-5 flex items-center justify-between border-y border-[#e9e9e9] py-3">
-            <span className="text-sm font-semibold text-ink">Quantity</span>
-            <div className="flex items-center rounded border border-[#e9e9e9]">
-              <button
-                type="button"
-                aria-label="Decrease quantity"
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center text-lg text-[#555] hover:text-point-500"
-              >
-                −
-              </button>
-              <span className="flex h-9 w-12 items-center justify-center text-sm font-semibold text-[#222]">
-                {qty}
-              </span>
-              <button
-                type="button"
-                aria-label="Increase quantity"
-                onClick={() => setQty((q) => q + 1)}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center text-lg text-[#555] hover:text-point-500"
-              >
-                +
-              </button>
+          {/* Quantity + shipping — hidden for pre-orders (quantity is set in the
+              pre-order dialog) */}
+          {!product.isPreOrder && (
+            <div className="mt-5 flex items-center justify-between border-y border-[#e9e9e9] py-3">
+              <span className="text-sm font-semibold text-ink">Quantity</span>
+              <div className="flex items-center rounded border border-[#e9e9e9]">
+                <button
+                  type="button"
+                  aria-label="Decrease quantity"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center text-lg text-[#555] hover:text-point-500"
+                >
+                  −
+                </button>
+                <span className="flex h-9 w-12 items-center justify-center text-sm font-semibold text-[#222]">
+                  {qty}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Increase quantity"
+                  onClick={() => setQty((q) => q + 1)}
+                  className="flex h-9 w-9 cursor-pointer items-center justify-center text-lg text-[#555] hover:text-point-500"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           <div className="mt-2 text-sm text-[#888]">
             Shipping Fee <span className="text-point-500">Free</span>
           </div>
 
-          {/* Buy buttons */}
+          {/* Buy buttons — shown based on their feature flags */}
           <div className="mt-5 flex gap-2">
-            <button
-              type="button"
-              title="Checkout & payments are coming soon"
-              className="h-12 flex-1 cursor-not-allowed rounded bg-point-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-point-600"
-            >
-              {product.isPreOrder ? "PRE-ORDER" : "ADD TO CART"}
-            </button>
-            <button
-              type="button"
-              disabled={!product.buyNowEnabled}
-              onClick={product.buyNowEnabled ? handleBuyNow : undefined}
-              title={
-                product.buyNowEnabled
-                  ? undefined
-                  : "Checkout & payments are coming soon"
-              }
-              className={`h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white ${
-                product.buyNowEnabled ? "cursor-pointer" : "cursor-not-allowed"
-              }`}
-            >
-              BUY NOW
-            </button>
+            {showPreOrder && (
+              <button
+                type="button"
+                onClick={handlePreorder}
+                className="h-12 flex-1 rounded bg-point-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-point-600"
+              >
+                PRE-ORDER
+              </button>
+            )}
+            {showBuyNow && (
+              <button
+                type="button"
+                onClick={handleBuyNow}
+                className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+              >
+                BUY NOW
+              </button>
+            )}
           </div>
-          <p className="mt-2 text-center text-xs text-zinc-400">
-            Checkout &amp; payments coming soon.
-          </p>
         </div>
       </div>
 
@@ -272,6 +295,15 @@ export function ProductDetail({ product }: ProductDetailProps) {
           )}
         </div>
       </div>
+
+      <PreorderDialog
+        open={preorderOpen}
+        productId={product.id}
+        productName={product.name}
+        priceLabel={formatMoney(product.priceCents, product.currency)}
+        defaultQty={1}
+        onClose={() => setPreorderOpen(false)}
+      />
     </div>
   );
 }

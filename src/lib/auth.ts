@@ -1,4 +1,5 @@
 import "server-only";
+import { headers } from "next/headers";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin, emailOTP, username } from "better-auth/plugins";
@@ -101,3 +102,20 @@ export const auth = betterAuth({
     }),
   ],
 });
+
+/**
+ * Resolve the current session and throw if the user isn't an admin. Used by
+ * admin server actions to guard mutations.
+ */
+export async function requireAdmin() {
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    session = null;
+  }
+  if (session?.user?.role !== "admin") {
+    throw new Error("Unauthorized");
+  }
+  return session;
+}
