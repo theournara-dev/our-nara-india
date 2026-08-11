@@ -266,13 +266,6 @@ export default function LoginPage() {
                 >
                   {loading ? "Signing in…" : "Sign In"}
                 </button>
-                <button
-                  type="button"
-                  title="Guest checkout will be available with the order milestone"
-                  className="h-11 flex-1 cursor-not-allowed rounded border border-[#e9e9e9] px-4 text-sm font-medium text-[#555]"
-                >
-                  Guest Checkout
-                </button>
               </div>
 
               <div className="flex items-center justify-center gap-4 pt-1 text-xs text-[#888]">
