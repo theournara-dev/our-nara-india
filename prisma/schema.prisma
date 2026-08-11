@@ -148,6 +148,9 @@ model Brand {
   coverUrl    String?  @map("cover_url")
   description String?
   isActive    Boolean  @default(true) @map("is_active")
+  // Feature rollout: enable Buy Now / popups for every product of this brand.
+  buyNowEnabled Boolean @default(false) @map("buy_now_enabled")
+  popupEnabled  Boolean @default(false) @map("popup_enabled")
   createdAt   DateTime @default(now()) @map("created_at")
 
   products Product[]
@@ -186,6 +189,10 @@ model Product {
   preOrderNotice String?  @map("pre_order_notice")
   images         String[]
   isActive       Boolean  @default(true) @map("is_active")
+  // Feature rollout: enable Buy Now / popups for this product. Effective value
+  // is `product.flag || brand.flag` (see src/data/products.ts).
+  buyNowEnabled  Boolean  @default(false) @map("buy_now_enabled")
+  popupEnabled   Boolean  @default(false) @map("popup_enabled")
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
   createdAt      DateTime @default(now()) @map("created_at")

@@ -82,6 +82,7 @@ function revalidateCatalog() {
   revalidatePath("/admin/products");
   revalidatePath("/");
   revalidatePath("/search");
+  revalidatePath("/api/popups");
 }
 
 // ── Actions ─────────────────────────────────────────────────────────────────
@@ -197,6 +198,40 @@ export async function hardDeleteProduct(id: string) {
 export async function toggleProductActive(id: string, isActive: boolean) {
   await requireAdmin();
   await db.product.update({ where: { id }, data: { isActive } });
+  revalidateCatalog();
+}
+
+/** Enable/disable the Buy Now button for a single product. */
+export async function toggleProductBuyNow(id: string, enabled: boolean) {
+  await requireAdmin();
+  await db.product.update({ where: { id }, data: { buyNowEnabled: enabled } });
+  revalidateCatalog();
+}
+
+/** Enable/disable popups for a single product. */
+export async function toggleProductPopup(id: string, enabled: boolean) {
+  await requireAdmin();
+  await db.product.update({ where: { id }, data: { popupEnabled: enabled } });
+  revalidateCatalog();
+}
+
+/** Enable/disable Buy Now for every product of a brand. */
+export async function toggleBrandBuyNow(brandId: string, enabled: boolean) {
+  await requireAdmin();
+  await db.brand.update({
+    where: { id: brandId },
+    data: { buyNowEnabled: enabled },
+  });
+  revalidateCatalog();
+}
+
+/** Enable/disable popups for every product of a brand. */
+export async function toggleBrandPopup(brandId: string, enabled: boolean) {
+  await requireAdmin();
+  await db.brand.update({
+    where: { id: brandId },
+    data: { popupEnabled: enabled },
+  });
   revalidateCatalog();
 }
 

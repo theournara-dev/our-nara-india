@@ -57,7 +57,10 @@ export function PopupHost() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/popups", { cache: "no-store" })
+    // Send the current path so the server only returns popups when the popup
+    // feature is enabled for this brand/product page.
+    const path = encodeURIComponent(window.location.pathname);
+    fetch(`/api/popups?path=${path}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((data: { popups?: Popup[] }) => {
         if (cancelled) return;

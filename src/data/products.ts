@@ -13,6 +13,8 @@ export interface ProductDetail extends ProductCardView {
   description?: string;
   seoTitle?: string;
   seoDescription?: string;
+  /** Effective Buy Now flag: product override OR its brand's flag. */
+  buyNowEnabled: boolean;
   variants: {
     id: string;
     optionLabel?: string;
@@ -39,7 +41,14 @@ type ProductRow = {
   isActive: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
-  brand: { slug: string; name: string };
+  buyNowEnabled: boolean;
+  popupEnabled: boolean;
+  brand: {
+    slug: string;
+    name: string;
+    buyNowEnabled: boolean;
+    popupEnabled: boolean;
+  };
   variants: {
     id: string;
     optionLabel: string | null;
@@ -50,7 +59,9 @@ type ProductRow = {
 };
 
 const include = {
-  brand: { select: { slug: true, name: true } },
+  brand: {
+    select: { slug: true, name: true, buyNowEnabled: true, popupEnabled: true },
+  },
   variants: true,
 } as const;
 
@@ -78,6 +89,7 @@ function toDetail(p: ProductRow): ProductDetail {
     description: p.description ?? undefined,
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
+    buyNowEnabled: p.buyNowEnabled || p.brand.buyNowEnabled,
     variants: p.variants.map((v) => ({
       id: v.id,
       optionLabel: v.optionLabel ?? undefined,

@@ -49,7 +49,7 @@ export default async function AdminLayout({
 
       {/* Desktop dashboard */}
       <div className="hidden md:block">
-        <div className="mx-auto flex max-w-[1400px] gap-8 px-6 py-8">
+        <div className="mx-auto flex max-w-[1600px] gap-8 px-6 py-8">
           <aside className="w-56 shrink-0">
             <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
               Admin

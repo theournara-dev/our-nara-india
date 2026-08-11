@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ProductDetail } from "@/data/products";
 import { formatMoney } from "@/lib/money";
+import { notify } from "@/lib/toast";
 
 interface ProductDetailProps {
   product: ProductDetail;
@@ -21,11 +22,20 @@ export function ProductDetail({ product }: ProductDetailProps) {
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
-  const [tab, setTab] = useState<"DETAIL" | "INFO" | "REVIEW" | "Q&A">("DETAIL");
+  const [tab, setTab] = useState<"DETAIL" | "INFO" | "REVIEW" | "Q&A">(
+    "DETAIL",
+  );
 
   const hasDiscount =
-    product.compareAtCents != null && product.compareAtCents > product.priceCents;
+    product.compareAtCents != null &&
+    product.compareAtCents > product.priceCents;
   const images = product.images.length ? product.images : [];
+
+  function handleBuyNow() {
+    // Checkout isn't wired up yet — acknowledge the click without losing the
+    // gated state. Swap this for the real purchase flow once checkout lands.
+    notify.error("buy-now-coming-soon", "Checkout & payments are coming soon.");
+  }
 
   return (
     <div className="mx-auto box-border w-[92%] max-w-[1560px] px-2">
@@ -56,12 +66,16 @@ export function ProductDetail({ product }: ProductDetailProps) {
                   type="button"
                   onClick={() => setActiveImage(i)}
                   className={`relative aspect-square w-16 cursor-pointer overflow-hidden rounded-lg border ${
-                    i === activeImage
-                      ? "border-point-500"
-                      : "border-[#e9e9e9]"
+                    i === activeImage ? "border-point-500" : "border-[#e9e9e9]"
                   }`}
                 >
-                  <Image src={image} alt="" fill sizes="64px" className="object-cover" />
+                  <Image
+                    src={image}
+                    alt=""
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -104,7 +118,8 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 PRE-ORDER
               </span>
               <span className="text-sm text-zinc-500">
-                {product.preOrderNotice ?? "Order now, ships when stock arrives."}
+                {product.preOrderNotice ??
+                  "Order now, ships when stock arrives."}
               </span>
             </div>
           )}
@@ -171,8 +186,16 @@ export function ProductDetail({ product }: ProductDetailProps) {
             </button>
             <button
               type="button"
-              title="Checkout & payments are coming soon"
-              className="h-12 flex-1 cursor-not-allowed rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+              disabled={!product.buyNowEnabled}
+              onClick={product.buyNowEnabled ? handleBuyNow : undefined}
+              title={
+                product.buyNowEnabled
+                  ? undefined
+                  : "Checkout & payments are coming soon"
+              }
+              className={`h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white ${
+                product.buyNowEnabled ? "cursor-pointer" : "cursor-not-allowed"
+              }`}
             >
               BUY NOW
             </button>
@@ -213,11 +236,15 @@ export function ProductDetail({ product }: ProductDetailProps) {
               <table className="w-full border-collapse text-left text-sm">
                 <tbody>
                   <tr className="border-b border-[#eee]">
-                    <th className="w-32 py-2 pr-3 font-semibold text-[#222]">Name</th>
+                    <th className="w-32 py-2 pr-3 font-semibold text-[#222]">
+                      Name
+                    </th>
                     <td className="py-2 text-[#555]">{product.name}</td>
                   </tr>
                   <tr className="border-b border-[#eee]">
-                    <th className="py-2 pr-3 font-semibold text-[#222]">Brand</th>
+                    <th className="py-2 pr-3 font-semibold text-[#222]">
+                      Brand
+                    </th>
                     <td className="py-2 text-[#555]">{product.brand.name}</td>
                   </tr>
                   <tr className="border-b border-[#eee]">
@@ -235,7 +262,10 @@ export function ProductDetail({ product }: ProductDetailProps) {
           )}
           {tab === "Q&A" && (
             <p className="text-center text-zinc-400">
-              <Link href="/community/product-qa" className="text-point-500 hover:underline">
+              <Link
+                href="/community/product-qa"
+                className="text-point-500 hover:underline"
+              >
                 Product Questions
               </Link>
             </p>

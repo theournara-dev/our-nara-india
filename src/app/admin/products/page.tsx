@@ -6,9 +6,14 @@ import {
   toggleProductActive,
   softDeleteProduct,
   hardDeleteProduct,
+  toggleProductBuyNow,
+  toggleProductPopup,
+  toggleBrandBuyNow,
+  toggleBrandPopup,
 } from "./actions";
 import { ProductRowActions } from "./row-actions";
 import { ProductFilters } from "./filters";
+import { FeatureToggle } from "@/components/admin/feature-toggle";
 import { currentQuery } from "./lib";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +88,7 @@ export default async function AdminProductsPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const selectedBrand = brands.find((b) => b.id === brand);
 
   // Query string that captures the current list state, so New/Edit links carry
   // it forward and returning preserves the page + filters.
@@ -140,26 +146,60 @@ export default async function AdminProductsPage({
         categories={categories}
       />
 
+      {/* Brand-level feature rollout (shown when a brand is filtered) */}
+      {selectedBrand && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-zinc-100 bg-white px-4 py-3">
+          <span className="text-sm font-semibold text-zinc-900">
+            {selectedBrand.name}
+          </span>
+          <span className="text-xs text-zinc-400">
+            Applies to every product in this brand
+          </span>
+          <div className="ml-auto flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              Buy Now
+              <FeatureToggle
+                id={selectedBrand.id}
+                checked={selectedBrand.buyNowEnabled}
+                onChange={toggleBrandBuyNow}
+                label={`Buy Now for ${selectedBrand.name}`}
+              />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-700">
+              Popup
+              <FeatureToggle
+                id={selectedBrand.id}
+                checked={selectedBrand.popupEnabled}
+                onChange={toggleBrandPopup}
+                label={`Popup for ${selectedBrand.name}`}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
-              <th className="px-4 py-3 font-medium">Product</th>
-              <th className="px-4 py-3 font-medium">Brand</th>
-              <th className="px-4 py-3 font-medium">Category</th>
-              <th className="px-4 py-3 font-medium">Price</th>
-              <th className="px-4 py-3 font-medium">Stock</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-3 py-2.5 font-medium">Product</th>
+              <th className="px-3 py-2.5 font-medium">Brand</th>
+              <th className="px-3 py-2.5 font-medium">Category</th>
+              <th className="px-3 py-2.5 font-medium">Price</th>
+              <th className="px-3 py-2.5 font-medium">Stock</th>
+              <th className="px-3 py-2.5 font-medium">Status</th>
+              <th className="px-3 py-2.5 font-medium">Buy Now</th>
+              <th className="px-3 py-2.5 font-medium">Popup</th>
+              <th className="px-3 py-2.5 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
-                  className="px-4 py-10 text-center text-zinc-500"
+                  colSpan={9}
+                  className="px-3 py-10 text-center text-zinc-500"
                 >
                   No products found.
                 </td>
@@ -172,7 +212,7 @@ export default async function AdminProductsPage({
                     key={p.id}
                     className="border-b border-zinc-50 last:border-0"
                   >
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center gap-3">
                         {p.images[0] ? (
                           <Image
@@ -190,7 +230,7 @@ export default async function AdminProductsPage({
                         <div className="min-w-0">
                           <Link
                             href={`/admin/products/${p.id}/edit${filterQuery}`}
-                            className="block max-w-[260px] truncate font-medium text-zinc-900 hover:text-point-500"
+                            className="block max-w-[220px] truncate font-medium text-zinc-900 hover:text-point-500"
                           >
                             {p.name}
                           </Link>
@@ -200,15 +240,17 @@ export default async function AdminProductsPage({
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-zinc-600">{p.brand.name}</td>
-                    <td className="px-4 py-3 text-zinc-600">
+                    <td className="px-3 py-2.5 text-zinc-600">
+                      {p.brand.name}
+                    </td>
+                    <td className="px-3 py-2.5 text-zinc-600">
                       {p.category.name}
                     </td>
-                    <td className="px-4 py-3 text-zinc-900">
+                    <td className="px-3 py-2.5 text-zinc-900">
                       {formatMoney(p.priceCents, p.currency)}
                     </td>
-                    <td className="px-4 py-3 text-zinc-600">{stock}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2.5 text-zinc-600">{stock}</td>
+                    <td className="px-3 py-2.5">
                       <span
                         className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                           p.isActive
@@ -219,7 +261,23 @@ export default async function AdminProductsPage({
                         {p.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-2.5">
+                      <FeatureToggle
+                        id={p.id}
+                        checked={p.buyNowEnabled}
+                        onChange={toggleProductBuyNow}
+                        label={`Buy Now for ${p.name}`}
+                      />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <FeatureToggle
+                        id={p.id}
+                        checked={p.popupEnabled}
+                        onChange={toggleProductPopup}
+                        label={`Popup for ${p.name}`}
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
                       <ProductRowActions
                         id={p.id}
                         isActive={p.isActive}
