@@ -101,7 +101,11 @@ export function ThemeProductSection({
             <ul className="swiper-wrapper">
               {products.map((product, index) => (
                 <li key={product.id} className="swiper-slide">
-                  <ThemeProductCard product={product} index={index} />
+                  <ThemeProductCard
+                    product={product}
+                    index={index}
+                    priority={index === 0}
+                  />
                 </li>
               ))}
             </ul>

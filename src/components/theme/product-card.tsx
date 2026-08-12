@@ -16,9 +16,12 @@ import { cn } from "@/lib/utils";
 export function ThemeProductCard({
   product,
   index,
+  priority = false,
 }: {
   product: ProductCardType;
   index?: number;
+  /** Eager-load + preload this image (set for the first/above-the-fold card). */
+  priority?: boolean;
 }) {
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
@@ -48,6 +51,7 @@ export function ThemeProductCard({
               alt={product.name}
               fill
               unoptimized
+              priority={priority}
               className="object-cover transition-opacity duration-300 ease-in-out group-hover:opacity-0"
             />
             <Image

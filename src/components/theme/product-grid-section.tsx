@@ -54,9 +54,9 @@ export function ProductGridSection({
         </div>
 
         <div className={`grid gap-x-4 gap-y-12 pt-8 ${gridClass}`}>
-          {products.map((product) => (
+          {products.map((product, index) => (
             <div key={product.id}>
-              <ThemeProductCard product={product} />
+              <ThemeProductCard product={product} priority={index === 0} />
             </div>
           ))}
         </div>

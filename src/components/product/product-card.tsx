@@ -13,7 +13,14 @@ import { notifyAddedToCart } from "@/lib/toast";
  * category and brand listings). Links to the product detail page and offers a
  * quick add-to-cart action revealed on hover.
  */
-export function ProductCard({ product }: { product: ProductCard }) {
+export function ProductCard({
+  product,
+  priority = false,
+}: {
+  product: ProductCard;
+  /** Eager-load + preload this image (set for the first/above-the-fold card). */
+  priority?: boolean;
+}) {
   const imageUrl = product.images[0];
   const hasDiscount =
     product.compareAtCents != null &&
@@ -35,6 +42,7 @@ export function ProductCard({ product }: { product: ProductCard }) {
             src={imageUrl}
             alt={product.name}
             fill
+            priority={priority}
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />

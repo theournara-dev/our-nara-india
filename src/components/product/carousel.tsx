@@ -29,9 +29,9 @@ export function ProductCarousel({ products, className }: ProductCarouselProps) {
       }}
       className={className}
     >
-      {products.map((product) => (
+      {products.map((product, index) => (
         <SwiperSlide key={product.id} className="h-auto pb-1">
-          <ProductCard product={product} />
+          <ProductCard product={product} priority={index === 0} />
         </SwiperSlide>
       ))}
     </Swiper>
