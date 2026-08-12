@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "thefirstteam11.cafe24.com" },
       { protocol: "https", hostname: "img.echosting.cafe24.com" },
       { protocol: "https", hostname: "**.cafe24.com" },
+      {
+        protocol: "https",
+        hostname: "ndoennfngice37ju.public.blob.vercel-storage.com",
+      },
     ],
   },
 };
