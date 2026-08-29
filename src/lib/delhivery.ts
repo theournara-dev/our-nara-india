@@ -6,8 +6,9 @@ import "server-only";
  *
  * This is the *fulfillment* side of the pipeline: after Razorpay marks an
  * order PAID, the admin creates a Delhivery shipment (waybill + label), the
- * courier moves it, and status events flow back either via webhook
- * (`/api/delhivery/webhook`) or the daily sync.
+ * courier moves it, and status flows back via pulls — the admin "Sync"
+ * button on demand, plus the once-daily cron that sweeps every non-terminal
+ * shipment.
  *
  * Env vars:
  *  - DELHIVERY_API_TOKEN      : API token from the One Delhivery panel (required)

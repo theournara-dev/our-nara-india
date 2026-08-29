@@ -1,8 +1,7 @@
 /**
  * Shared fulfillment rules for deriving Order.status from Shipment.status.
- * Single source of truth used by the Delhivery webhook, the daily cron sync,
- * and the admin sync action — kept in one module so the three paths can't
- * drift (they already did once).
+ * Single source of truth used by the daily cron sync and the admin sync
+ * action — kept in one module so the pull paths can't drift.
  *
  * Order.status is *derived forward-only*: tracking events may only advance a
  * paid order through SHIPPED → DELIVERED. Rank comparison enforces this, so

@@ -6,10 +6,13 @@ import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
 /**
- * Daily safety-net sync (Vercel Hobby: 1x/day cron is free).
+ * Daily Delhivery + Razorpay sync (Vercel Hobby: 1x/day cron is free).
+ * This is the ONLY Delhivery status path — no Delhivery webhooks (panel
+ * registration was too slow); statuses arrive via pull.
  *
- * 1. Shipments: pull every non-terminal shipment from Delhivery and update
- *    stale rows (covers missed webhooks + dashboard-side changes).
+ * 1. Shipments: pull every non-terminal shipment from Delhivery (least
+ *    recently synced first) and update stale rows. Admins can also pull any
+ *    single shipment on demand via the orders-row "Sync" button.
  * 2. Razorpay: re-check recently created PENDING orders whose webhooks were
  *    missed, using the authoritative `order.amount_paid` from the API.
  *

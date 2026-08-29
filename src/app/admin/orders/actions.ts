@@ -192,7 +192,7 @@ export async function cancelShipment(waybill: string) {
   revalidate();
 }
 
-/** On-demand pull of one shipment's status (the manual fallback to webhooks). */
+/** On-demand pull of one shipment's status (freshness between cron runs). */
 export async function syncShipment(waybill: string) {
   await requireAdmin();
   const shipment = await db.shipment.findUnique({ where: { waybill } });
