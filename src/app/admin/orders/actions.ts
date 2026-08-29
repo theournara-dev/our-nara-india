@@ -31,6 +31,32 @@ export async function updateOrderStatus(id: string, status: string) {
   revalidatePath("/admin/orders");
 }
 
+/**
+ * Permanently delete an order and all of its related rows (items, payments,
+ * shipments, coupon redemptions, mileage entries). Those relations have no
+ * DB-level cascade, so everything is removed in one transaction. Admin-only.
+ */
+export async function deleteOrder(id: string) {
+  await requireAdmin();
+  const order = await db.order.findUnique({
+    where: { id },
+    select: { id: true, orderNumber: true },
+  });
+  if (!order) throw new Error("Order not found.");
+
+  await db.$transaction([
+    db.mileageLedger.deleteMany({ where: { orderId: id } }),
+    db.couponRedemption.deleteMany({ where: { orderId: id } }),
+    db.shipment.deleteMany({ where: { orderId: id } }),
+    db.payment.deleteMany({ where: { orderId: id } }),
+    db.orderItem.deleteMany({ where: { orderId: id } }),
+    db.order.delete({ where: { id } }),
+  ]);
+
+  revalidatePath("/admin/orders");
+  return { orderNumber: order.orderNumber };
+}
+
 function revalidate() {
   revalidatePath("/admin/orders");
 }

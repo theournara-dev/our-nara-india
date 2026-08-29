@@ -3,9 +3,11 @@
 import { useState, useTransition } from "react";
 import { notify } from "@/lib/toast";
 import { trackingUrl } from "@/lib/delhivery-client";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import {
   cancelShipment,
   createShipment,
+  deleteOrder as deleteOrderAction,
   importShipment,
   schedulePickup,
   syncShipment,
@@ -104,16 +106,22 @@ export function OrderRowActions({
     });
   }
 
+  // Shared button base so every action reads as part of one toolbar.
   const canFulfill = status === "PAID" || status === "PRE_ORDER";
+  const btn =
+    "inline-flex h-7 items-center rounded-md border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50";
+  const btnGhost =
+    "inline-flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="flex flex-col items-end gap-1.5">
+    <div className="flex flex-col items-stretch gap-1.5">
+      {/* Row 1: status */}
       <select
         value={status}
         onChange={(e) => onChange(e.target.value)}
         disabled={pending}
         aria-label="Order status"
-        className="rounded border border-zinc-200 bg-white px-2 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60"
+        className="h-7 w-full rounded-md border border-zinc-200 bg-white px-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
       >
         {ORDER_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -122,56 +130,58 @@ export function OrderRowActions({
         ))}
       </select>
 
-      {/* Shipment badge / actions */}
+      {/* Row 2: shipment summary or create/import buttons */}
       {shipment ? (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center justify-between gap-1.5 rounded-md bg-zinc-50 px-2 py-1">
           <span
             title={`Synced ${shipment.lastSyncedAt ? new Date(shipment.lastSyncedAt).toLocaleString("en-IN") : "never"}${shipment.providerStatus ? ` · Delhivery: ${shipment.providerStatus}` : ""}`}
-            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${SHIPMENT_STYLES[shipment.status] ?? "bg-zinc-100"}`}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${SHIPMENT_STYLES[shipment.status] ?? "bg-zinc-100"}`}
           >
             {SHIPMENT_LABELS[shipment.status] ?? shipment.status}
           </span>
-          <a
-            href={trackingUrl(shipment.waybill)}
-            target="_blank"
-            rel="noreferrer"
-            className="text-[11px] text-point-500 hover:underline"
-            title="Open tracking at Delhivery"
-          >
-            {shipment.waybill} ↗
-          </a>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => run("Syncing shipment", async () => { await syncShipment(shipment.waybill); })}
-            className="text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
-          >
-            Sync
-          </button>
-          {(shipment.status === "CREATED" || shipment.status === "PICKUP_SCHEDULED") && (
-            <>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run("Scheduling pickup", async () => { await schedulePickup(); })}
-                className="text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
-              >
-                Pickup
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => run("Cancelling shipment", async () => { await cancelShipment(shipment.waybill); })}
-                className="text-[11px] text-zinc-400 hover:text-rose-600 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </>
-          )}
+          <div className="flex items-center gap-1 overflow-hidden">
+            <a
+              href={trackingUrl(shipment.waybill)}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-[11px] text-point-500 hover:underline"
+              title="Open tracking at Delhivery"
+            >
+              {shipment.waybill} ↗
+            </a>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => run("Syncing shipment", async () => { await syncShipment(shipment.waybill); })}
+              className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
+            >
+              Sync
+            </button>
+            {(shipment.status === "CREATED" || shipment.status === "PICKUP_SCHEDULED") && (
+              <>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run("Scheduling pickup", async () => { await schedulePickup(); })}
+                  className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
+                >
+                  Pickup
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => run("Cancelling shipment", async () => { await cancelShipment(shipment.waybill); })}
+                  className="shrink-0 text-[11px] text-zinc-400 hover:text-rose-600 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
         </div>
       ) : (
         canFulfill && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               disabled={pending}
@@ -191,14 +201,15 @@ export function OrderRowActions({
                   });
                 })
               }
-              className="rounded border border-point-500 px-2 py-1 text-[11px] font-medium text-point-500 hover:bg-point-500 hover:text-white disabled:opacity-60"
+              className={`${btn} border-point-400 text-point-600 hover:border-point-500 hover:bg-point-500 hover:text-white`}
             >
               Create shipment
             </button>
             <button
               type="button"
+              disabled={pending}
               onClick={() => setImportOpen((v) => !v)}
-              className="text-[11px] text-zinc-400 hover:text-point-500"
+              className={btnGhost}
             >
               Import
             </button>
@@ -206,13 +217,14 @@ export function OrderRowActions({
         )
       )}
 
+      {/* Row 3 (conditional): waybill import input */}
       {importOpen && !shipment && (
         <div className="flex items-center gap-1">
           <input
             value={waybillInput}
             onChange={(e) => setWaybillInput(e.target.value)}
             placeholder="Waybill number"
-            className="h-7 w-36 rounded border border-zinc-200 px-2 text-xs"
+            className="h-7 w-full min-w-0 rounded-md border border-zinc-200 px-2 text-xs"
           />
           <button
             type="button"
@@ -222,12 +234,63 @@ export function OrderRowActions({
                 await importShipment(id, waybillInput.trim());
               })
             }
-            className="rounded border border-zinc-200 px-2 py-1 text-[11px] text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+            className={`${btn} shrink-0`}
           >
             Attach
           </button>
         </div>
       )}
     </div>
+  );
+}
+
+/** Per-row delete control, rendered in its own table column. */
+export function OrderDeleteAction({
+  id,
+  orderNumber,
+}: {
+  id: string;
+  orderNumber: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
+  function handleDelete() {
+    setDeleteOpen(false);
+    startTransition(async () => {
+      const tid = notify.loading("Deleting order…");
+      try {
+        await deleteOrderAction(id);
+        notify.success(tid, "Order deleted");
+      } catch (err) {
+        notify.error(
+          tid,
+          "Delete failed",
+          err instanceof Error ? err.message : "Try again.",
+        );
+      }
+    });
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => setDeleteOpen(true)}
+        className="inline-flex h-7 items-center rounded-md px-2 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        Delete
+      </button>
+      <ConfirmDialog
+        open={deleteOpen}
+        title={`Delete order ${orderNumber}?`}
+        message="This permanently removes the order with its items, payments and shipment history. This cannot be undone."
+        confirmLabel="Delete order"
+        busy={pending}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteOpen(false)}
+      />
+    </>
   );
 }

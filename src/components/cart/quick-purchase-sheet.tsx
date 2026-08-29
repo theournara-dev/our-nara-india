@@ -11,7 +11,8 @@ import {
 } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
-import { notify } from "@/lib/toast";
+import { friendlyPaymentError } from "@/lib/payment-errors";
+import { notify, notifyErrorWithContact } from "@/lib/toast";
 import { UserInfoForm, useUserInfo } from "./user-info-form";
 
 /**
@@ -125,11 +126,12 @@ export function QuickPurchaseSheet({
       );
       onClose();
     } catch (err) {
-      notify.error(
-        id,
-        "Payment failed",
-        err instanceof Error ? err.message : "Please try again.",
-      );
+      const friendly = friendlyPaymentError(err);
+      const trace =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : undefined;
+      notifyErrorWithContact(id, friendly.title, friendly.hint, trace);
     } finally {
       setPlacing(false);
       // The Razorpay modal restores body overflow when it closes, which can

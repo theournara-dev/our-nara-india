@@ -17,7 +17,8 @@ import {
 } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
-import { notify } from "@/lib/toast";
+import { friendlyPaymentError } from "@/lib/payment-errors";
+import { notify, notifyErrorWithContact } from "@/lib/toast";
 
 export default function CartPage() {
   const items = useCart();
@@ -65,11 +66,12 @@ export default function CartPage() {
         `Order ${orderNumber} is confirmed.`,
       );
     } catch (err) {
-      notify.error(
-        id,
-        "Payment failed",
-        err instanceof Error ? err.message : "Please try again.",
-      );
+      const friendly = friendlyPaymentError(err);
+      const trace =
+        err instanceof Error
+          ? { name: err.name, message: err.message }
+          : undefined;
+      notifyErrorWithContact(id, friendly.title, friendly.hint, trace);
     } finally {
       setPlacing(false);
     }

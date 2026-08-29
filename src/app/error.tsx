@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { openContactDialog } from "@/components/contact/contact-dialog";
 
 /** App-level error boundary. Replaces the bare "This page couldn't load"
  *  screen with a branded page and a recovery action. Rendered inside the root
@@ -39,6 +40,19 @@ export default function AppError({
           Back to home
         </Button>
       </div>
+      <button
+        type="button"
+        onClick={() =>
+          openContactDialog({
+            name: error.name,
+            message: error.message,
+            digest: error.digest,
+          })
+        }
+        className="text-sm text-zinc-400 underline decoration-zinc-300 underline-offset-4 hover:text-point-500"
+      >
+        Report this issue
+      </button>
     </Container>
   );
 }

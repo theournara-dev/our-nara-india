@@ -602,3 +602,39 @@ model PageSection {
   @@index([pageId, sortOrder])
   @@map("page_sections")
 }
+
+// ---------------------------------------------------------------------------
+// Feedback (contact-us submissions)
+// ---------------------------------------------------------------------------
+// Messages sent through the storefront contact dialog. Status tracks the
+// admin triage workflow: NEW (unhandled) -> IN_PROGRESS -> RESOLVED, with
+// ARCHIVED for noise/spam.
+
+enum FeedbackStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+  ARCHIVED
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  email     String
+  message   String
+  status    FeedbackStatus @default(NEW)
+  // Error/trace context captured at submit time (page URL, browser, error).
+  errorName    String? @map("error_name")
+  errorMessage String? @map("error_message")
+  errorDigest  String? @map("error_digest")
+  errorUrl     String? @map("error_url")
+  userAgent    String? @map("user_agent")
+  ip           String?
+  adminNote    String?
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([email])
+  @@index([createdAt])
+  @@map("feedback")
+}

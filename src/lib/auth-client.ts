@@ -7,6 +7,8 @@ import {
 } from "better-auth/client/plugins";
 import { ac, roles } from "@/lib/permissions";
 
+// The client defaults to the current origin, which keeps local dev, production
+// and preview deployments all same-origin (so Origin-header CSRF checks pass).
 export const authClient = createAuthClient({
   plugins: [
     usernameClient(),

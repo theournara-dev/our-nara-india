@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { PopupHost } from "@/components/layout/popup-host";
 import { CartProvider } from "@/components/cart/cart-provider";
+import { ContactDialogHost } from "@/components/contact/contact-dialog";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </CartProvider>
         <Toaster richColors position="top-center" />
         <PopupHost />
+        <ContactDialogHost />
       </body>
     </html>
   );

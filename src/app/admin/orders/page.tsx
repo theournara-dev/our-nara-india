@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatus } from "@/generated/prisma/client";
-import { OrderRowActions } from "./row-actions";
+import { OrderDeleteAction, OrderRowActions } from "./row-actions";
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
@@ -134,6 +134,7 @@ export default async function AdminOrdersPage({
               <th className="px-4 py-3 font-medium">Total</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Date</th>
+              <th className="px-4 py-3 text-right font-medium">Actions</th>
               <th className="px-4 py-3 text-right font-medium">Set status</th>
             </tr>
           </thead>
@@ -141,7 +142,7 @@ export default async function AdminOrdersPage({
             {orders.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-10 text-center text-zinc-500"
                 >
                   No orders found.
@@ -214,6 +215,12 @@ export default async function AdminOrdersPage({
                         month: "short",
                         year: "numeric",
                       })}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <OrderDeleteAction
+                        id={o.id}
+                        orderNumber={o.orderNumber}
+                      />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <OrderRowActions
