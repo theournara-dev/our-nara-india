@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { SITE } from "@/lib/constants";
+import { sendEmail } from "@/lib/email";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 
 /**
@@ -93,6 +95,10 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
     return;
   }
 
+  // Idempotency: Razorpay delivers at-least-once. A retried captured event
+  // must not re-decrement stock or re-send the confirmation email.
+  if (paymentRecord.status === "CAPTURED") return;
+
   const order = await db.order.findUnique({
     where: { id: paymentRecord.orderId },
   });
@@ -130,7 +136,73 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
         ]),
   ]);
 
-  // TODO(commerce): decrement stock, credit mileage, send confirmation email.
+  // Side-effects: decrement stock and email the customer. Kept outside the
+  // transaction — stock is operational and the mail failure must not fail
+  // the webhook (Razorpay would otherwise retry a paid event).
+  await runPaidSideEffects(order.id);
+}
+
+/**
+ * Paid-order side effects: decrement variant stock + confirmation email.
+ * Shared by payment.captured and the order.paid fallback so a missed
+ * captured event still reserves stock and mails the customer.
+ */
+async function runPaidSideEffects(orderId: string) {
+  const orderWithItems = await db.order.findUnique({
+    where: { id: orderId },
+    select: {
+      orderNumber: true,
+      items: {
+        select: { variantId: true, quantity: true },
+      },
+    },
+  });
+  if (!orderWithItems) return;
+  await decrementStock(orderWithItems.items);
+  await sendOrderConfirmation(orderWithItems.orderNumber);
+}
+
+/**
+ * Decrement ProductVariant.stock for the paid items. Uses per-variant
+ * `updateMany` with an `stock >= qty` guard so a decrement never drives
+ * stock negative (the update simply skips when there isn't enough).
+ */
+async function decrementStock(
+  items: { variantId: string | null; quantity: number }[],
+) {
+  for (const item of items) {
+    if (!item.variantId) continue;
+    await db.productVariant.updateMany({
+      where: { id: item.variantId, stock: { gte: item.quantity } },
+      data: { stock: { decrement: item.quantity } },
+    });
+  }
+}
+
+/** Best-effort order confirmation email; never throws. */
+async function sendOrderConfirmation(orderNumber: string) {
+  try {
+    const order = await db.order.findUnique({
+      where: { orderNumber },
+      select: {
+        email: true,
+        totalCents: true,
+        currency: true,
+        items: { select: { name: true, quantity: true } },
+      },
+    });
+    if (!order) return;
+    const lines = order.items
+      .map((i) => `- ${i.name} x${i.quantity}`)
+      .join("\n");
+    await sendEmail({
+      to: order.email,
+      subject: `Order ${orderNumber} confirmed — ${SITE.name}`,
+      text: `Thanks for your order!\n\n${lines}\n\nWe'll notify you when it ships.`,
+    });
+  } catch (err) {
+    console.error("Order confirmation email failed:", err);
+  }
 }
 
 async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
@@ -200,6 +272,10 @@ async function handleOrderPaid(order: RazorpayOrderEntity) {
       data: { status: internalOrder.isPreOrder ? "PRE_ORDER" : "PAID" },
     }),
   ]);
+
+  // The captured event (which normally runs these) was missed — run the
+  // same side-effects here.
+  await runPaidSideEffects(internalOrder.id);
 }
 
 export async function POST(request: Request) {

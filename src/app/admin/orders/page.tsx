@@ -57,6 +57,16 @@ export default async function AdminOrdersPage({
       orderBy: { createdAt: "desc" },
       include: {
         items: { select: { id: true, name: true, quantity: true } },
+        shipments: {
+          select: {
+            id: true,
+            waybill: true,
+            status: true,
+            providerStatus: true,
+            lastSyncedAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
       },
     }),
     db.order.count({ where }),
@@ -140,11 +150,29 @@ export default async function AdminOrdersPage({
             ) : (
               orders.map((o) => {
                 const shipping =
-                  (o.shipping as { name?: string } | null | undefined) ?? {};
+                  (o.shipping as
+                    | {
+                        name?: string;
+                        phone?: string | null;
+                        addressLine1?: string | null;
+                        addressLine2?: string | null;
+                        city?: string | null;
+                        state?: string | null;
+                        postal?: string | null;
+                      }
+                    | null
+                    | undefined) ?? {};
                 const itemCount = o.items.reduce(
                   (sum, i) => sum + i.quantity,
                   0,
                 );
+                // Show the "active" shipment (latest non-terminal one) so
+                // cancelling in the app frees the row for a fresh shipment;
+                // cancelled/failed history stays in the DB.
+                const activeShipment =
+                  o.shipments.find(
+                    (s) => s.status !== "CANCELLED" && s.status !== "FAILED",
+                  ) ?? undefined;
                 return (
                   <tr
                     key={o.id}
@@ -191,6 +219,21 @@ export default async function AdminOrdersPage({
                       <OrderRowActions
                         id={o.id}
                         status={o.status as OrderStatusValue}
+                        shipment={
+                          activeShipment
+                            ? {
+                                waybill: activeShipment.waybill,
+                                status: activeShipment.status,
+                                providerStatus:
+                                  activeShipment.providerStatus ?? undefined,
+                                lastSyncedAt:
+                                  activeShipment.lastSyncedAt?.toISOString(),
+                              }
+                            : undefined
+                        }
+                        shipping={shipping}
+                        totalCents={o.totalCents}
+                        orderNumber={o.orderNumber}
                       />
                     </td>
                   </tr>

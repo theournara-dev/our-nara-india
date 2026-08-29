@@ -187,6 +187,10 @@ model Product {
   isPreOrder     Boolean  @default(false) @map("is_pre_order")
   preOrderNotice String?  @map("pre_order_notice")
   images         String[]
+  // Shipping weight in grams, used for Delhivery rate calc + labels.
+  // Nullable until admins fill it in; checkout/fulfillment falls back
+  // to DEFAULT_PRODUCT_WEIGHT_GRAMS.
+  weightGrams    Int?     @map("weight_grams")
   isActive       Boolean  @default(true) @map("is_active")
   // Feature rollout: enable Buy Now for this product. Effective value is
   // `product.flag || brand.flag` (see src/data/products.ts).
@@ -264,6 +268,7 @@ model Order {
   user        User?              @relation(fields: [userId], references: [id])
   items       OrderItem[]
   payments    Payment[]
+  shipments   Shipment[]
   redemptions CouponRedemption[]
   mileage     MileageLedger[]
 
@@ -342,6 +347,60 @@ model Payment {
   @@index([orderId])
   @@index([providerRef])
   @@map("payments")
+}
+
+// ---------------------------------------------------------------------------
+// Fulfillment (Delhivery)
+// ---------------------------------------------------------------------------
+// One Order can have multiple Shipment rows over its life (cancel + recreate,
+// dashboard-created imports). `waybill` is Delhivery's tracking number and the
+// join key for webhook events; `clientOrderRef` mirrors our own orderNumber so
+// Delhivery-side data always resolves back to us. Statuses mirror Delhivery's
+// lifecycle; Order.status is derived forward-only from these.
+
+enum ShipmentStatus {
+  CREATED
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  DELIVERED
+  RTO
+  CANCELLED
+  FAILED // e.g. amount mismatch, or unknown tracking state
+}
+
+// Who last wrote the row: our app, the admin (manual import/edit), or a
+// Delhivery webhook/sync. Purely provenance metadata for the admin UI.
+enum ShipmentSource {
+  APP
+  ADMIN
+  DELHIVERY
+}
+
+model Shipment {
+  id             String         @id @default(cuid())
+  orderId        String         @map("order_id")
+  provider       String         @default("delhivery")
+  waybill        String         @unique
+  clientOrderRef String         @map("client_order_ref") // = Order.orderNumber
+  status         ShipmentStatus @default(CREATED)
+  // Delhivery's own status string from the last event/sync (for debugging).
+  providerStatus String?        @map("provider_status")
+  labelUrl       String?        @map("label_url")
+  codAmountCents Int            @default(0) @map("cod_amount_cents")
+  // Always-prepaid for Razorpay orders; kept as a column for future COD.
+  isCod          Boolean        @default(false) @map("is_cod")
+  lastEventAt    DateTime?      @map("last_event_at")
+  lastSyncedAt   DateTime?      @map("last_synced_at")
+  source         ShipmentSource @default(APP)
+  rawPayload     Json?          @map("raw_payload")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+  @@index([status])
+  @@map("shipments")
 }
 
 // ---------------------------------------------------------------------------
