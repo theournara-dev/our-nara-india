@@ -61,9 +61,10 @@ export default function PrivacyPage() {
 
     <p>
       <strong className="text-zinc-900">7. Limitation of Liability.</strong>{" "}
-      The website and its services are provided "as is" without warranties of
-      any kind. Seoulveda Trading LLP shall not be liable for indirect,
-      incidental, or consequential damages arising from the use of this website.
+      The website and its services are provided &quot;as is&quot; without
+      warranties of any kind. Seoulveda Trading LLP shall not be liable for
+      indirect, incidental, or consequential damages arising from the use of
+      this website.
     </p>
 
     <p>

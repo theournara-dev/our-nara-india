@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
 import { isValidImageUrl } from "@/lib/blob";
 import { notify } from "@/lib/toast";
@@ -77,6 +78,7 @@ export function ProductForm({
   backHref,
 }: Props) {
   const isEdit = Boolean(product);
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [brands, setBrands] = useState<BrandOption[]>(initialBrands);
   const [categories, setCategories] =
@@ -296,7 +298,11 @@ export function ProductForm({
           await updateProduct(product.id, input);
           notify.success(toastId, "Product saved");
         } else {
-          await createProduct(input, backHref); // redirects back to the list
+          await createProduct(input);
+          notify.success(toastId, "Product created");
+          // Navigate back to the list after the create succeeds (the server
+          // action no longer redirects, so we avoid the swallowed NEXT_REDIRECT).
+          router.push(backHref);
         }
       } catch (err) {
         notify.error(

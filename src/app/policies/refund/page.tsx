@@ -13,7 +13,7 @@ export default function RefundPage() {
           <strong className="text-zinc-900">1. 1. Order Cancellations</strong>
           ▪1.1 Cancellation Before Dispatch
           Immediate Cancellation Window: You can cancel your order **within 1 hour** of placing it at no cost.
-          If the order status is "Processing" (not yet packed or shipped), cancellation is usually instant upon request.
+          If the order status is &quot;Processing&quot; (not yet packed or shipped), cancellation is usually instant upon request.
           ⚠️ Urgent Action:
           For urgent cancellations outside the window, please contact us immediately via the dedicated support channels.
         </p>
@@ -32,7 +32,7 @@ export default function RefundPage() {
         <p>
           <strong className="text-zinc-900">Non-Returnable Items (Final Sale)</strong>
             Opened or consumed food, supplements, or personal-care products.
-            Items explicitly marked as **"Clearance"** or **"Final Sale"**.
+            Items explicitly marked as **&quot;Clearance&quot;** or **&quot;Final Sale&quot;**.
             Products damaged by customer misuse or neglect.
        
         </p>

@@ -2,20 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { removeCartItem, updateCartItemQty, useCart } from "@/lib/cart";
+import { useEffect, useRef, useState } from "react";
+import {
+  clearCart,
+  removeCartItem,
+  updateCartItemQty,
+  useCart,
+} from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
+import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { notify } from "@/lib/toast";
-import { UserInfoForm, type UserInfoValues } from "./user-info-form";
+import { UserInfoForm, useUserInfo } from "./user-info-form";
 
 /**
  * Right-side "quick purchase" drawer opened from the product page's BUY NOW
  * button (and the header cart icon). Lists every item in the cart, collects the
  * customer's contact + shipping details, and shows a subtotal/total block.
  *
- * Checkout isn't wired to a payment provider yet, so "Place order" is a stub
- * that confirms the details are ready — the Razorpay/Stripe flow lands in the
- * commerce milestone.
+ * "Place order" creates the internal order and opens the Razorpay checkout
+ * modal; on success the cart is cleared and the drawer closes.
  */
 export function QuickPurchaseSheet({
   open,
@@ -25,12 +30,18 @@ export function QuickPurchaseSheet({
   onClose: () => void;
 }) {
   const items = useCart();
-  const [userInfo, setUserInfo] = useState<UserInfoValues | null>(null);
+  const { values: userInfo, setValues: setUserInfo } = useUserInfo();
   const [placing, setPlacing] = useState(false);
   // Vertical offset so the drawer slides in below the header instead of
   // underneath it. Measured from the header bar (responsive height), clamped to
   // 0 when the page is scrolled and the header is off-screen.
   const [topOffset, setTopOffset] = useState(0);
+  // Bumped after the payment modal closes so the scroll lock is re-asserted
+  // (the Razorpay modal restores body overflow when it dismisses, which can
+  // undo our lock while the sheet is still open).
+  const [lockTick, setLockTick] = useState(0);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   // Lock page scroll (html + body) and measure the header while the drawer is
   // open. Locking only <body> leaves the root scroller (the <html> element)
@@ -43,6 +54,19 @@ export function QuickPurchaseSheet({
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
+    // Only the sheet's own scrollable body may scroll. Wheeling or touching
+    // over the header, footer, or backdrop must never scroll the page behind
+    // the sheet — even if the overflow lock is momentarily lost (e.g. after the
+    // Razorpay modal closes).
+    const overlay = overlayRef.current;
+    const body = bodyRef.current;
+    const preventScroll = (e: WheelEvent | TouchEvent) => {
+      if (body && body.contains(e.target as Node)) return;
+      e.preventDefault();
+    };
+    overlay?.addEventListener("wheel", preventScroll, { passive: false });
+    overlay?.addEventListener("touchmove", preventScroll, { passive: false });
+
     const measure = () => {
       const header = document.querySelector<HTMLElement>("[data-site-header]");
       const bottom = header?.getBoundingClientRect().bottom ?? 0;
@@ -53,32 +77,71 @@ export function QuickPurchaseSheet({
     return () => {
       document.body.style.overflow = prevBody;
       document.documentElement.style.overflow = prevHtml;
+      overlay?.removeEventListener("wheel", preventScroll);
+      overlay?.removeEventListener("touchmove", preventScroll);
       window.removeEventListener("resize", measure);
     };
-  }, [open]);
+  }, [open, lockTick]);
 
   const subtotalCents = items.reduce((s, i) => s + i.priceCents * i.qty, 0);
   const currency = items[0]?.currency ?? "INR";
   const shippingCents = 0; // free shipping
   const totalCents = subtotalCents + shippingCents;
 
-  function placeOrder() {
+  async function placeOrder() {
     if (items.length === 0) return;
+    if (!userInfo.name.trim() || !userInfo.email.trim()) {
+      notify.error(
+        "no-details",
+        "Missing details",
+        "Please fill in your contact and shipping details.",
+      );
+      return;
+    }
     setPlacing(true);
     const id = notify.loading("Placing order…");
-    // Stub until the payment provider is wired up.
-    setTimeout(() => {
+    try {
+      const { orderNumber } = await checkoutWithRazorpay({
+        items: items.map((i) => ({
+          productId: i.productId,
+          variantId: i.option,
+          quantity: i.qty,
+        })),
+        name: userInfo.name,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        addressLine1: userInfo.addressLine1,
+        addressLine2: userInfo.addressLine2,
+        city: userInfo.city,
+        state: userInfo.state,
+        postal: userInfo.postal,
+        country: userInfo.country,
+      });
+      clearCart();
       notify.success(
         id,
-        "Order ready!",
-        "Checkout with Razorpay/Stripe is coming in the commerce milestone.",
+        "Payment successful!",
+        `Order ${orderNumber} is confirmed.`,
       );
+      onClose();
+    } catch (err) {
+      notify.error(
+        id,
+        "Payment failed",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
       setPlacing(false);
-    }, 600);
+      // The Razorpay modal restores body overflow when it closes, which can
+      // undo our scroll lock. Re-assert it so the page stays locked while the
+      // sheet is still open (e.g. after a cancelled payment).
+      setLockTick((t) => t + 1);
+    }
   }
 
   return (
     <div
+      ref={overlayRef}
       className={`fixed inset-0 z-50 ${open ? "" : "pointer-events-none"}`}
       aria-hidden={!open}
     >
@@ -122,7 +185,10 @@ export function QuickPurchaseSheet({
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div
+          ref={bodyRef}
+          className="flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+        >
           {items.length === 0 ? (
             <div className="py-16 text-center">
               <p className="text-3xl">🛍️</p>
@@ -233,7 +299,10 @@ export function QuickPurchaseSheet({
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                   Your details
                 </h3>
-                <UserInfoForm onChange={setUserInfo} />
+                <UserInfoForm
+                  values={userInfo}
+                  onChange={setUserInfo}
+                />
               </section>
             </div>
           )}
@@ -269,7 +338,7 @@ export function QuickPurchaseSheet({
               {placing ? "Placing…" : "Place order"}
             </button>
             <p className="mt-2 text-center text-[11px] text-zinc-400">
-              {userInfo
+              {userInfo.name || userInfo.email
                 ? `Shipping to ${userInfo.name || "you"} · ${userInfo.email || "no email"}`
                 : "Fill in your details to continue."}
             </p>

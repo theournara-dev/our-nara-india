@@ -7,15 +7,21 @@ import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   UserInfoForm,
-  type UserInfoValues,
+  useUserInfo,
 } from "@/components/cart/user-info-form";
-import { removeCartItem, updateCartItemQty, useCart } from "@/lib/cart";
+import {
+  clearCart,
+  removeCartItem,
+  updateCartItemQty,
+  useCart,
+} from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
+import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { notify } from "@/lib/toast";
 
 export default function CartPage() {
   const items = useCart();
-  const [userInfo, setUserInfo] = useState<UserInfoValues | null>(null);
+  const { values: userInfo, setValues } = useUserInfo();
   const [placing, setPlacing] = useState(false);
 
   const subtotalCents = items.reduce((s, i) => s + i.priceCents * i.qty, 0);
@@ -23,19 +29,50 @@ export default function CartPage() {
   const shippingCents = 0; // free shipping
   const totalCents = subtotalCents + shippingCents;
 
-  function placeOrder() {
+  async function placeOrder() {
     if (items.length === 0) return;
+    if (!userInfo.name.trim() || !userInfo.email.trim()) {
+      notify.error(
+        "no-details",
+        "Missing details",
+        "Please fill in your contact and shipping details.",
+      );
+      return;
+    }
     setPlacing(true);
     const id = notify.loading("Placing order…");
-    // Stub until the payment provider is wired up.
-    setTimeout(() => {
+    try {
+      const { orderNumber } = await checkoutWithRazorpay({
+        items: items.map((i) => ({
+          productId: i.productId,
+          variantId: i.option,
+          quantity: i.qty,
+        })),
+        name: userInfo.name,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        addressLine1: userInfo.addressLine1,
+        addressLine2: userInfo.addressLine2,
+        city: userInfo.city,
+        state: userInfo.state,
+        postal: userInfo.postal,
+        country: userInfo.country,
+      });
+      clearCart();
       notify.success(
         id,
-        "Order ready!",
-        "Checkout with Razorpay/Stripe is coming in the commerce milestone.",
+        "Payment successful!",
+        `Order ${orderNumber} is confirmed.`,
       );
+    } catch (err) {
+      notify.error(
+        id,
+        "Payment failed",
+        err instanceof Error ? err.message : "Please try again.",
+      );
+    } finally {
       setPlacing(false);
-    }, 600);
+    }
   }
 
   return (
@@ -150,7 +187,7 @@ export default function CartPage() {
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">
                   Your details
                 </h2>
-                <UserInfoForm onChange={setUserInfo} />
+                <UserInfoForm values={userInfo} onChange={setValues} />
               </section>
             </div>
 
@@ -186,7 +223,7 @@ export default function CartPage() {
                 {placing ? "Placing…" : "Place order"}
               </button>
               <p className="mt-2 text-center text-[11px] text-zinc-400">
-                {userInfo
+                {userInfo.name || userInfo.email
                   ? `Shipping to ${userInfo.name || "you"} · ${userInfo.email || "no email"}`
                   : "Fill in your details to continue."}
               </p>

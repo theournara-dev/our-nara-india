@@ -1,24 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
-/**
- * Contact + shipping address form shared by the quick-purchase sheet and the
- * cart page. Fields are prefilled from the signed-in account when available and
- * editable so a guest (or a user checking out to a different address) can fill
- * them in. Values are surfaced to the parent via `onChange` so the caller can
- * read them when placing an order.
- */
-export function UserInfoForm({
-  onChange,
-}: {
-  onChange?: (values: UserInfoValues) => void;
-}) {
-  const { data: session } = authClient.useSession();
-  const user = session?.user;
+export type UserInfoValues = {
+  name: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postal: string;
+  country: string;
+};
 
-  const [values, setValues] = useState<UserInfoValues>(() => ({
+export const EMPTY_USER_INFO: UserInfoValues = {
+  name: "",
+  email: "",
+  phone: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  postal: "",
+  country: "IN",
+};
+
+type SessionUser = {
+  name?: string | null;
+  email?: string | null;
+  telephone?: string | null;
+  mobile?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal?: string | null;
+  country?: string | null;
+} | null;
+
+function valuesFromUser(user: SessionUser): UserInfoValues {
+  return {
     name: user?.name ?? "",
     email: user?.email ?? "",
     phone: user?.telephone ?? user?.mobile ?? "",
@@ -28,31 +51,51 @@ export function UserInfoForm({
     state: user?.state ?? "",
     postal: user?.postal ?? "",
     country: user?.country ?? "IN",
-  }));
+  };
+}
 
-  // Prefill once the session resolves after mount.
-  const [prevUser, setPrevUser] = useState(user);
-  if (prevUser !== user) {
-    setPrevUser(user);
-    if (user) {
-      setValues({
-        name: user.name ?? "",
-        email: user.email ?? "",
-        phone: user.telephone ?? user.mobile ?? "",
-        addressLine1: user.addressLine1 ?? "",
-        addressLine2: user.addressLine2 ?? "",
-        city: user.city ?? "",
-        state: user.state ?? "",
-        postal: user.postal ?? "",
-        country: user.country ?? "IN",
-      });
-    }
-  }
+/**
+ * Contact + shipping values owned by the parent. Session fields act as the
+ * base and the user's edits as overrides, so the caller always has complete,
+ * current values — prefilled sign-in details count as valid immediately,
+ * with no "has the user filled this in yet" flag to forget.
+ */
+export function useUserInfo(): {
+  values: UserInfoValues;
+  setValues: (next: UserInfoValues) => void;
+} {
+  const { data: session } = authClient.useSession();
+  const base = useMemo(
+    () => valuesFromUser(session?.user as SessionUser),
+    [session],
+  );
+  const [overrides, setOverrides] = useState<Partial<UserInfoValues> | null>(
+    null,
+  );
+  const values = useMemo(
+    () => (overrides ? { ...base, ...overrides } : base),
+    [base, overrides],
+  );
+  const setValues = useCallback((next: UserInfoValues) => {
+    setOverrides(next);
+  }, []);
+  return { values, setValues };
+}
 
+/**
+ * Controlled contact + shipping address form shared by the quick-purchase
+ * sheet and the cart page. All state lives in the parent (via `useUserInfo`),
+ * so the form is a pure view of `values` that reports edits through `onChange`.
+ */
+export function UserInfoForm({
+  values,
+  onChange,
+}: {
+  values: UserInfoValues;
+  onChange: (values: UserInfoValues) => void;
+}) {
   function update<K extends keyof UserInfoValues>(key: K, value: string) {
-    const next = { ...values, [key]: value };
-    setValues(next);
-    onChange?.(next);
+    onChange({ ...values, [key]: value });
   }
 
   const inputCls =
@@ -167,15 +210,3 @@ export function UserInfoForm({
     </div>
   );
 }
-
-export type UserInfoValues = {
-  name: string;
-  email: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  state: string;
-  postal: string;
-  country: string;
-};

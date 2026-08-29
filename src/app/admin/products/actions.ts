@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -73,12 +72,12 @@ function revalidateCatalog() {
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 
-export async function createProduct(input: ProductInput, backHref: string) {
+export async function createProduct(input: ProductInput) {
   await requireAdmin();
   const data = productInput.parse(input);
   const slug = await uniqueSlug(slugify(data.slug));
 
-  await db.product.create({
+  const product = await db.product.create({
     data: {
       name: data.name,
       slug,
@@ -107,10 +106,11 @@ export async function createProduct(input: ProductInput, backHref: string) {
         })),
       },
     },
+    select: { id: true, slug: true },
   });
 
   revalidateCatalog();
-  redirect(backHref);
+  return product;
 }
 
 export async function updateProduct(id: string, input: ProductInput) {
