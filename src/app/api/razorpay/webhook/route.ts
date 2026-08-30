@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { SITE } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
-import { verifyWebhookSignature } from "@/lib/razorpay";
+import { getRazorpay, verifyWebhookSignature } from "@/lib/razorpay";
 
 /**
  * Razorpay webhook. Razorpay posts payment events here asynchronously; we use
@@ -42,7 +42,15 @@ interface RazorpayWebhook {
   payload?: {
     payment?: { entity?: RazorpayPaymentEntity };
     order?: { entity?: RazorpayOrderEntity };
+    refund?: { entity?: RazorpayRefundEntity };
   };
+}
+
+interface RazorpayRefundEntity {
+  id?: string;
+  payment_id?: string;
+  amount?: number;
+  status?: string;
 }
 
 /** Reconcile a Razorpay order id back to our internal payment row. */
@@ -116,13 +124,26 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
       // legitimate one — this path is a fraud signal.
       data: { status: "FAILED", rawPayload: payment as unknown as object },
     });
+    // Money WAS captured at a wrong amount — a human must review and refund.
+    await notifySupport(
+      `[OUR:NARA] Amount mismatch on order ${order.orderNumber} — refund needed`,
+      `Razorpay captured a payment for order ${order.orderNumber} that doesn't match our total.\n\nExpected: ${order.totalCents}\nCaptured: ${payment.amount}\n\nThe payment row was marked FAILED for review. Refund via the Razorpay dashboard if this was erroneous.`,
+    );
     return;
   }
 
   await db.$transaction([
     db.payment.update({
       where: { id: paymentRecord.id },
-      data: { status: "CAPTURED", rawPayload: payment as unknown as object },
+      // Store the Razorpay payment id in a known spot — refund events key on
+      // it, since our rows use the Razorpay order id as providerRef.
+      data: {
+        status: "CAPTURED",
+        rawPayload: {
+          ...payment,
+          razorpay_payment_id: payment.id ?? null,
+        } as unknown as object,
+      },
     }),
     // Guard against webhook retries regressing admin-set statuses (e.g.
     // REFUNDED back to PAID); only advance from open states.
@@ -139,15 +160,25 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
   // Side-effects: decrement stock and email the customer. Kept outside the
   // transaction — stock is operational and the mail failure must not fail
   // the webhook (Razorpay would otherwise retry a paid event).
-  await runPaidSideEffects(order.id);
+  await runPaidSideEffects(order.id, paymentRecord.id);
+}
+
+/** A non-fatal issue to flag to support (does not fail the webhook). */
+interface FriendlyIssue {
+  message: string;
 }
 
 /**
  * Paid-order side effects: decrement variant stock + confirmation email.
  * Shared by payment.captured and the order.paid fallback so a missed
  * captured event still reserves stock and mails the customer.
+ * The decrement outcome is persisted on the payment row so the refund
+ * handler knows whether stock was actually taken (phantom-restock guard).
  */
-async function runPaidSideEffects(orderId: string) {
+async function runPaidSideEffects(
+  orderId: string,
+  paymentRowId: string,
+) {
   const orderWithItems = await db.order.findUnique({
     where: { id: orderId },
     select: {
@@ -158,24 +189,58 @@ async function runPaidSideEffects(orderId: string) {
     },
   });
   if (!orderWithItems) return;
-  await decrementStock(orderWithItems.items);
+  const shortage = await decrementStock(orderWithItems.items);
+  // Record whether stock was actually taken — refunds restock only when true.
+  await db.payment.update({
+    where: { id: paymentRowId },
+    data: { stockTaken: !shortage },
+  });
+  if (shortage) {
+    console.error(
+      `Oversell guard skipped decrement for order ${orderWithItems.orderNumber}: ${shortage.message}`,
+    );
+    await notifySupport(
+      `[OUR:NARA] Oversell guard triggered — order ${orderWithItems.orderNumber}`,
+      `The paid order ${orderWithItems.orderNumber} could not decrement stock:\n${shortage.message}\n\nReview the order and product stock manually.`,
+    );
+  }
   await sendOrderConfirmation(orderWithItems.orderNumber);
 }
 
 /**
  * Decrement ProductVariant.stock for the paid items. Uses per-variant
  * `updateMany` with an `stock >= qty` guard so a decrement never drives
- * stock negative (the update simply skips when there isn't enough).
+ * stock negative. Returns ids the guard skipped — a skip is an oversell
+ * symptom (stock changed between order creation and payment), surfaced in
+ * the logs and flagged to support.
  */
 async function decrementStock(
   items: { variantId: string | null; quantity: number }[],
-) {
+): Promise<FriendlyIssue | null> {
+  // Collect ALL shortages — an early return would leave the remaining paid
+  // items un-decremented, creating the next oversell.
+  const shortages: string[] = [];
   for (const item of items) {
     if (!item.variantId) continue;
-    await db.productVariant.updateMany({
+    const res = await db.productVariant.updateMany({
       where: { id: item.variantId, stock: { gte: item.quantity } },
       data: { stock: { decrement: item.quantity } },
     });
+    if (res.count === 0) {
+      shortages.push(`variant ${item.variantId} (wanted ${item.quantity})`);
+    }
+  }
+  return shortages.length > 0
+    ? { message: `Stock shortage on ${shortages.join("; ")}.` }
+    : null;
+}
+
+/** Best-effort internal alert email; never throws. */
+async function notifySupport(subject: string, text: string) {
+  try {
+    await sendEmail({ to: SITE.supportEmail, subject, text });
+  } catch (err) {
+    console.error("Support alert email failed:", err);
   }
 }
 
@@ -225,7 +290,9 @@ async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
     where: { id: paymentRecord.orderId },
     select: { id: true, status: true },
   });
-  if (!order || PROTECTED_ORDER_STATUSES.has(order.status)) return;
+  // Only fails open orders — a retryable FAILED order stays retryable, and
+  // paid/protected statuses are never touched.
+  if (!order || order.status !== "PENDING") return;
 
   await db.order.update({
     where: { id: order.id },
@@ -260,12 +327,36 @@ async function handleOrderPaid(order: RazorpayOrderEntity) {
     return;
   }
 
+  // Fetch the payments for this Razorpay order so we can store the payment
+  // id — refund events key on it, and this fallback is exactly the path where
+  // the captured webhook (which normally records it) was missed.
+  let rzpPaymentId: string | null = null;
+  try {
+    const rzpPayments = await getRazorpay().orders.fetchPayments(rzpOrderId);
+    rzpPaymentId =
+      rzpPayments.items?.find((p) => p.status === "captured")?.id ??
+      rzpPayments.items?.[0]?.id ??
+      null;
+  } catch (err) {
+    console.error(`Could not fetch payments for razorpay order ${rzpOrderId}:`, err);
+  }
+
   await db.$transaction([
     // This path fires when payment.captured was missed, so also move the
-    // payment row off CREATED.
+    // payment row off CAPTURED-less limbo and record the payment id for
+    // future refund reconciliation.
     db.payment.update({
       where: { id: paymentRecord.id },
-      data: { status: "CAPTURED" },
+      data: {
+        status: "CAPTURED",
+        ...(rzpPaymentId
+          ? {
+              rawPayload: {
+                razorpay_payment_id: rzpPaymentId,
+              },
+            }
+          : {}),
+      },
     }),
     db.order.update({
       where: { id: internalOrder.id },
@@ -275,7 +366,123 @@ async function handleOrderPaid(order: RazorpayOrderEntity) {
 
   // The captured event (which normally runs these) was missed — run the
   // same side-effects here.
-  await runPaidSideEffects(internalOrder.id);
+  await runPaidSideEffects(internalOrder.id, paymentRecord.id);
+}
+
+/**
+ * Refund processed at Razorpay. Full refunds mark the payment/order REFUNDED
+ * and give stock back; partial refunds are NOT auto-applied — the admin
+ * applies them from the panel (we note them and alert support).
+ */
+async function handleRefundCreated(refund: RazorpayRefundEntity) {
+  const rzpPaymentId = refund.payment_id;
+  if (!rzpPaymentId) return;
+
+  // The refund references Razorpay's payment id; our payment rows key on the
+  // Razorpay order id. Captured events store the payment id in rawPayload,
+  // so find the payment whose rawPayload names it.
+  const paymentRecord = await db.payment.findFirst({
+    where: {
+      provider: "razorpay",
+      rawPayload: { path: ["razorpay_payment_id"], equals: rzpPaymentId },
+    },
+  });
+  if (!paymentRecord) {
+    console.error(`No payment row for razorpay payment ${rzpPaymentId} (refund)`);
+    await notifySupport(
+      `[OUR:NARA] Unmatched refund webhook for payment ${rzpPaymentId}`,
+      `A refund arrived for payment ${rzpPaymentId} but no local payment row stores that id (e.g. the order was paid via the order.paid fallback). Reconcile the refund manually.`,
+    );
+    return;
+  }
+
+  // Idempotency: retried refund events must not double-restock.
+  if (paymentRecord.status === "REFUNDED") return;
+
+  // Only a FULL refund (>= what we recorded) flips the order and restocks.
+  // Stock was only ever decremented via the captured path, so anything that
+  // isn't CAPTURED (e.g. an amount-mismatch FAILED payment that was refunded
+  // from the dashboard) must NOT restock — it was never decremented.
+  const isFullRefund =
+    refund.amount != null && refund.amount >= paymentRecord.amountCents;
+
+  const order = await db.order.findUnique({
+    where: { id: paymentRecord.orderId },
+    select: { id: true, isPreOrder: true },
+  });
+  if (!order) return;
+
+  if (!isFullRefund) {
+    await db.payment.update({
+      where: { id: paymentRecord.id },
+      // Merge (never replace): keep the razorpay_payment_id key so later
+      // refunds still reconcile, and keep the prior payload for audit.
+      data: {
+        rawPayload: {
+          ...((paymentRecord.rawPayload as Record<string, unknown> | null) ?? {}),
+          lastPartialRefund: refund,
+        } as unknown as object,
+      },
+    });
+    await notifySupport(
+      `[OUR:NARA] Partial refund on order — manual reconciliation needed`,
+      `A partial refund (${refund.amount ?? "unknown amount"} of ${paymentRecord.amountCents}) arrived for payment ${rzpPaymentId}. The payment/order status was NOT changed — update it manually once fully refunded.`,
+    );
+    return;
+  }
+
+  // Restock ONLY when stock was actually taken. `stockTaken` is written by
+  // the captured path (the oversell guard can capture payment without
+  // decrementing); for rows written before that flag existed, fall back to
+  // the CAPTURED status heuristic.
+  const stockWasTaken = paymentRecord.stockTaken || paymentRecord.status === "CAPTURED";
+
+  // Items to give back — resolved BEFORE the transaction so the restock runs
+  // inside it (a restock failure then aborts the status flip and the webhook
+  // retry is meaningful, instead of a post-transaction failure being eaten by
+  // the REFUNDED idempotency guard).
+  const items = stockWasTaken
+    ? await db.orderItem.findMany({
+        where: { orderId: paymentRecord.orderId },
+        select: { variantId: true, quantity: true },
+      })
+    : [];
+
+  await db.$transaction([
+    db.payment.update({
+      where: { id: paymentRecord.id },
+      data: {
+        status: "REFUNDED",
+        rawPayload: {
+          ...refund,
+          razorpay_payment_id: rzpPaymentId,
+        } as unknown as object,
+      },
+    }),
+    // A refunded pre-order keeps the pre-order flow; only plain orders go
+    // straight to REFUNDED here.
+    ...(order.isPreOrder
+      ? []
+      : [
+          db.order.update({
+            where: { id: order.id },
+            data: { status: "REFUNDED" },
+          }),
+        ]),
+    // Give the stock back atomically with the status flip so a restock
+    // failure aborts the flip and the webhook retry can make progress.
+    ...items.map((item) =>
+      db.productVariant.update({
+        where: { id: item.variantId! },
+        data: { stock: { increment: item.quantity } },
+      }),
+    ),
+  ]);
+
+  await notifySupport(
+    `[OUR:NARA] Refund processed for payment ${rzpPaymentId}`,
+    `A full refund arrived for payment ${rzpPaymentId}. The payment and order were marked REFUNDED${stockWasTaken ? " and stock was restored" : " (stock untouched — it was never decremented for this payment)"}.`,
+  );
 }
 
 export async function POST(request: Request) {
@@ -296,6 +503,7 @@ export async function POST(request: Request) {
   const event = webhook.event ?? "unknown";
   const payment = webhook.payload?.payment?.entity ?? {};
   const order = webhook.payload?.order?.entity ?? {};
+  const refund = webhook.payload?.refund?.entity ?? {};
 
   try {
     switch (event) {
@@ -310,6 +518,9 @@ export async function POST(request: Request) {
         break;
       case "order.paid":
         await handleOrderPaid(order);
+        break;
+      case "refund.created":
+        await handleRefundCreated(refund);
         break;
       default:
         // Unhandled event types are acknowledged so Razorpay doesn't retry.

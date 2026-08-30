@@ -30,8 +30,18 @@ export async function POST(request: Request) {
   if (!order) {
     return Response.json({ error: "Order not found" }, { status: 404 });
   }
-  if (order.status !== "PENDING") {
+  // FAILED orders are retryable: a failed attempt (bank timeout, dropped
+  // network) must not brick the cart — a fresh Razorpay order revives it.
+  if (order.status !== "PENDING" && order.status !== "FAILED") {
     return Response.json({ error: "Order is not payable" }, { status: 409 });
+  }
+
+  // Revive a failed order back to PENDING so the payment flow can proceed.
+  if (order.status === "FAILED") {
+    await db.order.update({
+      where: { id: order.id },
+      data: { status: "PENDING" },
+    });
   }
 
   try {

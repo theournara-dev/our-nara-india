@@ -9,7 +9,7 @@ import {
   schedulePickup as apiSchedulePickup,
 } from "@/lib/delhivery";
 import { db } from "@/lib/db";
-import { applyTrackingStatus } from "./fulfillment";
+import { applyTrackingStatus, advanceShipmentStatus } from "./fulfillment";
 import { ORDER_STATUSES, type OrderStatusValue } from "./status";
 
 /**
@@ -122,20 +122,33 @@ export async function createShipment(input: {
     weightGrams: totalWeightGrams(order.items),
   });
 
-  await db.shipment.create({
-    data: {
-      orderId: order.id,
-      provider: "delhivery",
-      waybill: result.waybill,
-      clientOrderRef: order.orderNumber,
-      status: "CREATED",
-      source: "APP",
-      labelUrl: result.labelUrl,
-      codAmountCents: 0,
-      isCod: false,
-      lastSyncedAt: new Date(),
-    },
-  });
+  try {
+    await db.shipment.create({
+      data: {
+        orderId: order.id,
+        provider: "delhivery",
+        waybill: result.waybill,
+        clientOrderRef: order.orderNumber,
+        status: "CREATED",
+        source: "APP",
+        labelUrl: result.labelUrl,
+        codAmountCents: 0,
+        isCod: false,
+        lastSyncedAt: new Date(),
+      },
+    });
+  } catch (err) {
+    // The waybill EXISTS at Delhivery but we failed to record it — a retry
+    // would create a duplicate shipment. Log loudly so it can be imported
+    // via the "Import" flow instead.
+    console.error(
+      `ORPHANED WAYBILL: ${result.waybill} for order ${order.orderNumber} — DB write failed, import manually:`,
+      err,
+    );
+    throw new Error(
+      `Shipment created at Delhivery (waybill ${result.waybill}) but saving it failed. Import it with the Import button — do NOT create another shipment.`,
+    );
+  }
 
   revalidate();
 }
@@ -237,10 +250,13 @@ export async function syncShipment(waybill: string) {
     throw new Error("Waybill not found at Delhivery — marked as stale.");
   }
 
+  // Forward-only: never demote an advanced shipment on an unmapped wording.
+  const nextStatus = advanceShipmentStatus(shipment.status, remote.status);
+
   await db.shipment.update({
     where: { waybill },
     data: {
-      status: remote.status,
+      status: nextStatus,
       providerStatus: remote.providerStatus,
       lastEventAt: remote.lastEventAt,
       lastSyncedAt: new Date(),
@@ -254,7 +270,7 @@ export async function syncShipment(waybill: string) {
     select: { id: true, status: true },
   });
   if (order) {
-    const target = await applyTrackingStatus(order.status, remote.status);
+    const target = await applyTrackingStatus(order.status, nextStatus);
     if (target) {
       await db.order.update({
         where: { id: order.id },

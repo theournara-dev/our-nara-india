@@ -339,6 +339,9 @@ model Payment {
   amountCents Int           @map("amount_cents")
   currency    String        @default("INR")
   status      PaymentStatus @default(CREATED)
+  // Did the captured path actually decrement stock? Refunds restock only
+  // when true (the oversell guard can capture payment without decrement).
+  stockTaken  Boolean       @default(false) @map("stock_taken")
   rawPayload  Json?         @map("raw_payload")
   createdAt   DateTime      @default(now()) @map("created_at")
 

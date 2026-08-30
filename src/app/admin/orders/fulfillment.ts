@@ -55,6 +55,23 @@ export const SHIPMENT_TO_ORDER: Record<
 };
 
 /**
+ * Forward-only shipment status: a sync must never demote a shipment that has
+ * already progressed, nor swap one terminal state for another (e.g. the
+ * admin-set CANCELLED flipped to FAILED by a late pull). Only a strictly
+ * higher-ranked remote status is applied. Returns the existing status when
+ * the remote one is equal/lower-ranked.
+ */
+export function advanceShipmentStatus(
+  current: ShipmentStatus,
+  remote: ShipmentStatus,
+): ShipmentStatus {
+  if (SHIPMENT_STATUS_RANK[remote] <= SHIPMENT_STATUS_RANK[current]) {
+    return current;
+  }
+  return remote;
+}
+
+/**
  * Advance an order's status from a tracking-derived shipment status.
  * Forward-only: DELIVERED stays DELIVERED; admin terminal states
  * (CANCELLED/REFUNDED) are never overwritten. Returns the applied status

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getRazorpay } from "@/lib/razorpay";
 import { fetchShipment, isConfigured as delhiveryConfigured } from "@/lib/delhivery";
-import { applyTrackingStatus } from "@/app/admin/orders/fulfillment";
+import { applyTrackingStatus, advanceShipmentStatus } from "@/app/admin/orders/fulfillment";
 import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
@@ -72,11 +72,14 @@ export async function GET(request: Request) {
         const remote = await fetchShipment(shipment.waybill);
         if (!remote) continue;
 
-        const changed = remote.status !== shipment.status;
+        // Forward-only: a remote status that maps below our current rank
+        // (or an unmapped wording → CREATED fallback) must not demote us.
+        const next = advanceShipmentStatus(shipment.status, remote.status);
+        const changed = next !== shipment.status;
         await db.shipment.update({
           where: { waybill: shipment.waybill },
           data: {
-            status: remote.status,
+            status: next,
             providerStatus: remote.providerStatus,
             lastEventAt: remote.lastEventAt ?? shipment.lastEventAt,
             lastSyncedAt: new Date(),
@@ -85,7 +88,7 @@ export async function GET(request: Request) {
         });
         if (changed) summary.shipmentsUpdated += 1;
 
-        await advanceOrder(shipment.orderId, remote.status);
+        await advanceOrder(shipment.orderId, next);
       } catch (err) {
         summary.errors.push(`shipment ${shipment.waybill}: ${String(err)}`);
       }
@@ -97,7 +100,7 @@ export async function GET(request: Request) {
     const cutoff = new Date(Date.now() - 30 * 60 * 1000); // older than 30 min
     const pendingOrders = await db.order.findMany({
       where: { status: "PENDING", createdAt: { lt: cutoff } },
-      select: { id: true, orderNumber: true, totalCents: true },
+      select: { id: true, orderNumber: true, totalCents: true, isPreOrder: true },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -121,7 +124,8 @@ export async function GET(request: Request) {
             }),
             db.order.update({
               where: { id: order.id },
-              data: { status: "PAID" },
+              // Mirror the webhook path: pre-orders must not be marked PAID.
+              data: { status: order.isPreOrder ? "PRE_ORDER" : "PAID" },
             }),
           ]);
           summary.ordersPaid += 1;

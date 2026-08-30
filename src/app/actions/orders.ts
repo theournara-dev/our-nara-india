@@ -30,12 +30,61 @@ const createOrderInput = z.object({
   state: z.string().optional(),
   postal: z.string().optional(),
   country: z.string().optional(),
+  /**
+   * Client-generated idempotency token (stable per cart contents + details).
+   * A retry or double-submit with the same token returns the existing PENDING
+   * order instead of creating a duplicate.
+   */
+  cartToken: z.string().min(8).max(100).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInput>;
 
 export async function createOrder(input: CreateOrderInput) {
   const data = createOrderInput.parse(input);
+
+  // Idempotency: a retry or double-submit with the same cart token returns
+  // the existing open order instead of creating a duplicate (the customer
+  // may have already opened its Razorpay modal). Scoped to the same email so
+  // an FNV collision between different customers can't hand over an order,
+  // and items must still match (address edits keep the same token only when
+  // the client regenerates it — the token covers address fields too).
+  if (data.cartToken) {
+    const existing = await db.order.findFirst({
+      where: {
+        billing: { path: ["cartToken"], equals: data.cartToken },
+        email: data.email.trim().toLowerCase(),
+        status: "PENDING",
+      },
+      orderBy: { createdAt: "desc" },
+      include: { items: { select: { productId: true, variantId: true, quantity: true } } },
+    });
+    // Content re-check: only reuse when every requested item line matches the
+    // stored order exactly (guards hash collisions AND stale tokens).
+    const sameItems =
+      existing &&
+      existing.items.length === data.items.length &&
+      data.items.every((req) =>
+        existing.items.some(
+          (it) =>
+            it.productId === req.productId &&
+            (it.variantId ?? undefined) === req.variantId &&
+            it.quantity === req.quantity,
+        ),
+      ) &&
+      existing.items.every(
+        (it) =>
+          data.items.some(
+            (req) =>
+              req.productId === it.productId &&
+              (req.variantId ?? undefined) === (it.variantId ?? undefined) &&
+              req.quantity === it.quantity,
+          ),
+      );
+    if (existing && sameItems) {
+      return { orderId: existing.id, orderNumber: existing.orderNumber };
+    }
+  }
 
   // Attach the signed-in user if there is one (guest checkout is allowed).
   let userId: string | null = null;
@@ -57,11 +106,22 @@ export async function createOrder(input: CreateOrderInput) {
       currency: true,
       isPreOrder: true,
       variants: {
-        select: { id: true, optionValue: true, sku: true, priceCents: true },
+        select: { id: true, optionValue: true, sku: true, priceCents: true, stock: true },
       },
     },
   });
   const productById = new Map(products.map((p) => [p.id, p]));
+
+  // Aggregate quantity per variant across cart lines — two lines of the same
+  // variant must be checked against stock COMBINED, not per-line.
+  const qtyByVariant = new Map<string, number>();
+  for (const item of data.items) {
+    if (!item.variantId) continue;
+    qtyByVariant.set(
+      item.variantId,
+      (qtyByVariant.get(item.variantId) ?? 0) + item.quantity,
+    );
+  }
 
   const orderItems: {
     productId: string;
@@ -91,6 +151,16 @@ export async function createOrder(input: CreateOrderInput) {
       const variant = product.variants.find((v) => v.id === item.variantId);
       if (!variant) {
         throw new Error("A selected option is no longer available.");
+      }
+      // Stock guard: refuse the order when the variant can't cover the
+      // COMBINED quantity of all cart lines for it — otherwise the webhook's
+      // guarded decrement would silently skip and the oversell would go
+      // unnoticed.
+      const totalWanted = qtyByVariant.get(variant.id) ?? item.quantity;
+      if (variant.stock < totalWanted) {
+        throw new Error(
+          `Only ${variant.stock} left of ${product.name}${variant.optionValue ? ` (${variant.optionValue})` : ""}. Please adjust your cart.`,
+        );
       }
       optionValue = variant.optionValue;
       sku = variant.sku;
@@ -142,6 +212,8 @@ export async function createOrder(input: CreateOrderInput) {
       discountCents,
       totalCents,
       isPreOrder,
+      // cartToken lives in billing Json (unused column) for idempotent reuse.
+      billing: data.cartToken ? { cartToken: data.cartToken } : undefined,
       shipping: {
         name: data.name.trim(),
         phone: data.phone?.trim() || null,
