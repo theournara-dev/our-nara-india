@@ -30,7 +30,11 @@ interface RazorpayCheckoutOptions {
   order_id: string;
   prefill?: { name?: string; email?: string; contact?: string };
   notes?: Record<string, string>;
-  handler: (response: { razorpay_payment_id: string }) => void;
+  handler: (response: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => void;
   modal?: { ondismiss?: () => void };
   theme?: { color?: string };
 }
@@ -63,13 +67,45 @@ function loadCheckoutScript(): Promise<void> {
   return scriptPromise;
 }
 
+/**
+ * Stable idempotency token for one checkout attempt: derived from the cart
+ * contents + customer details. Double-submits and server-action retries hash
+ * to the same token, so the server reuses the PENDING order instead of
+ * creating a duplicate.
+ */
+function cartToken(input: CreateOrderInput): string {
+  const canonical = JSON.stringify([
+    ...input.items
+      .map((i) => [i.productId, i.variantId ?? "", i.quantity])
+      .sort(),
+    input.name,
+    input.email,
+    input.phone ?? "",
+    input.addressLine1 ?? "",
+    input.addressLine2 ?? "",
+    input.city ?? "",
+    input.state ?? "",
+    input.postal ?? "",
+    input.country ?? "",
+  ]);
+  // Simple non-crypto hash (FNV-1a), zero-padded to a fixed width so the
+  // server-side zod min(8) can never reject a short run. Collisions only
+  // matter for identical intents, and the server matches on email too.
+  let h = 0x811c9dc5;
+  for (let i = 0; i < canonical.length; i++) {
+    h ^= canonical.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return `cart-${(h >>> 0).toString(36).padStart(7, "0")}`;
+}
+
 export async function checkoutWithRazorpay(
   input: CreateOrderInput,
 ): Promise<{ orderId: string; orderNumber: string }> {
   // 1. Create the internal PENDING order (server-side totals).
   let order: { orderId: string; orderNumber: string };
   try {
-    order = await createOrder(input);
+    order = await createOrder({ ...input, cartToken: cartToken(input) });
   } catch (err) {
     // Server actions surface ZodError as a serialized JSON blob — show a
     // readable message instead.
@@ -126,8 +162,34 @@ export async function checkoutWithRazorpay(
       },
       notes: { internalOrderId: order.orderId },
       theme: { color: "#6F2DBD" },
-      handler: () => {
+      handler: async (response) => {
         if (settled) return;
+        // Verify the handler signature server-side before declaring success.
+        // This doesn't gate the webhook (still authoritative), but stops the
+        // UI from showing "successful" for an unverifiable payment.
+        try {
+          const res = await fetch("/api/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response),
+          });
+          if (!res.ok) {
+            const data = (await res.json().catch(() => ({}))) as {
+              error?: string;
+            };
+            settled = true;
+            reject(
+              new Error(
+                data.error ??
+                  "We couldn't confirm your payment. If you were charged, our team will verify it shortly.",
+              ),
+            );
+            return;
+          }
+        } catch {
+          // Network hiccup during verification: don't hard-fail the purchase —
+          // the webhook will still reconcile it.
+        }
         settled = true;
         resolve({ orderId: order.orderId, orderNumber: order.orderNumber });
       },

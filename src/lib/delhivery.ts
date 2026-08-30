@@ -97,6 +97,10 @@ export function mapDelhiveryStatus(
     return "IN_TRANSIT";
   }
   if (s.includes("pending") || s.includes("created")) return "CREATED";
+  // Log unrecognized vocabulary so the mapping table can be extended —
+  // silent misses would make shipments appear stuck (they keep their current
+  // status via the forward-only guard).
+  console.warn(`[delhivery] Unrecognized provider status: "${raw}"`);
   return null;
 }
 
@@ -112,6 +116,9 @@ export interface DelhiveryShipment {
 // Low-level request helper
 // ---------------------------------------------------------------------------
 
+/** Per-request timeout: one slow call must not eat the cron's 60s budget. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 async function request<T>(
   path: string,
   init: { method?: "GET" | "POST"; body?: string } = {},
@@ -126,6 +133,7 @@ async function request<T>(
     },
     body: init.body,
     cache: "no-store",
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
   const text = await res.text();

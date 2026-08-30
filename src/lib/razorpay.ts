@@ -75,6 +75,27 @@ export function verifyWebhookSignature(
   return signature === expected;
 }
 
+/**
+ * Verify the checkout handler signature (HMAC-SHA256 of
+ * `razorpay_order_id|razorpay_payment_id` with RAZORPAY_KEY_SECRET). Lets the
+ * client-side success path be confirmed server-side before showing "paid" —
+ * the webhook remains the authoritative backstop.
+ */
+export function verifyPaymentSignature(input: {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  signature: string | null | undefined;
+}): boolean {
+  if (!input.signature) return false;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keySecret) return false;
+
+  const expected = createHmac("sha256", keySecret)
+    .update(`${input.razorpayOrderId}|${input.razorpayPaymentId}`)
+    .digest("hex");
+  return input.signature === expected;
+}
+
 export type RazorpayPaymentEvent =
   | "payment.captured"
   | "payment.failed"
