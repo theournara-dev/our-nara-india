@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { DEFAULT_PRODUCT_WEIGHT_GRAMS, DelhiveryError, fetchShipment } from "@/lib/delhivery";
+import {
+  DEFAULT_PRODUCT_WEIGHT_GRAMS,
+  DelhiveryError,
+  fetchShipment,
+} from "@/lib/delhivery";
 import {
   cancelShipment as apiCancelShipment,
   createShipment as apiCreateShipment,
@@ -10,7 +14,7 @@ import {
 } from "@/lib/delhivery";
 import { db } from "@/lib/db";
 import { applyTrackingStatus, advanceShipmentStatus } from "./fulfillment";
-import { ORDER_STATUSES, type OrderStatusValue } from "./status";
+import { ORDER_STATUSES, type OrderStatusValue } from "@/lib/order-status";
 
 /**
  * Admin order actions: manual status changes plus the Delhivery fulfillment
@@ -67,7 +71,8 @@ function totalWeightGrams(
 ): number {
   const grams = items.reduce(
     (sum, i) =>
-      sum + (i.product.weightGrams ?? DEFAULT_PRODUCT_WEIGHT_GRAMS) * i.quantity,
+      sum +
+      (i.product.weightGrams ?? DEFAULT_PRODUCT_WEIGHT_GRAMS) * i.quantity,
     0,
   );
   return Math.max(50, grams); // Delhivery minimum sensible weight
@@ -95,12 +100,17 @@ export async function createShipment(input: {
 
   const order = await db.order.findUnique({
     where: { id: input.orderId },
-    include: { items: { include: { product: { select: { weightGrams: true } } } } },
+    include: {
+      items: { include: { product: { select: { weightGrams: true } } } },
+    },
   });
   if (!order) throw new Error("Order not found.");
 
   const existing = await db.shipment.findFirst({
-    where: { orderId: input.orderId, status: { notIn: ["CANCELLED", "FAILED"] } },
+    where: {
+      orderId: input.orderId,
+      status: { notIn: ["CANCELLED", "FAILED"] },
+    },
   });
   if (existing) {
     throw new Error("Order already has an active shipment.");
@@ -211,8 +221,15 @@ export async function cancelShipment(waybill: string) {
     // record the local cancel for those. Server errors (5xx/timeouts) mean
     // the cancel may NOT have happened there, so let them fail loudly
     // instead of recording a cancel Delhivery never processed.
-    if (err instanceof DelhiveryError && err.status != null && err.status < 500) {
-      console.error(`Delhivery cancel ${waybill} (${err.status}):`, err.message);
+    if (
+      err instanceof DelhiveryError &&
+      err.status != null &&
+      err.status < 500
+    ) {
+      console.error(
+        `Delhivery cancel ${waybill} (${err.status}):`,
+        err.message,
+      );
     } else {
       throw err;
     }

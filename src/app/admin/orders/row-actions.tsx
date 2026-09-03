@@ -16,28 +16,12 @@ import {
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
+  SHIPMENT_LABELS,
+  SHIPMENT_STYLES,
+  badgeStyle,
   type OrderStatusValue,
-} from "./status";
-
-const SHIPMENT_LABELS: Record<string, string> = {
-  CREATED: "Created",
-  PICKUP_SCHEDULED: "Pickup scheduled",
-  IN_TRANSIT: "In transit",
-  DELIVERED: "Delivered",
-  RTO: "RTO",
-  CANCELLED: "Cancelled",
-  FAILED: "Failed",
-};
-
-const SHIPMENT_STYLES: Record<string, string> = {
-  CREATED: "bg-amber-100 text-amber-700",
-  PICKUP_SCHEDULED: "bg-sky-100 text-sky-700",
-  IN_TRANSIT: "bg-blue-100 text-blue-700",
-  DELIVERED: "bg-emerald-100 text-emerald-700",
-  RTO: "bg-violet-100 text-violet-700",
-  CANCELLED: "bg-zinc-100 text-zinc-500",
-  FAILED: "bg-rose-100 text-rose-700",
-};
+  type ShipmentStatusValue,
+} from "@/lib/order-status";
 
 export interface ShipmentSummary {
   waybill: string;
@@ -135,9 +119,10 @@ export function OrderRowActions({
         <div className="flex items-center justify-between gap-1.5 rounded-md bg-zinc-50 px-2 py-1">
           <span
             title={`Synced ${shipment.lastSyncedAt ? new Date(shipment.lastSyncedAt).toLocaleString("en-IN") : "never"}${shipment.providerStatus ? ` · Delhivery: ${shipment.providerStatus}` : ""}`}
-            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${SHIPMENT_STYLES[shipment.status] ?? "bg-zinc-100"}`}
+            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeStyle(SHIPMENT_STYLES, shipment.status)}`}
           >
-            {SHIPMENT_LABELS[shipment.status] ?? shipment.status}
+            {SHIPMENT_LABELS[shipment.status as ShipmentStatusValue] ??
+              shipment.status}
           </span>
           <div className="flex items-center gap-1 overflow-hidden">
             <a
@@ -152,17 +137,26 @@ export function OrderRowActions({
             <button
               type="button"
               disabled={pending}
-              onClick={() => run("Syncing shipment", async () => { await syncShipment(shipment.waybill); })}
+              onClick={() =>
+                run("Syncing shipment", async () => {
+                  await syncShipment(shipment.waybill);
+                })
+              }
               className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
             >
               Sync
             </button>
-            {(shipment.status === "CREATED" || shipment.status === "PICKUP_SCHEDULED") && (
+            {(shipment.status === "CREATED" ||
+              shipment.status === "PICKUP_SCHEDULED") && (
               <>
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => run("Scheduling pickup", async () => { await schedulePickup(); })}
+                  onClick={() =>
+                    run("Scheduling pickup", async () => {
+                      await schedulePickup();
+                    })
+                  }
                   className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
                 >
                   Pickup
@@ -170,7 +164,11 @@ export function OrderRowActions({
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={() => run("Cancelling shipment", async () => { await cancelShipment(shipment.waybill); })}
+                  onClick={() =>
+                    run("Cancelling shipment", async () => {
+                      await cancelShipment(shipment.waybill);
+                    })
+                  }
                   className="shrink-0 text-[11px] text-zinc-400 hover:text-rose-600 disabled:opacity-50"
                 >
                   Cancel

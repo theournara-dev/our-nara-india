@@ -8,7 +8,7 @@ import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_STYLES,
   type OrderStatusValue,
-} from "./status";
+} from "@/lib/order-status";
 
 export const dynamic = "force-dynamic";
 
@@ -180,9 +180,12 @@ export default async function AdminOrdersPage({
                     className="border-b border-zinc-50 last:border-0"
                   >
                     <td className="px-4 py-3">
-                      <span className="font-medium text-zinc-900">
+                      <Link
+                        href={`/admin/orders/${o.id}`}
+                        className="font-medium text-zinc-900 transition-colors hover:text-point-500"
+                      >
                         {o.orderNumber}
-                      </span>
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <div className="max-w-[220px]">
