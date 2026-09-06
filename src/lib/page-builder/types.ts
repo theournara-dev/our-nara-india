@@ -86,6 +86,13 @@ export const shortItemSchema = z.object({
   videoFile: z.string().optional(),
   posterUrl: z.string().optional(),
   productHref: z.string().optional(),
+  // Product info shown in the slide's bottom info bar (matches the original
+  // shortsRoll itemWrap: thumbnail + name + brand + summary + price).
+  productImage: z.string().optional(),
+  brand: z.string().optional(),
+  shortTags: z.array(z.string()).optional(),
+  priceCents: z.number().optional(),
+  currency: z.string().optional(),
 });
 export type ShortItem = z.infer<typeof shortItemSchema>;
 

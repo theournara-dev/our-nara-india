@@ -57,9 +57,15 @@ export function parseShortsUrl(url: string): ParsedShort | null {
 export function getEmbedSrc(parsed: ParsedShort): string {
   switch (parsed.type) {
     case "youtube":
-      return `//www.youtube.com/embed/${parsed.id}?autoplay=1&mute=1&loop=1&playlist=${parsed.id}&controls=0&showinfo=0&rel=0&playsinline=1`;
+      // `enablejsapi=1` lets the host listen for `onStateChange` (ended) via
+      // postMessage. No `loop` — it would prevent the ended state from firing.
+      return `//www.youtube.com/embed/${parsed.id}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&playsinline=1&enablejsapi=1`;
     case "tiktok":
-      return `https://www.tiktok.com/player/v1/${parsed.id}?autoplay=1&loop=1&controls=0&description=0`;
+      // No `loop` — the player's postMessage API reports the ended state
+      // (onStateChange 0) only when the video actually finishes. `muted=1`
+      // is required for browsers to allow autoplay (unmuted autoplay is
+      // blocked and the player would sit waiting for a click).
+      return `https://www.tiktok.com/player/v1/${parsed.id}?autoplay=1&mute=1&controls=0&description=0`;
     case "instagram":
       return `https://www.instagram.com/reel/${parsed.id}/embed/`;
   }

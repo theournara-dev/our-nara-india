@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swiper from "swiper";
-import { Autoplay, Pagination } from "swiper/modules";
+import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import type { ShortsPick, ShortsPlatform } from "@/data/shorts";
@@ -22,6 +22,49 @@ import { SliderNav } from "@/components/ui/slider-nav";
 // the shorts until there are enough for Swiper's loop mode, so the reels keep
 // looping like the hero regardless of how few the admin has configured.
 const MAX_SLIDES_PER_VIEW = 5;
+
+/** Minimum gap between auto-advances, so a platform's duplicate ended
+ * events (or two platforms firing together) can't skip slides. */
+const AUTO_ADVANCE_DEBOUNCE_MS = 1500;
+let lastAutoAdvance = 0;
+
+function getShortsSwiper() {
+  const root = document.querySelector<HTMLElement>(".shorts-section");
+  return root && (root as HTMLElement & { swiper?: Swiper }).swiper;
+}
+
+/** Advance to the next slide (called when the active video finishes playing;
+ * manual navigation goes through the nav buttons instead). */
+function autoAdvance() {
+  const now = Date.now();
+  if (now - lastAutoAdvance < AUTO_ADVANCE_DEBOUNCE_MS) return;
+  lastAutoAdvance = now;
+  getShortsSwiper()?.slideNext();
+}
+
+/**
+ * Advance when the embedded player (TikTok / YouTube) reports that its video
+ * ended, mirroring the native `<video>` `ended` handling. Both platforms post
+ * `onStateChange` where 0 = ended; YouTube wraps the value in `info`, TikTok
+ * in `value`, and the exact envelope differs across versions, so the shapes
+ * are matched tolerantly. Instagram has no player API and simply stays until
+ * the visitor navigates manually.
+ */
+function handlePlayerMessage(ev: MessageEvent) {
+  const data = ev.data;
+  if (!data || typeof data !== "object") return;
+  const d = data as Record<string, unknown>;
+  if (d.event !== "onStateChange" && d.type !== "onStateChange") return;
+  if ((d.value ?? d.info) !== 0) return;
+
+  // Only the active slide's player may advance the carousel.
+  const active = document.querySelector<HTMLIFrameElement>(
+    ".shorts-section .swiper-slide-active iframe",
+  );
+  if (!active || ev.source !== active.contentWindow) return;
+
+  autoAdvance();
+}
 
 interface ShortsCarouselProps {
   picks: ShortsPick[];
@@ -54,13 +97,15 @@ export function ShortsCarousel({ picks }: ShortsCarouselProps) {
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: [Autoplay, Pagination],
+      modules: [Pagination],
       speed: 600,
       slidesPerView: 1.4,
       spaceBetween: 16,
       loop: true,
       centeredSlides: true,
-      autoplay: { delay: 5000, disableOnInteraction: false },
+      // No autoplay timer: slides advance when the active video finishes
+      // playing (see handlePlayerMessage / the native `ended` listener) or on
+      // manual navigation.
       pagination: {
         el: paginationRef.current as HTMLElement,
         type: "progressbar",
@@ -91,8 +136,30 @@ export function ShortsCarousel({ picks }: ShortsCarouselProps) {
       },
     });
 
+    // Swiper 14's loop mode physically reorders slides in the DOM and moves
+    // slide classes around transitions (slideChange -> loopFix -> slideChange,
+    // with more shifts afterwards), so the mounted player can end up on a
+    // shifted non-active slide no matter which event mounted it. Watch the
+    // DOM directly: whenever the active slide has no player, re-mount it there.
+    const observer = new MutationObserver(() => {
+      const active = el.querySelector(".swiper-slide-active");
+      if (!active) return;
+      if (active.querySelector(".video-wrap")?.childElementCount) return;
+      playActiveShortsVideo(el);
+    });
+    observer.observe(el, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    window.addEventListener("message", handlePlayerMessage);
+
     swiperRef.current = swiper;
     return () => {
+      observer.disconnect();
+      window.removeEventListener("message", handlePlayerMessage);
       swiper.destroy(true, true);
       swiperRef.current = null;
     };
@@ -102,6 +169,13 @@ export function ShortsCarousel({ picks }: ShortsCarouselProps) {
 
   return (
     <div>
+      {/* Warm the browser cache for uploaded video files ahead of their slide
+          becoming active (platform embeds can't be preloaded this way). */}
+      {picks
+        .filter((p) => p.videoFile)
+        .map((p) => (
+          <link key={p.id} rel="preload" as="video" href={p.videoFile} />
+        ))}
       <div
         ref={rootRef}
         className={`shorts-section swiper transition-opacity duration-300 ${
@@ -134,6 +208,33 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
   const parsed = parseShortsUrl(pick.videoUrl);
   const platformThumb =
     parsed?.type === "youtube" ? getYouTubeThumbnail(parsed.id) : undefined;
+  // The video area shows the video's own thumbnail (the original site also
+  // overlays the video box with the video's thumbnail, not the product shot).
+  // TikTok has no static thumbnail URL, so its oEmbed thumbnail is fetched
+  // client-side (module-cached) and falls back to the poster until it loads.
+  const [videoThumb, setVideoThumb] = useState<string | undefined>(
+    platformThumb,
+  );
+  const videoFileThumb = pick.videoFile ? pick.posterUrl : undefined;
+
+  useEffect(() => {
+    if (parsed?.type !== "tiktok" || !pick.videoUrl) return;
+    let cancelled = false;
+    getTikTokThumbnail(pick.videoUrl).then((thumb) => {
+      if (!cancelled && thumb) setVideoThumb(thumb);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [parsed, pick.videoUrl]);
+
+  const backgroundImage =
+    videoThumb ??
+    videoFileThumb ??
+    pick.thumbnailUrl ??
+    pick.posterUrl ??
+    "";
+
   // Always show a product thumbnail; fall back to the poster when unset.
   const productImage = pick.productImage ?? pick.posterUrl;
 
@@ -147,7 +248,7 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
         data-video-file={pick.videoFile}
         data-poster-url={pick.posterUrl ?? ""}
         style={{
-          backgroundImage: `url("${pick.thumbnailUrl ?? platformThumb ?? pick.posterUrl ?? ""}")`,
+          backgroundImage: `url("${backgroundImage}")`,
         }}
       />
 
@@ -227,11 +328,13 @@ function playActiveShortsVideo(root: HTMLElement) {
     video.src = file;
     video.setAttribute("autoplay", "");
     video.setAttribute("muted", "");
-    video.setAttribute("loop", "");
+    // No `loop`: the carousel advances to the next slide on `ended`.
     video.setAttribute("playsinline", "");
     video.setAttribute("controls", "");
     video.setAttribute("preload", "metadata");
     video.setAttribute("aria-label", "Shorts video");
+    // No `loop`: the carousel advances to the next slide on `ended`.
+    video.addEventListener("ended", autoAdvance);
     const poster = wrap.dataset.posterUrl;
     if (poster) video.setAttribute("poster", poster);
     wrap.appendChild(video);
@@ -242,13 +345,6 @@ function playActiveShortsVideo(root: HTMLElement) {
   const id = wrap.dataset.videoId;
   if (!type || !id) return;
 
-  // Best-effort poster refresh for TikTok (no static thumbnail exists).
-  if (type === "tiktok" && wrap.dataset.videoUrl) {
-    getTikTokThumbnail(wrap.dataset.videoUrl).then((thumb) => {
-      if (thumb) wrap.style.backgroundImage = `url("${thumb}")`;
-    });
-  }
-
   const iframe = document.createElement("iframe");
   iframe.src = getEmbedSrc({ type, id });
   iframe.setAttribute("frameborder", "0");
@@ -258,5 +354,16 @@ function playActiveShortsVideo(root: HTMLElement) {
   );
   iframe.setAttribute("allowfullscreen", "true");
   iframe.setAttribute("title", "Shorts video");
+
+  // YouTube's JS API handshake: ask the player to start posting events
+  // (`onStateChange` with `info: 0` fires when the video ends). Harmless for
+  // other platforms; TikTok reports events without a handshake.
+  iframe.addEventListener("load", () => {
+    iframe.contentWindow?.postMessage(
+      JSON.stringify({ event: "listening", id: 1, channel: "widget" }),
+      "*",
+    );
+  });
+
   wrap.appendChild(iframe);
 }

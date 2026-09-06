@@ -66,10 +66,32 @@ body {
     background: #000 !important;
 }
 /*
+ * Hero carousel — mixed-aspect slides. Swiper's default
+ * `.swiper-slide { height: 100% }` resolves against an auto-height wrapper,
+ * which sizes every slide by its own content and defeats flexbox stretch, so
+ * square-image slides end up shorter than portrait ones. `height: auto` here
+ * lets the flex wrapper stretch all slides to the tallest one. (This cannot
+ * live in the component: Swiper rewrites slide inline styles during loop
+ * updates and would strip it, and the `h-auto` utility is not compiled.)
+ */
+.hero-carousel .swiper-slide {
+    height: auto;
+}
+.hero-carousel .swiper-slide > a {
+    display: block;
+    height: 100%;
+}
+
+/*
  * Shorts Picks — replica of the original theme's `shortsRoll` section.
  * Portrait video cards where only the active slide embeds a player; inactive
  * slides are dimmed and the active one expands (9/14 -> 9/16).
  */
+.shorts-section .swiper-wrapper {
+    /* Center the shorter (9/14) slides against the taller active (9/16) one,
+       so the active slide stands out both from the top and the bottom. */
+    align-items: center;
+}
 .shorts-section .swiper-slide {
     position: relative;
     margin-top: 24px;
@@ -169,12 +191,31 @@ body {
 }
 .shorts-section .info-text .tags {
     font-size: 14px;
-    color: #888888;
+    color: #333;
 }
 .shorts-section .info-text .price {
-    font-size: 18px;
-    font-weight: 700;
-    color: #000;
+    font-size: 15px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Mobile sizes from the original theme's media query. */
+@media (max-width: 767px) {
+    .shorts-section .info-bar {
+        gap: 8px;
+        padding: 8px;
+    }
+    .shorts-section .info-bar .thumb {
+        width: 48px;
+    }
+    .shorts-section .info-text .name {
+        font-size: 13px;
+        margin: 0 0 4px;
+    }
+    .shorts-section .info-text .tags,
+    .shorts-section .info-text .price {
+        font-size: 13px;
+    }
 }
 
 /*

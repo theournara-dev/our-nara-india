@@ -38,9 +38,16 @@ export function toLoopable<T>(
   keyOf: (item: T) => string,
 ): LoopableItem<T>[] {
   if (items.length === 0) return [];
-  const minSlides = minSlidesForLoop(maxSlidesPerView);
+  const baseSlides = minSlidesForLoop(maxSlidesPerView);
 
-  if (items.length >= minSlides) {
+  // Round up to a whole number of cycles so the duplicated list ends exactly
+  // at a cycle boundary. Stopping mid-cycle (e.g. 7 items padded to 8) makes
+  // the last slide a copy of the first one, which then sits right next to the
+  // original first slide across Swiper's loop seam.
+  let minSlides = baseSlides;
+  while (minSlides % items.length !== 0) minSlides++;
+
+  if (items.length >= baseSlides) {
     return items.map((item) => ({ key: keyOf(item), item }));
   }
 

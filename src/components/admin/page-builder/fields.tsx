@@ -1073,6 +1073,45 @@ export function ShortsItemsField({
             onChange={(v) => update({ productHref: v })}
             placeholder="/products/slug"
           />
+          <ImageField
+            label="Product image (info bar, optional)"
+            value={item.productImage ?? ""}
+            onChange={(v) => update({ productImage: v })}
+          />
+          <TextField
+            label="Brand (optional)"
+            value={item.brand ?? ""}
+            onChange={(v) => update({ brand: v })}
+            placeholder="NOWATER"
+          />
+          <TextField
+            label="Tags (optional, comma separated)"
+            value={(item.shortTags ?? []).join(", ")}
+            onChange={(v) =>
+              update({
+                shortTags: v
+                  .split(",")
+                  .map((t) => t.trim())
+                  .filter(Boolean),
+              })
+            }
+            placeholder="Soothing, PoreCare"
+          />
+          <TextField
+            label="Price (optional, minor units e.g. cents)"
+            value={item.priceCents != null ? String(item.priceCents) : ""}
+            onChange={(v) => {
+              const n = Number(v);
+              update({ priceCents: v && Number.isFinite(n) ? n : undefined });
+            }}
+            placeholder="210000"
+          />
+          <TextField
+            label="Currency (optional)"
+            value={item.currency ?? ""}
+            onChange={(v) => update({ currency: v || undefined })}
+            placeholder="INR"
+          />
         </div>
       )}
     />

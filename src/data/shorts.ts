@@ -107,4 +107,9 @@ export const defaultShortsItems = shortsPicks.map((s) => ({
   videoUrl: s.videoUrl,
   posterUrl: s.posterUrl,
   productHref: s.productHref,
+  productImage: s.productImage,
+  brand: s.brand,
+  shortTags: s.shortTags,
+  priceCents: s.priceCents,
+  currency: s.currency,
 }));

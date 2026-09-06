@@ -26,8 +26,7 @@ export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
 
   // Fall back to the original slides when the section has none, so the
   // homepage never regresses before content is configured.
-  const items: HeroSlide[] =
-    slides.length > 0 ? slides : defaultHeroSlides;
+  const items: HeroSlide[] = slides.length > 0 ? slides : defaultHeroSlides;
   const heroSlides = useMemo(
     () => toLoopable(items, MAX_SLIDES_PER_VIEW, (s) => s.image),
     [items],
@@ -69,7 +68,7 @@ export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
   return (
     <div className="mx-auto mt-5 mb-15 w-full overflow-x-clip max-md:mt-0 max-md:mb-10">
       <div
-        className={`swiper transition-opacity duration-300 ${
+        className={`hero-carousel swiper transition-opacity duration-300 ${
           ready ? "opacity-100" : "opacity-0 min-h-20"
         }`}
         ref={rootRef}
@@ -149,7 +148,7 @@ function HeroImage({ slide }: { slide: HeroSlide }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-zinc-100">
+    <div className="relative overflow-hidden flex size-full rounded-xl bg-zinc-100">
       {!loaded && (
         <div
           aria-hidden
@@ -164,7 +163,7 @@ function HeroImage({ slide }: { slide: HeroSlide }) {
         sizes="(min-width: 1200px) 27vw, (min-width: 768px) 40vw, 85vw"
         loading="eager" // carousel slides are translated off-screen; eager avoids blank slides
         onLoad={() => setLoaded(true)}
-        className={`relative h-auto w-full transition-opacity duration-500 ${
+        className={`relative h-full w-full object-cover transition-opacity duration-500 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
       />
