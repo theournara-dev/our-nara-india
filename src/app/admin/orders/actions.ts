@@ -4,23 +4,22 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import {
   DEFAULT_PRODUCT_WEIGHT_GRAMS,
-  DelhiveryError,
   fetchShipment,
 } from "@/lib/delhivery";
-import {
-  cancelShipment as apiCancelShipment,
-  createShipment as apiCreateShipment,
-  schedulePickup as apiSchedulePickup,
-} from "@/lib/delhivery";
+import { createShipment as apiCreateShipment } from "@/lib/delhivery";
 import { db } from "@/lib/db";
-import { applyTrackingStatus, advanceShipmentStatus } from "./fulfillment";
+import {
+  applyShipmentBackout,
+  applyTrackingStatus,
+  advanceShipmentStatus,
+} from "./fulfillment";
 import { ORDER_STATUSES, type OrderStatusValue } from "@/lib/order-status";
 
 /**
  * Admin order actions: manual status changes plus the Delhivery fulfillment
- * flow (create / import / pickup / cancel / sync). All actions require the
- * admin role; Delhivery API failures bubble up as readable errors and are
- * shown in the row's toast.
+ * flow (create / import / sync). All actions require the admin role;
+ * Delhivery API failures bubble up as readable errors and are shown in the
+ * row's toast.
  */
 
 export async function updateOrderStatus(id: string, status: string) {
@@ -119,8 +118,17 @@ export async function createShipment(input: {
   // Recompute amount from DB — never trust the client-supplied total.
   const amountCents = order.totalCents;
 
+  // Delhivery keys a shipment by its `order` reference + waybill, and the
+  // reference must be UNIQUE across auto-generated waybills. Once a shipment
+  // for this order exists (even cancelled/failed), that ref is consumed at
+  // Delhivery and re-sending it throws a generic internal error. Suffix
+  // re-shipments so the ref stays unique: ON-XXX, ON-XXX-R2, ON-XXX-R3…
+  const priorShipments = await db.shipment.count({ where: { orderId: order.id } });
+  const deliveryRef =
+    priorShipments > 0 ? `${order.orderNumber}-R${priorShipments + 1}` : order.orderNumber;
+
   const result = await apiCreateShipment({
-    orderNumber: order.orderNumber,
+    orderNumber: deliveryRef,
     customerName: input.customerName,
     phone: input.phone,
     addressLine1: input.addressLine1,
@@ -138,7 +146,7 @@ export async function createShipment(input: {
         orderId: order.id,
         provider: "delhivery",
         waybill: result.waybill,
-        clientOrderRef: order.orderNumber,
+        clientOrderRef: deliveryRef,
         status: "CREATED",
         source: "APP",
         labelUrl: result.labelUrl,
@@ -198,56 +206,6 @@ export async function importShipment(orderId: string, waybill: string) {
   revalidate();
 }
 
-/** Ask Delhivery to pick up ready-to-ship manifests from our warehouse. */
-export async function schedulePickup() {
-  await requireAdmin();
-  const res = await apiSchedulePickup();
-  revalidate();
-  if (!res.ok) {
-    throw new Error(res.message ?? "Delhivery did not confirm the pickup.");
-  }
-}
-
-/** Cancel a pre-dispatch shipment (post-dispatch is an RTO flow in the panel). */
-export async function cancelShipment(waybill: string) {
-  await requireAdmin();
-  const shipment = await db.shipment.findUnique({ where: { waybill } });
-  if (!shipment) throw new Error("Shipment not found.");
-
-  try {
-    await apiCancelShipment(waybill);
-  } catch (err) {
-    // Not-yet-manifested or already-cancelled waybills 4xx at Delhivery —
-    // record the local cancel for those. Server errors (5xx/timeouts) mean
-    // the cancel may NOT have happened there, so let them fail loudly
-    // instead of recording a cancel Delhivery never processed.
-    if (
-      err instanceof DelhiveryError &&
-      err.status != null &&
-      err.status < 500
-    ) {
-      console.error(
-        `Delhivery cancel ${waybill} (${err.status}):`,
-        err.message,
-      );
-    } else {
-      throw err;
-    }
-  }
-
-  await db.shipment.update({
-    where: { waybill },
-    data: { status: "CANCELLED", source: "ADMIN", lastSyncedAt: new Date() },
-  });
-  // Free the order for a new shipment if it never left CREATED.
-  await db.order.updateMany({
-    where: { id: shipment.orderId, status: "SHIPPED" },
-    data: { status: "PAID" },
-  });
-
-  revalidate();
-}
-
 /** On-demand pull of one shipment's status (freshness between cron runs). */
 export async function syncShipment(waybill: string) {
   await requireAdmin();
@@ -287,7 +245,9 @@ export async function syncShipment(waybill: string) {
     select: { id: true, status: true },
   });
   if (order) {
-    const target = await applyTrackingStatus(order.status, nextStatus);
+    const target =
+      (await applyTrackingStatus(order.status, nextStatus)) ??
+      applyShipmentBackout(order.status, nextStatus);
     if (target) {
       await db.order.update({
         where: { id: order.id },

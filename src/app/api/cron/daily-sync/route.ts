@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getRazorpay } from "@/lib/razorpay";
 import { fetchShipment, isConfigured as delhiveryConfigured } from "@/lib/delhivery";
-import { applyTrackingStatus, advanceShipmentStatus } from "@/app/admin/orders/fulfillment";
+import {
+  applyShipmentBackout,
+  applyTrackingStatus,
+  advanceShipmentStatus,
+} from "@/app/admin/orders/fulfillment";
 import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 
@@ -148,7 +152,9 @@ async function advanceOrder(orderId: string, shipmentStatus: ShipmentStatus) {
     select: { id: true, status: true },
   });
   if (!order) return;
-  const target = await applyTrackingStatus(order.status, shipmentStatus);
+  const target =
+    (await applyTrackingStatus(order.status, shipmentStatus)) ??
+    applyShipmentBackout(order.status, shipmentStatus);
   if (target) {
     await db.order.update({
       where: { id: order.id },

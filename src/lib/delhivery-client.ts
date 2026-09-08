@@ -6,5 +6,5 @@
  */
 
 export function trackingUrl(waybill: string): string {
-  return `https://track.delhivery.com/tracking/${encodeURIComponent(waybill)}`;
+  return `https://www.delhivery.com/track-v2/package/${encodeURIComponent(waybill)}`;
 }

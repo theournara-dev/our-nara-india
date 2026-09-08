@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { notify } from "@/lib/toast";
+import { notify, notifyErrorWithContact } from "@/lib/toast";
+import { friendlyShipmentError } from "@/lib/shipment-errors";
 import { trackingUrl } from "@/lib/delhivery-client";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import {
-  cancelShipment,
   createShipment,
   deleteOrder as deleteOrderAction,
   importShipment,
-  schedulePickup,
   syncShipment,
   updateOrderStatus,
 } from "./actions";
@@ -74,11 +73,10 @@ export function OrderRowActions({
         setImportOpen(false);
         setWaybillInput("");
       } catch (err) {
-        notify.error(
-          id,
-          `${label} failed`,
-          err instanceof Error ? err.message : "Try again.",
-        );
+        const friendly = friendlyShipmentError(err);
+        const trace =
+          err instanceof Error ? { name: err.name, message: err.message } : undefined;
+        notifyErrorWithContact(id, friendly.title, friendly.hint, trace);
       }
     });
   }
@@ -117,13 +115,26 @@ export function OrderRowActions({
       {/* Row 2: shipment summary or create/import buttons */}
       {shipment ? (
         <div className="flex items-center justify-between gap-1.5 rounded-md bg-zinc-50 px-2 py-1">
-          <span
-            title={`Synced ${shipment.lastSyncedAt ? new Date(shipment.lastSyncedAt).toLocaleString("en-IN") : "never"}${shipment.providerStatus ? ` · Delhivery: ${shipment.providerStatus}` : ""}`}
-            className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeStyle(SHIPMENT_STYLES, shipment.status)}`}
-          >
-            {SHIPMENT_LABELS[shipment.status as ShipmentStatusValue] ??
-              shipment.status}
-          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span
+              title={`Synced ${shipment.lastSyncedAt ? new Date(shipment.lastSyncedAt).toLocaleString("en-IN") : "never"}${shipment.providerStatus ? ` · Delhivery: ${shipment.providerStatus}` : ""}`}
+              className={`shrink-0 self-start rounded-full px-2 py-0.5 text-[11px] font-medium ${badgeStyle(SHIPMENT_STYLES, shipment.status)}`}
+            >
+              {SHIPMENT_LABELS[shipment.status as ShipmentStatusValue] ??
+                shipment.status}
+            </span>
+            <span className="shrink-0 text-[11px] text-zinc-400">
+              {shipment.lastSyncedAt
+                ? `Synced ${new Date(shipment.lastSyncedAt).toLocaleString("en-IN", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}`
+                : "Not synced yet"}
+            </span>
+          </div>
           <div className="flex items-center gap-1 overflow-hidden">
             <a
               href={trackingUrl(shipment.waybill)}
@@ -142,39 +153,10 @@ export function OrderRowActions({
                   await syncShipment(shipment.waybill);
                 })
               }
-              className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
+              className="shrink-0 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Sync
             </button>
-            {(shipment.status === "CREATED" ||
-              shipment.status === "PICKUP_SCHEDULED") && (
-              <>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    run("Scheduling pickup", async () => {
-                      await schedulePickup();
-                    })
-                  }
-                  className="shrink-0 text-[11px] text-zinc-400 hover:text-point-500 disabled:opacity-50"
-                >
-                  Pickup
-                </button>
-                <button
-                  type="button"
-                  disabled={pending}
-                  onClick={() =>
-                    run("Cancelling shipment", async () => {
-                      await cancelShipment(shipment.waybill);
-                    })
-                  }
-                  className="shrink-0 text-[11px] text-zinc-400 hover:text-rose-600 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
           </div>
         </div>
       ) : (
@@ -199,7 +181,7 @@ export function OrderRowActions({
                   });
                 })
               }
-              className={`${btn} border-point-400 text-point-600 hover:border-point-500 hover:bg-point-500 hover:text-white`}
+              className="inline-flex h-7 items-center rounded-md bg-point-500 px-2.5 text-[11px] font-medium text-white transition-colors hover:bg-point-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Create shipment
             </button>

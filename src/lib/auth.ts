@@ -11,27 +11,33 @@ import { sendVerificationCode } from "@/lib/email";
 /**
  * Base URL for auth callbacks and CSRF origin checks. Better Auth derives its
  * trusted origins from this, so it must match the origin the browser actually
- * visits: localhost in dev, the Vercel deployment otherwise (env vars win).
+ * visits.
+ *
+ * Local dev runs on a random free port (`next dev --port 0`), so a fixed
+ * origin can't be used. The dynamic config derives the base URL from each
+ * request's Host header and validates it against `allowedHosts` wildcards —
+ * `localhost:*` matches any port. Production/preview origins are listed
+ * explicitly (env vars win there).
  */
-function resolveBaseURL(): string {
-  return (
-    process.env.BETTER_AUTH_URL ??
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : process.env.NEXT_PUBLIC_SITE_URL) ??
-    "http://localhost:3000"
-  );
-}
-
-const baseURL = resolveBaseURL();
+const baseURL = {
+  allowedHosts: [
+    "localhost:*",
+    "127.0.0.1:*",
+    "our-nara.com",
+    "www.our-nara.com",
+    "our-nara-india.vercel.app",
+    "*.vercel.app",
+  ],
+  fallback:
+    process.env.BETTER_AUTH_PRODUCTION_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    "https://our-nara-india.vercel.app",
+};
 
 /** Every origin the app is served from (local dev + production + previews). */
 const prodUrl =
   process.env.BETTER_AUTH_PRODUCTION_URL ?? process.env.NEXT_PUBLIC_SITE_URL;
 const trustedOrigins = [
-  baseURL,
   prodUrl,
   // Custom production domains + the Vercel deployment domain.
   "https://www.our-nara.com",
@@ -42,8 +48,9 @@ const trustedOrigins = [
     : null,
   process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  "http://localhost:3000",
-  "http://localhost:3001",
+  // Any local port (dev runs on a random free port).
+  "http://localhost:*",
+  "http://127.0.0.1:*",
 ].filter((o): o is string => Boolean(o));
 
 export const auth = betterAuth({

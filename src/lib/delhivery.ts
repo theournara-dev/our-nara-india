@@ -73,7 +73,9 @@ export type ShipmentStatusValue =
   | "FAILED";
 
 /**
- * Map an arbitrary Delhivery status/flow string onto our statuses.
+ * Map an arbitrary Delhivery status/flow string onto our statuses. `extra`
+ * may carry the scan's StatusCode + Instructions so context-sensitive scans
+ * can be distinguished (see the "not received from client" close-out below).
  * Returns null for unrecognized strings — callers keep their current status
  * instead of jumping to a terminal state on unknown provider wording
  * (Delhivery's status vocabulary varies by surface; e.g. "Undelivered" NDR
@@ -81,13 +83,24 @@ export type ShipmentStatusValue =
  */
 export function mapDelhiveryStatus(
   raw: string | null | undefined,
+  extra?: string | null,
 ): ShipmentStatusValue | null {
   if (!raw) return null;
-  const s = raw.trim().toLowerCase();
+  const s = `${raw} ${extra ?? ""}`.trim().toLowerCase();
+  // Pre-pickup cancellation, surfaced by the legacy API as a close-out scan:
+  // "Not Picked" (X-PNP) + instruction "Shipment not received from client".
+  // This is what an admin cancellation in the Delhivery One dashboard
+  // produces — the API has no "Cancelled" scan for forward shipments. MUST
+  // run before the generic pickup rules, since a bare "Not Picked" without
+  // this instruction is merely awaiting pickup, NOT a cancel.
+  if (s.includes("shipment not received from client")) return "CANCELLED";
   if (s.includes("undeliver") || s.includes("not reachable")) return "FAILED";
   if (s.includes("rto") || s.includes("return")) return "RTO";
   if (s.includes("cancel")) return "CANCELLED";
   if (s.includes("delivered") || s.includes("complete")) return "DELIVERED";
+  // Manifested but the courier hasn't physically picked the parcel up yet —
+  // the normal awaiting-pickup state (kept distinct from the close-out above).
+  if (s.includes("not picked")) return "PICKUP_SCHEDULED";
   if (s.includes("manifest") || s.includes("pickup")) return "PICKUP_SCHEDULED";
   if (
     s.includes("transit") ||
@@ -121,14 +134,19 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 async function request<T>(
   path: string,
-  init: { method?: "GET" | "POST"; body?: string } = {},
+  init: {
+    method?: "GET" | "POST";
+    body?: string;
+    /** Override the request content type. Defaults to application/json. */
+    contentType?: string;
+  } = {},
 ): Promise<T> {
   const token = getToken();
   const res = await fetch(`${baseUrl()}${path}`, {
     method: init.method ?? "GET",
     headers: {
       Authorization: `Token ${token}`,
-      "Content-Type": "application/json",
+      "Content-Type": init.contentType ?? "application/json",
       Accept: "application/json",
     },
     body: init.body,
@@ -208,20 +226,52 @@ export async function createShipment(
     weight: params.weightGrams, // grams
   };
 
-  const body = {
-    format: "json",
-    pickup_location: pickup,
-    shipments: [shipment],
-  };
+  // Delhivery's legacy B2C surface does NOT read `format` from a JSON body —
+  // it requires a top-level form-encoded `format=json&data=<url-encoded JSON>`
+  // payload (the official FAQ calls this out explicitly; sending it inside the
+  // JSON body fails with "format key missing in POST"). `pickup_location` must
+  // be an OBJECT {"name": ...} — a bare string makes Delhivery's handler crash
+  // with "str object has no attribute 'get'". `shipments` lives inside `data`.
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      pickup_location: { name: pickup },
+      shipments: [shipment],
+    }),
+  );
 
   const res = await request<{
-    packages?: { waybill?: string; ref_id?: string }[];
+    success?: boolean;
+    error?: boolean;
+    rmk?: string;
+    packages?: { waybill?: string; status?: string; remarks?: string }[];
     wbn?: string;
     packages_assigned?: { waybill?: string }[];
   }>("/api/cmu/create.json", {
     method: "POST",
-    body: JSON.stringify(body),
+    contentType: "application/x-www-form-urlencoded",
+    body: `format=json&data=${payload}`,
   });
+
+  // Delhivery reports failures as HTTP 200 with success:false (or a per-package
+  // "Fail" status) — and its catch-all `rmk` ("An internal Error has occurred…")
+  // is deliberately generic. The REAL exception always arrives in
+  // `packages[].remarks` (e.g. "Crashing while saving package due to exception
+  // '…non serviceable pincode'", wallet balance, duplicate order ref). Prefer
+  // package remarks over rmk so the actual cause reaches the user; rmk is only
+  // quoted when the API returns no per-package detail.
+  const failedPackage = res.packages?.find(
+    (p) => p.status === "Fail" || !p.waybill,
+  );
+  if (res.success === false || res.error === true || failedPackage) {
+    const detail =
+      failedPackage?.remarks ??
+      res.packages?.[0]?.remarks ??
+      res.rmk ??
+      "unknown error";
+    throw new DelhiveryError(
+      `Delhivery rejected the shipment: ${detail}`,
+    );
+  }
 
   // The create response may nest the allocated waybill in several spots
   // depending on API surface version; check all of them.
@@ -251,7 +301,12 @@ export async function fetchShipment(
       ShipmentData?: {
         Shipment?: {
           AWB?: string;
-          Status?: { Status?: string; StatusDateTime?: string };
+          Status?: {
+            Status?: string;
+            StatusCode?: string;
+            Instructions?: string;
+            StatusDateTime?: string;
+          };
         };
       }[];
     }>("/api/v1/packages/json/?waybill=" + encodeURIComponent(waybill));
@@ -259,7 +314,13 @@ export async function fetchShipment(
     const s = res.ShipmentData?.[0]?.Shipment;
     if (!s) return null;
 
-    const status = mapDelhiveryStatus(s.Status?.Status) ?? "CREATED";
+    // Include StatusCode + Instructions so context-sensitive scans like the
+    // pre-pickup cancel close-out ("Not Picked" / X-PNP / "Shipment not
+    // received from client") can be recognized as such.
+    const status = mapDelhiveryStatus(
+      s.Status?.Status,
+      `${s.Status?.StatusCode ?? ""} ${s.Status?.Instructions ?? ""}`,
+    ) ?? "CREATED";
 
     return {
       waybill: s.AWB ?? waybill,
@@ -276,37 +337,7 @@ export async function fetchShipment(
   }
 }
 
-/** Request a pickup for a manifested shipment (or all ready-to-pick today). */
-export async function schedulePickup(): Promise<{ ok: boolean; message?: string }> {
-  // On the legacy surface pickups are scheduled via the dashboard or the
-  // parent pickup-request endpoint; a missing warehouse config is the common
-  // failure, so surface it clearly.
-  const pickup = pickupLocation();
-  if (!pickup) {
-    throw new DelhiveryError("Missing DELHIVERY_PICKUP_LOCATION env var.");
-  }
-  const res = await request<{ success?: boolean; message?: string }>(
-    "/api/mu/requests/create.json",
-    {
-      method: "POST",
-      body: JSON.stringify({ pickup_location: pickup, request_auto: true }),
-    },
-  );
-  return { ok: Boolean(res.success), message: res.message };
-}
-
-/** Cancel a pre-dispatch shipment; post-dispatch must be RTO from the panel. */
-export async function cancelShipment(waybill: string): Promise<void> {
-  await request("/api/p/edit", {
-    method: "POST",
-    body: JSON.stringify({
-      waybill,
-      cancellation: "yes",
-    }),
-  });
-}
-
 /** Public tracking URL — open this from the admin for the full history. */
 export function trackingUrl(waybill: string): string {
-  return `https://track.delhivery.com/tracking/${encodeURIComponent(waybill)}`;
+  return `https://www.delhivery.com/track-v2/package/${encodeURIComponent(waybill)}`;
 }

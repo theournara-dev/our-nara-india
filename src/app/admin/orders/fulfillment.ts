@@ -87,3 +87,21 @@ export async function applyTrackingStatus(
   if (ORDER_STATUS_RANK[target] <= ORDER_STATUS_RANK[current]) return null;
   return target;
 }
+
+/**
+ * Pre-dispatch backout for a terminal shipment status (CANCELLED/FAILED):
+ * the parcel never left the warehouse (Delhivery surfaces pre-pickup
+ * cancellations this way), so a SHIPPED order returns to PAID — freeing the
+ * row for a new shipment instead of leaving it stuck as "in transit".
+ * Only a SHIPPED order is ever demoted; advanceShipmentStatus has already
+ * vetted the shipment status itself, and delivery/admin-terminal orders are
+ * never touched.
+ */
+export function applyShipmentBackout(
+  current: OrderStatus,
+  shipmentStatus: ShipmentStatus,
+): Extract<OrderStatus, "PAID"> | null {
+  if (current !== "SHIPPED") return null;
+  if (shipmentStatus !== "CANCELLED" && shipmentStatus !== "FAILED") return null;
+  return "PAID";
+}
