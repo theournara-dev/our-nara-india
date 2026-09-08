@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
 import { priceForVersion } from "@/lib/money";
+import { notifyAdminsNewOrder } from "@/lib/order-notifications";
 
 /**
  * Create an internal Order (PENDING) from the cart. This is the server-side
@@ -260,7 +261,12 @@ export async function createOrder(input: CreateOrderInput) {
       },
       items: { create: orderItems },
     },
+    include: { items: true },
   });
+
+  // Fire-and-forget: alert admins about the new order without blocking
+  // checkout latency. The function is non-throwing anyway.
+  void notifyAdminsNewOrder(order);
 
   return { orderId: order.id, orderNumber: order.orderNumber };
 }

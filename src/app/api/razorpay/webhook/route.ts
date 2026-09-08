@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { SITE } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
 import { getRazorpay, verifyWebhookSignature } from "@/lib/razorpay";
+import { notifyOrderStatusChange } from "@/lib/order-notifications";
 
 /**
  * Razorpay webhook. Razorpay posts payment events here asynchronously; we use
@@ -181,12 +182,7 @@ async function runPaidSideEffects(
 ) {
   const orderWithItems = await db.order.findUnique({
     where: { id: orderId },
-    select: {
-      orderNumber: true,
-      items: {
-        select: { variantId: true, quantity: true },
-      },
-    },
+    include: { items: true },
   });
   if (!orderWithItems) return;
   const shortage = await decrementStock(orderWithItems.items);
@@ -204,7 +200,10 @@ async function runPaidSideEffects(
       `The paid order ${orderWithItems.orderNumber} could not decrement stock:\n${shortage.message}\n\nReview the order and product stock manually.`,
     );
   }
-  await sendOrderConfirmation(orderWithItems.orderNumber);
+  await notifyOrderStatusChange(
+    orderWithItems,
+    orderWithItems.isPreOrder ? "PRE_ORDER" : "PAID",
+  );
 }
 
 /**
@@ -244,32 +243,6 @@ async function notifySupport(subject: string, text: string) {
   }
 }
 
-/** Best-effort order confirmation email; never throws. */
-async function sendOrderConfirmation(orderNumber: string) {
-  try {
-    const order = await db.order.findUnique({
-      where: { orderNumber },
-      select: {
-        email: true,
-        totalCents: true,
-        currency: true,
-        items: { select: { name: true, quantity: true } },
-      },
-    });
-    if (!order) return;
-    const lines = order.items
-      .map((i) => `- ${i.name} x${i.quantity}`)
-      .join("\n");
-    await sendEmail({
-      to: order.email,
-      subject: `Order ${orderNumber} confirmed — ${SITE.name}`,
-      text: `Thanks for your order!\n\n${lines}\n\nWe'll notify you when it ships.`,
-    });
-  } catch (err) {
-    console.error("Order confirmation email failed:", err);
-  }
-}
-
 async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
   const rzpOrderId = payment.order_id;
   if (!rzpOrderId) return;
@@ -288,7 +261,7 @@ async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
 
   const order = await db.order.findUnique({
     where: { id: paymentRecord.orderId },
-    select: { id: true, status: true },
+    include: { items: true },
   });
   // Only fails open orders — a retryable FAILED order stays retryable, and
   // paid/protected statuses are never touched.
@@ -298,6 +271,7 @@ async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
     where: { id: order.id },
     data: { status: "FAILED" },
   });
+  await notifyOrderStatusChange(order, "FAILED");
 }
 
 async function handleOrderPaid(order: RazorpayOrderEntity) {
@@ -408,7 +382,7 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
 
   const order = await db.order.findUnique({
     where: { id: paymentRecord.orderId },
-    select: { id: true, isPreOrder: true },
+    include: { items: true },
   });
   if (!order) return;
 
@@ -483,6 +457,12 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
     `[OUR:NARA] Refund processed for payment ${rzpPaymentId}`,
     `A full refund arrived for payment ${rzpPaymentId}. The payment and order were marked REFUNDED${stockWasTaken ? " and stock was restored" : " (stock untouched — it was never decremented for this payment)"}.`,
   );
+
+  // Only plain orders flip to REFUNDED here (pre-orders keep the pre-order
+  // flow) — notify the customer only when the status actually changed.
+  if (!order.isPreOrder) {
+    await notifyOrderStatusChange(order, "REFUNDED");
+  }
 }
 
 export async function POST(request: Request) {

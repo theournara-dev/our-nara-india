@@ -8,6 +8,7 @@ import {
 } from "@/app/admin/orders/fulfillment";
 import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { notifyOrderStatusChange } from "@/lib/order-notifications";
 
 /**
  * Daily Delhivery + Razorpay sync (Vercel Hobby: 1x/day cron is free).
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
         });
         if (changed) summary.shipmentsUpdated += 1;
 
-        await advanceOrder(shipment.orderId, next);
+        await advanceOrder(shipment.orderId, next, shipment.waybill);
       } catch (err) {
         summary.errors.push(`shipment ${shipment.waybill}: ${String(err)}`);
       }
@@ -104,7 +105,13 @@ export async function GET(request: Request) {
     const cutoff = new Date(Date.now() - 30 * 60 * 1000); // older than 30 min
     const pendingOrders = await db.order.findMany({
       where: { status: "PENDING", createdAt: { lt: cutoff } },
-      select: { id: true, orderNumber: true, totalCents: true, isPreOrder: true },
+      select: {
+        id: true,
+        orderNumber: true,
+        totalCents: true,
+        isPreOrder: true,
+        items: true,
+      },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
@@ -133,6 +140,10 @@ export async function GET(request: Request) {
             }),
           ]);
           summary.ordersPaid += 1;
+          await notifyOrderStatusChange(
+            order,
+            order.isPreOrder ? "PRE_ORDER" : "PAID",
+          );
         }
       } catch (err) {
         summary.errors.push(`razorpay order ${order.orderNumber}: ${String(err)}`);
@@ -146,19 +157,24 @@ export async function GET(request: Request) {
 }
 
 /** Forward-only order status via shared fulfillment rules. */
-async function advanceOrder(orderId: string, shipmentStatus: ShipmentStatus) {
+async function advanceOrder(
+  orderId: string,
+  shipmentStatus: ShipmentStatus,
+  waybill: string,
+) {
   const order = await db.order.findUnique({
     where: { id: orderId },
-    select: { id: true, status: true },
+    include: { items: true },
   });
   if (!order) return;
   const target =
     (await applyTrackingStatus(order.status, shipmentStatus)) ??
     applyShipmentBackout(order.status, shipmentStatus);
-  if (target) {
+  if (target && target !== order.status) {
     await db.order.update({
       where: { id: order.id },
       data: { status: target },
     });
+    await notifyOrderStatusChange(order, target, { waybill });
   }
 }

@@ -14,6 +14,7 @@ import {
   advanceShipmentStatus,
 } from "./fulfillment";
 import { ORDER_STATUSES, type OrderStatusValue } from "@/lib/order-status";
+import { notifyOrderStatusChange } from "@/lib/order-notifications";
 
 /**
  * Admin order actions: manual status changes plus the Delhivery fulfillment
@@ -27,10 +28,30 @@ export async function updateOrderStatus(id: string, status: string) {
   if (!(ORDER_STATUSES as readonly string[]).includes(status)) {
     throw new Error("Invalid order status");
   }
-  await db.order.update({
+  const order = await db.order.findUnique({
     where: { id },
-    data: { status: status as OrderStatusValue },
+    include: { items: true },
   });
+  if (!order) throw new Error("Order not found.");
+  const nextStatus = status as OrderStatusValue;
+  if (nextStatus !== order.status) {
+    await db.order.update({
+      where: { id },
+      data: { status: nextStatus },
+    });
+    const NOTIFIABLE_STATUSES = new Set<OrderStatusValue>([
+      "PAID",
+      "PRE_ORDER",
+      "SHIPPED",
+      "DELIVERED",
+      "CANCELLED",
+      "REFUNDED",
+      "FAILED",
+    ]);
+    if (NOTIFIABLE_STATUSES.has(nextStatus)) {
+      await notifyOrderStatusChange(order, nextStatus);
+    }
+  }
   revalidatePath("/admin/orders");
 }
 
@@ -242,16 +263,19 @@ export async function syncShipment(waybill: string) {
   // Forward-only order progression via the shared fulfillment rules.
   const order = await db.order.findUnique({
     where: { id: shipment.orderId },
-    select: { id: true, status: true },
+    include: { items: true },
   });
   if (order) {
     const target =
       (await applyTrackingStatus(order.status, nextStatus)) ??
       applyShipmentBackout(order.status, nextStatus);
-    if (target) {
+    if (target && target !== order.status) {
       await db.order.update({
         where: { id: order.id },
         data: { status: target },
+      });
+      await notifyOrderStatusChange(order, target, {
+        waybill: shipment.waybill,
       });
     }
   }
