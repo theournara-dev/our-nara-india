@@ -8,7 +8,7 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import type { ShortsPick, ShortsPlatform } from "@/data/shorts";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { toLoopable } from "@/lib/carousel";
 import {
   getEmbedSrc,
@@ -294,7 +294,10 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
           )}
           {pick.priceCents != null && (
             <span className="price">
-              {formatMoney(pick.priceCents, pick.currency ?? "INR")}
+              {formatMoney(
+                priceForVersion(pick.priceCents, undefined),
+                pick.currency ?? "INR",
+              )}
             </span>
           )}
         </div>

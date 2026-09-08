@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
+import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Couponzone" };
 
@@ -16,7 +17,7 @@ const coupons = [
   {
     id: "c2",
     title: "Free Shipping",
-    detail: "On orders over ₹999",
+    detail: `On orders over ${formatMoney(99900, "INR", { convert: false })}`,
     badge: "Shipping",
   },
   {

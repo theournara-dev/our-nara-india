@@ -8,8 +8,9 @@ import "swiper/css";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import type { ResolvedTripleBannerBox } from "@/data/triple-banner";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 interface TripleBannerProps {
   boxes: ResolvedTripleBannerBox[];
@@ -101,6 +102,7 @@ export function TripleBanner({ boxes }: TripleBannerProps) {
 
 /** A single horizontal product row: thumbnail + brand/name/tags/price + cart. */
 function TripleBannerProduct({ product }: { product: ProductCardType }) {
+  const { config } = useSiteVersion();
   function handleAddToCart() {
     addProductToCart(product);
     notifyAddedToCart(product.name);
@@ -125,11 +127,17 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
         <span className="tags">{product.shortTags.join(" · ")}</span>
-        {product.isPreOrder && (
+        {product.isPreOrder && config.preOrderEnabled && (
           <span className="overview">PRE-ORDER/Order now, ships later</span>
         )}
         <span className="price">
-          {formatMoney(product.priceCents, product.currency)}
+          {formatMoney(
+            priceForVersion(
+              product.priceCents,
+              product.globalPriceCents,
+            ),
+            product.currency,
+          )}
         </span>
       </div>
 

@@ -34,6 +34,8 @@ type ProductRow = {
   description: string | null;
   priceCents: number;
   compareAtCents: number | null;
+  globalPriceCents: number | null;
+  globalCompareAtCents: number | null;
   currency: string;
   isPreOrder: boolean;
   preOrderNotice: string | null;
@@ -53,6 +55,7 @@ type ProductRow = {
     optionValue: string;
     sku: string;
     stock: number;
+    globalPriceCents: number | null;
   }[];
 };
 
@@ -72,6 +75,8 @@ function toCard(p: ProductRow): ProductCard {
     shortTags: p.shortTags,
     priceCents: p.priceCents,
     compareAtCents: p.compareAtCents ?? undefined,
+    globalPriceCents: p.globalPriceCents ?? undefined,
+    globalCompareAtCents: p.globalCompareAtCents ?? undefined,
     currency: p.currency,
     isPreOrder: p.isPreOrder,
     preOrderNotice: p.preOrderNotice ?? undefined,

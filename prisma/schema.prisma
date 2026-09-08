@@ -182,7 +182,12 @@ model Product {
   shortTags      String[] @map("short_tags")
   description    String?
   priceCents     Int      @map("price_cents")
+  // Global-site price in USD cents (our-nara.co.kr). Local price is
+  // `priceCents` (INR). Nullable until admins set it; storefront falls back
+  // to the converted local price (see src/lib/money.ts priceForVersion).
+  globalPriceCents Int?   @map("global_price_cents")
   compareAtCents Int?     @map("compare_at_cents")
+  globalCompareAtCents Int? @map("global_compare_at_cents")
   currency       String   @default("INR")
   isPreOrder     Boolean  @default(false) @map("is_pre_order")
   preOrderNotice String?  @map("pre_order_notice")
@@ -224,6 +229,8 @@ model ProductVariant {
   optionValue String  @map("option_value") // e.g. "01 Rose"
   sku         String  @unique
   priceCents  Int?    @map("price_cents")
+  // Global-site variant price in USD cents (mirrors Product.globalPriceCents).
+  globalPriceCents Int? @map("global_price_cents")
   stock       Int     @default(0)
   isActive    Boolean @default(true) @map("is_active")
 

@@ -294,6 +294,7 @@ async function main() {
         summary: product.summary,
         shortTags: product.shortTags,
         priceCents: product.priceCents,
+        globalPriceCents: Math.max(1, Math.round(product.priceCents / 83)),
         currency: "INR",
         isPreOrder: product.isPreOrder,
         preOrderNotice: product.preOrderNotice,
@@ -303,6 +304,7 @@ async function main() {
       update: {
         name: product.name,
         priceCents: product.priceCents,
+        globalPriceCents: Math.max(1, Math.round(product.priceCents / 83)),
         isPreOrder: product.isPreOrder,
       },
     });

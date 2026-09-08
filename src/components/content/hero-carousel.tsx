@@ -12,12 +12,14 @@ import { toLoopable } from "@/lib/carousel";
 import { HiPause, HiPlay } from "react-icons/hi2";
 import type { HeroSlide } from "@/lib/page-builder/types";
 import { defaultHeroSlides } from "@/data/hero";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 // Largest `slidesPerView` in the breakpoints below (1200px → 3.7). `toLoopable`
 // duplicates the slides only if there aren't enough for Swiper's loop mode.
 const MAX_SLIDES_PER_VIEW = 3.7;
 
 export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
+  const { config } = useSiteVersion();
   const rootRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
   const swiperRef = useRef<Swiper | null>(null);
@@ -79,7 +81,7 @@ export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
               key={key}
               className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100 [&.swiper-slide-prev]:opacity-100 [&.swiper-slide-next]:opacity-100"
             >
-              {slide.preorder && (
+              {slide.preorder && config.preOrderEnabled && (
                 <div className="pointer-events-none absolute right-5 top-5 z-10 flex h-20 w-20 items-center justify-center rounded-full bg-point-500 text-center text-[13px] font-semibold leading-tight tracking-wide text-white">
                   PRE
                   <br />

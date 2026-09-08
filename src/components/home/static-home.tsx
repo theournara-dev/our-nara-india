@@ -19,6 +19,7 @@ import {
 } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
 import { tripleBannerBoxes } from "@/data/triple-banner";
+import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
 
 /**
  * The original, hardcoded homepage. Used as a fallback by the dynamic page
@@ -27,6 +28,7 @@ import { tripleBannerBoxes } from "@/data/triple-banner";
  * drives the layout instead.
  */
 export async function StaticHome() {
+  const { preOrderEnabled } = getVersionConfig(SITE_VERSION);
   const featured = await getFeaturedProducts(4);
   const shorts = await getShortsPicks();
   const longBanners = await getLongBanners();
@@ -36,13 +38,15 @@ export async function StaticHome() {
       products: await getProductsBySlugs(box.productSlugs),
     })),
   );
-  const preOrder = await getProductsBySlugs([
-    "centella-dark-spot-solution-ampoule-pro",
-    "peptide-volume-neck-cream",
-    "peptide-volume-lifting-pro-essence-30ml",
-    "centella-moist-soothing-gel-cream-ex",
-    "peptide-volume-lifting-pro-essence-100ml",
-  ]);
+  const preOrder = preOrderEnabled
+    ? await getProductsBySlugs([
+        "centella-dark-spot-solution-ampoule-pro",
+        "peptide-volume-neck-cream",
+        "peptide-volume-lifting-pro-essence-30ml",
+        "centella-moist-soothing-gel-cream-ex",
+        "peptide-volume-lifting-pro-essence-100ml",
+      ])
+    : [];
   const brandSections = await Promise.all(
     homeBrandSections.map(async (section) => ({
       ...section,
@@ -95,14 +99,16 @@ export async function StaticHome() {
       </Reveal>
 
       {/* Pre-orders */}
-      <Reveal>
-        <ProductGridSection
-          sub="AVAILABLE NOW"
-          title="PRE-ORDER"
-          products={preOrder}
-          moreHref="/category/pre-order"
-        />
-      </Reveal>
+      {preOrderEnabled && (
+        <Reveal>
+          <ProductGridSection
+            sub="AVAILABLE NOW"
+            title="PRE-ORDER"
+            products={preOrder}
+            moreHref="/category/pre-order"
+          />
+        </Reveal>
+      )}
 
       {/* Long banner */}
       <Reveal>

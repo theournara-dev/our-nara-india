@@ -1,4 +1,9 @@
 import { useSyncExternalStore } from "react";
+import {
+  getActiveVersion,
+  getVersionConfig,
+} from "@/lib/site-version";
+import { priceForVersion } from "@/lib/money";
 
 /**
  * Minimal client-side cart backed by localStorage. There's no cart backend yet
@@ -69,6 +74,12 @@ export function getCart(): CartItem[] {
  * Build a CartItem from a catalog product and add it to the cart. Accepts any
  * object with the fields the cart needs, so product cards and the product
  * detail page share one code path.
+ *
+ * The stored price/currency are resolved for the ACTIVE site version at add
+ * time: local stores INR `priceCents`, global stores the USD
+ * `globalPriceCents` (falling back to a display conversion when unset) with
+ * the version's currency. Cart totals therefore always match the version the
+ * customer is shopping in.
  */
 export function addProductToCart(
   product: {
@@ -78,17 +89,23 @@ export function addProductToCart(
     images: string[];
     priceCents: number;
     currency: string;
+    globalPriceCents?: number | null;
   },
   qty = 1,
   option?: string,
 ): CartItem[] {
+  const version = getActiveVersion();
   return addToCart({
     productId: product.id,
     slug: product.slug,
     name: product.name,
     image: product.images[0] ?? "",
-    priceCents: product.priceCents,
-    currency: product.currency,
+    priceCents: priceForVersion(
+      product.priceCents,
+      product.globalPriceCents,
+      version,
+    ),
+    currency: getVersionConfig(version).currency,
     qty,
     option,
   });

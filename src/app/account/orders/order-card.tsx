@@ -121,7 +121,7 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
           </p>
         </div>
         <span className="font-semibold text-zinc-900">
-          {formatMoney(order.totalCents, order.currency)}
+          {formatMoney(order.totalCents, order.currency, { convert: false })}
         </span>
         <ChevronDown
           aria-hidden
@@ -150,7 +150,7 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
                       {[
                         item.optionValue,
                         item.sku,
-                        `${item.quantity} × ${formatMoney(item.priceCents, item.currency)}`,
+                        `${item.quantity} × ${formatMoney(item.priceCents, item.currency, { convert: false })}`,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
@@ -160,6 +160,7 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
                     {formatMoney(
                       item.priceCents * item.quantity,
                       item.currency,
+                      { convert: false },
                     )}
                   </span>
                 </li>
@@ -172,7 +173,9 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
             <div className="flex justify-between gap-4">
               <dt className="text-zinc-500">Subtotal</dt>
               <dd className="text-zinc-900">
-                {formatMoney(order.subtotalCents, order.currency)}
+                {formatMoney(order.subtotalCents, order.currency, {
+                  convert: false,
+                })}
               </dd>
             </div>
             <div className="flex justify-between gap-4">
@@ -180,21 +183,27 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
               <dd className="text-zinc-900">
                 {order.shippingCents === 0
                   ? "Free"
-                  : formatMoney(order.shippingCents, order.currency)}
+                  : formatMoney(order.shippingCents, order.currency, {
+                      convert: false,
+                    })}
               </dd>
             </div>
             {order.discountCents > 0 && (
               <div className="flex justify-between gap-4">
                 <dt className="text-zinc-500">Discount</dt>
                 <dd className="text-zinc-900">
-                  −{formatMoney(order.discountCents, order.currency)}
+                  −{formatMoney(order.discountCents, order.currency, {
+                    convert: false,
+                  })}
                 </dd>
               </div>
             )}
             <div className="flex justify-between gap-4 pt-1 font-semibold">
               <dt className="text-zinc-900">Total</dt>
               <dd className="text-zinc-900">
-                {formatMoney(order.totalCents, order.currency)}
+                {formatMoney(order.totalCents, order.currency, {
+                  convert: false,
+                })}
               </dd>
             </div>
           </dl>
@@ -260,7 +269,9 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
                         p.status}
                     </span>
                     <span className="ml-auto text-zinc-900">
-                      {formatMoney(p.amountCents, p.currency)}
+                      {formatMoney(p.amountCents, p.currency, {
+                        convert: false,
+                      })}
                     </span>
                     <span className="w-full text-xs text-zinc-400">
                       {p.createdAt}

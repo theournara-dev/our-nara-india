@@ -1,44 +1,48 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
+import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
 
 export const metadata: Metadata = { title: "Help" };
-
-const guideSections = [
-  {
-    title: "How to Join",
-    body: "Create an account from the Join page to track orders, save wishlists and collect mileage points on every purchase.",
-  },
-  {
-    title: "How to order",
-    body: "Browse the catalog, select your options and quantity, then add to cart. Proceed to checkout to place your order.",
-  },
-  {
-    title: "Payment",
-    body: "We accept cards, UPI, netbanking and wallets via Razorpay. Payment is processed securely at checkout.",
-  },
-  {
-    title: "Shipping",
-    body: "Domestic (India) orders ship in 3–7 business days; international orders in 7–14 business days. Shipping is free.",
-  },
-  {
-    title: "Returns & Exchanges",
-    body: "Unopened items can be returned within 14 days of delivery. Contact support to start a return or exchange.",
-  },
-  {
-    title: "Refunds",
-    body: "Refunds are issued to the original payment method within 5–7 business days after we receive the returned item.",
-  },
-  {
-    title: "Other",
-    body: "For anything else, reach our support team during business hours — see the Stores page for contact details.",
-  },
-];
 
 /** Help/guide page matching the original: HOME › HELP breadcrumb and the
  *  guide sections (How to Join / How to order / Payment / Shipping /
  *  Returns & Exchanges / Refunds / Other). */
 export default function HelpPage() {
+  const { paymentsEnabled } = getVersionConfig(SITE_VERSION);
+  const guideSections = [
+    {
+      title: "How to Join",
+      body: "Create an account from the Join page to track orders, save wishlists and collect mileage points on every purchase.",
+    },
+    {
+      title: "How to order",
+      body: "Browse the catalog, select your options and quantity, then add to cart. Proceed to checkout to place your order.",
+    },
+    {
+      title: "Payment",
+      body: paymentsEnabled
+        ? "We accept cards, UPI, netbanking and wallets via Razorpay. Payment is processed securely at checkout."
+        : "Payment is coming soon. We are setting up a simple secured checkout for this site — please check back shortly.",
+    },
+    {
+      title: "Shipping",
+      body: "Domestic (India) orders ship in 3–7 business days; international orders in 7–14 business days. Shipping is free.",
+    },
+    {
+      title: "Returns & Exchanges",
+      body: "Unopened items can be returned within 14 days of delivery. Contact support to start a return or exchange.",
+    },
+    {
+      title: "Refunds",
+      body: "Refunds are issued to the original payment method within 5–7 business days after we receive the returned item.",
+    },
+    {
+      title: "Other",
+      body: "For anything else, reach our support team during business hours — see the Stores page for contact details.",
+    },
+  ];
+
   return (
     <div>
       <Container className="py-8">

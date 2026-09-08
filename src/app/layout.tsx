@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/header";
 import { PopupHost } from "@/components/layout/popup-host";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
+import { SiteVersionProvider } from "@/components/site-version-provider";
 import { SITE } from "@/lib/constants";
 import "./globals.css";
 
@@ -57,11 +58,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col overflow-x-clip">
-        <CartProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </CartProvider>
+        <SiteVersionProvider>
+          <CartProvider>
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </CartProvider>
+        </SiteVersionProvider>
         <Toaster richColors position="top-center" />
         <PopupHost />
         <ContactDialogHost />

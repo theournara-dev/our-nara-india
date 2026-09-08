@@ -4,9 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
  * Product card. Default image is shown, the hover image crossfades in on hover
@@ -23,6 +24,7 @@ export function ThemeProductCard({
   /** Eager-load + preload this image (set for the first/above-the-fold card). */
   priority?: boolean;
 }) {
+  const { config } = useSiteVersion();
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
 
@@ -109,7 +111,7 @@ export function ThemeProductCard({
             {product.name}
           </Link>
         </strong>
-        {product.isPreOrder && (
+        {product.isPreOrder && config.preOrderEnabled && (
           <span className="block text-[13px] font-medium text-[#702dbd]">
             PRE-ORDER/Order now, ships later
           </span>
@@ -119,7 +121,13 @@ export function ThemeProductCard({
             {product.shortTags.join(" · ")}
           </li>
           <li className="text-[18px] font-bold text-black">
-            {formatMoney(product.priceCents, product.currency)}
+            {formatMoney(
+              priceForVersion(
+                product.priceCents,
+                product.globalPriceCents,
+              ),
+              product.currency,
+            )}
           </li>
         </ul>
       </div>

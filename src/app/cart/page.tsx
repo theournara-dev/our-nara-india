@@ -19,8 +19,11 @@ import { formatMoney } from "@/lib/money";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { friendlyPaymentError } from "@/lib/payment-errors";
 import { notify, notifyErrorWithContact } from "@/lib/toast";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 export default function CartPage() {
+  const { config } = useSiteVersion();
+  const { paymentsEnabled } = config;
   const items = useCart();
   const { values: userInfo, setValues } = useUserInfo();
   const [placing, setPlacing] = useState(false);
@@ -32,6 +35,14 @@ export default function CartPage() {
 
   async function placeOrder() {
     if (items.length === 0) return;
+    if (!paymentsEnabled) {
+      notify.error(
+        "payment-disabled",
+        "Payment coming soon",
+        "Payment is not available yet on this site. Please check back soon.",
+      );
+      return;
+    }
     if (!userInfo.name.trim() || !userInfo.email.trim()) {
       notify.error(
         "no-details",
@@ -219,10 +230,14 @@ export default function CartPage() {
               <button
                 type="button"
                 onClick={placeOrder}
-                disabled={placing}
+                disabled={placing || !paymentsEnabled}
                 className="mt-4 h-12 w-full rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
               >
-                {placing ? "Placing…" : "Place order"}
+                {placing
+                  ? "Placing…"
+                  : paymentsEnabled
+                    ? "Place order"
+                    : "Payment coming soon"}
               </button>
               <p className="mt-2 text-center text-[11px] text-zinc-400">
                 {userInfo.name || userInfo.email

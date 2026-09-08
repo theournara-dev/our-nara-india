@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
+import { priceForVersion } from "@/lib/money";
 
 /**
  * Create an internal Order (PENDING) from the cart. This is the server-side
@@ -42,6 +44,14 @@ export type CreateOrderInput = z.infer<typeof createOrderInput>;
 
 export async function createOrder(input: CreateOrderInput) {
   const data = createOrderInput.parse(input);
+
+  // Payments are not enabled on this site version — refuse to create orders
+  // so no PENDING order ever exists without a payment path behind it.
+  if (!getVersionConfig(SITE_VERSION).paymentsEnabled) {
+    throw new Error(
+      "Payment is not available yet on this site. Please check back soon.",
+    );
+  }
 
   // Idempotency: a retry or double-submit with the same cart token returns
   // the existing open order instead of creating a duplicate (the customer
@@ -103,10 +113,18 @@ export async function createOrder(input: CreateOrderInput) {
       id: true,
       name: true,
       priceCents: true,
+      globalPriceCents: true,
       currency: true,
       isPreOrder: true,
       variants: {
-        select: { id: true, optionValue: true, sku: true, priceCents: true, stock: true },
+        select: {
+          id: true,
+          optionValue: true,
+          sku: true,
+          priceCents: true,
+          globalPriceCents: true,
+          stock: true,
+        },
       },
     },
   });
@@ -143,8 +161,15 @@ export async function createOrder(input: CreateOrderInput) {
     }
 
     // Effective unit price: variant price overrides the product base price
-    // when the admin set one (see ProductVariant.priceCents).
-    let unitPriceCents = product.priceCents;
+    // when the admin set one (see ProductVariant.priceCents). Prices are then
+    // resolved for the SERVER-side site version (SITE_VERSION — build-time,
+    // since getActiveVersion is a client-side module override): local stores
+    // INR, global stores the USD globalPriceCents.
+    let unitPriceCents = priceForVersion(
+      product.priceCents,
+      product.globalPriceCents,
+      SITE_VERSION,
+    );
     let optionValue: string | null = null;
     let sku: string | null = null;
     if (item.variantId) {
@@ -164,7 +189,13 @@ export async function createOrder(input: CreateOrderInput) {
       }
       optionValue = variant.optionValue;
       sku = variant.sku;
-      if (variant.priceCents != null) unitPriceCents = variant.priceCents;
+      if (variant.priceCents != null) {
+        unitPriceCents = priceForVersion(
+          variant.priceCents,
+          variant.globalPriceCents ?? product.globalPriceCents,
+          SITE_VERSION,
+        );
+      }
     }
 
     subtotalCents += unitPriceCents * item.quantity;
@@ -178,7 +209,7 @@ export async function createOrder(input: CreateOrderInput) {
       sku,
       priceCents: unitPriceCents,
       quantity: item.quantity,
-      currency: product.currency,
+      currency: getVersionConfig(SITE_VERSION).currency,
     });
   }
 
@@ -187,14 +218,17 @@ export async function createOrder(input: CreateOrderInput) {
   const totalCents = subtotalCents + shippingCents - discountCents;
 
   // Guard: mixed-currency carts are not supported (all items must share one
-  // currency, otherwise the summed total would mix denominations).
-  const currencies = new Set(products.map((p) => p.currency));
+  // currency, otherwise the summed total would mix denominations). Items are
+  // priced in the active site version's currency, so this is trivially one
+  // currency per version — kept as a safety net for future multi-currency
+  // catalogs.
+  const currencies = new Set(orderItems.map((i) => i.currency));
   if (currencies.size > 1) {
     throw new Error(
       "Your cart contains items in different currencies. Please check out separately.",
     );
   }
-  const currency = products[0]?.currency ?? "INR";
+  const currency = getVersionConfig(SITE_VERSION).currency;
 
   const orderNumber = `ON-${Date.now().toString(36)}${Math.random()
     .toString(36)

@@ -2,6 +2,7 @@
 
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
 import { SITE } from "@/lib/constants";
+import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
 
 /**
  * Client-side Razorpay checkout. Loads the Razorpay checkout script on demand
@@ -102,6 +103,14 @@ function cartToken(input: CreateOrderInput): string {
 export async function checkoutWithRazorpay(
   input: CreateOrderInput,
 ): Promise<{ orderId: string; orderNumber: string }> {
+  // Payments are disabled on this version (e.g. global) — refuse the checkout
+  // up front so neither the internal order nor the Razorpay modal is created.
+  if (!getVersionConfig(getActiveVersion()).paymentsEnabled) {
+    throw new Error(
+      "Payment is not available yet on this site. Please check back soon.",
+    );
+  }
+
   // 1. Create the internal PENDING order (server-side totals).
   let order: { orderId: string; orderNumber: string };
   try {

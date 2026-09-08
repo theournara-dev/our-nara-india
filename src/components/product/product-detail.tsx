@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ProductDetail } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { useCartSheet } from "@/components/cart/cart-provider";
+import { useSiteVersion } from "@/components/site-version-provider";
 import { PreorderDialog } from "./preorder-dialog";
 
 interface ProductDetailProps {
@@ -23,6 +24,7 @@ interface ProductDetailProps {
  * wired up in the commerce milestone).
  */
 export function ProductDetail({ product }: ProductDetailProps) {
+  const { config } = useSiteVersion();
   const { openQuickPurchase } = useCartSheet();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
@@ -39,8 +41,11 @@ export function ProductDetail({ product }: ProductDetailProps) {
   // Buttons render based on product state. A pre-order shows the pre-order
   // dialog; available products show Buy Now (when enabled). They're mutually
   // exclusive — pre-orders aren't eligible for buy-now express checkout.
-  const showPreOrder = product.isPreOrder;
-  const showBuyNow = product.buyNowEnabled && !product.isPreOrder;
+  // On versions without pre-orders (global), every product is directly
+  // purchasable regardless of its isPreOrder/buyNowEnabled flags.
+  const showPreOrder = product.isPreOrder && config.preOrderEnabled;
+  const showBuyNow =
+    !config.preOrderEnabled || (product.buyNowEnabled && !product.isPreOrder);
 
   function handleBuyNow() {
     addProductToCart(product, qty, option || undefined);
@@ -118,16 +123,28 @@ export function ProductDetail({ product }: ProductDetailProps) {
           {/* Price */}
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-semibold text-point-500">
-              {formatMoney(product.priceCents, product.currency)}
+              {formatMoney(
+                priceForVersion(
+                  product.priceCents,
+                  product.globalPriceCents,
+                ),
+                product.currency,
+              )}
             </span>
             {hasDiscount && (
               <span className="text-lg text-zinc-400 line-through">
-                {formatMoney(product.compareAtCents!, product.currency)}
+                {formatMoney(
+                  priceForVersion(
+                    product.compareAtCents!,
+                    product.globalCompareAtCents,
+                  ),
+                  product.currency,
+                )}
               </span>
             )}
           </div>
 
-          {product.isPreOrder && (
+          {showPreOrder && (
             <div className="mt-2 flex items-center gap-2">
               <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
                 PRE-ORDER
@@ -163,7 +180,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
           {/* Quantity + shipping — hidden for pre-orders (quantity is set in the
               pre-order dialog) */}
-          {!product.isPreOrder && (
+          {!showPreOrder && (
             <div className="mt-5 flex items-center justify-between border-y border-[#e9e9e9] py-3">
               <span className="text-sm font-semibold text-ink">Quantity</span>
               <div className="flex items-center rounded border border-[#e9e9e9]">
@@ -204,15 +221,25 @@ export function ProductDetail({ product }: ProductDetailProps) {
                 PRE-ORDER
               </button>
             )}
-            {showBuyNow && (
-              <button
-                type="button"
-                onClick={handleBuyNow}
-                className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
-              >
-                BUY NOW
-              </button>
-            )}
+            {showBuyNow &&
+              (config.paymentsEnabled ? (
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+                >
+                  BUY NOW
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Payment is not available yet on this site."
+                  className="h-12 flex-1 cursor-not-allowed rounded border border-ink px-6 text-sm font-semibold text-zinc-400 opacity-70"
+                >
+                  Payment coming soon
+                </button>
+              ))}
           </div>
         </div>
       </div>
@@ -288,7 +315,10 @@ export function ProductDetail({ product }: ProductDetailProps) {
         open={preorderOpen}
         productId={product.id}
         productName={product.name}
-        priceLabel={formatMoney(product.priceCents, product.currency)}
+        priceLabel={formatMoney(
+          priceForVersion(product.priceCents, product.globalPriceCents),
+          product.currency,
+        )}
         defaultQty={1}
         onClose={() => setPreorderOpen(false)}
       />

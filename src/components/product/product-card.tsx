@@ -5,8 +5,9 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { ProductCard } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
  * A single product card used across the storefront (homepage sections,
@@ -21,6 +22,7 @@ export function ProductCard({
   /** Eager-load + preload this image (set for the first/above-the-fold card). */
   priority?: boolean;
 }) {
+  const { config } = useSiteVersion();
   const imageUrl = product.images[0];
   const hasDiscount =
     product.compareAtCents != null &&
@@ -53,7 +55,7 @@ export function ProductCard({
             </span>
           </div>
         )}
-        {product.isPreOrder && (
+        {product.isPreOrder && config.preOrderEnabled && (
           <Badge tone="accent" className="absolute left-3 top-3">
             PRE-ORDER
           </Badge>
@@ -89,11 +91,23 @@ export function ProductCard({
         )}
         <div className="mt-auto flex items-baseline gap-2 pt-2">
           <span className="font-semibold text-zinc-900">
-            {formatMoney(product.priceCents, product.currency)}
+            {formatMoney(
+              priceForVersion(
+                product.priceCents,
+                product.globalPriceCents,
+              ),
+              product.currency,
+            )}
           </span>
           {hasDiscount && (
             <span className="text-sm text-zinc-400 line-through">
-              {formatMoney(product.compareAtCents!, product.currency)}
+              {formatMoney(
+                priceForVersion(
+                  product.compareAtCents!,
+                  product.globalCompareAtCents,
+                ),
+                product.currency,
+              )}
             </span>
           )}
         </div>

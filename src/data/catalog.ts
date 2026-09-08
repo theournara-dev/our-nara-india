@@ -34,6 +34,9 @@ export interface StaticProduct {
   description?: string;
   priceCents: number;
   compareAtCents?: number;
+  /** Global (USD) price in minor units. Static fallback catalog stays INR-only. */
+  globalPriceCents?: number;
+  globalCompareAtCents?: number;
   currency: string;
   isPreOrder: boolean;
   preOrderNotice?: string;
@@ -52,6 +55,9 @@ export interface ProductCardView {
   shortTags: string[];
   priceCents: number;
   compareAtCents?: number;
+  /** Global (USD) price in minor units. Static fallback catalog stays INR-only. */
+  globalPriceCents?: number;
+  globalCompareAtCents?: number;
   currency: string;
   isPreOrder: boolean;
   preOrderNotice?: string;

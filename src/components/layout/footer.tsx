@@ -1,5 +1,11 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { SITE } from "@/lib/constants";
+import {
+  getVersionConfig,
+  parseSiteVersion,
+  SITE_VERSION,
+} from "@/lib/site-version";
 import {
   FaFacebookF,
   FaInstagram,
@@ -38,7 +44,13 @@ const socialLinks = [
 ];
 
 /** Storefront footer: CS center + socials, utility links and company address. */
-export function Footer() {
+export async function Footer() {
+  const cookiesStore = await cookies();
+  const version =
+    parseSiteVersion(cookiesStore.get("site_version")?.value) ?? SITE_VERSION;
+  const config = getVersionConfig(version);
+  const showIndia = config.showIndianAddress;
+
   return (
     <footer className="border-t border-zinc-100 bg-[#f9f9f9]">
       <div className="px-6 py-14 md:px-12">
@@ -48,9 +60,11 @@ export function Footer() {
             <h3 className="text-[15px] font-medium tracking-tight text-black">
               CS CENTER
             </h3>
-            <p className="mt-2 text-[26px] font-semibold leading-9 tracking-tight text-black">
-              {SITE.supportPhone}
-            </p>
+            {showIndia && (
+              <p className="mt-2 text-[26px] font-semibold leading-9 tracking-tight text-black">
+                {SITE.supportPhone}
+              </p>
+            )}
             <p className="text-[13px] font-medium text-[#777]">
               Week 09:00 - 18:00
             </p>
@@ -91,23 +105,29 @@ export function Footer() {
 
             <div className="mt-4 text-[13px] leading-[24px]">
               <span className="text-[#777]">Company : {SITE.name} </span>
-              <span className="text-[#777]">
-                A Brand of : Seoulveda Trading LLP &amp; The First Team{" "}
-              </span>
-              <span className="text-[#777]">
-                Phone : {SITE.supportPhone}
-              </span>
+              {showIndia && (
+                <span className="text-[#777]">
+                  A Brand of : Seoulveda Trading LLP &amp; The First Team{" "}
+                </span>
+              )}
+              {showIndia && (
+                <span className="text-[#777]">
+                  Phone : {SITE.supportPhone}
+                </span>
+              )}
               <br />
-              <span className="text-[#777]">
-                Address(India) : One World, S.V. Road, Near N L School, Malad
-                West, Mumbai, Maharashtra 400064
-              </span>
-              <br />
-              <span className="text-[#777]">
-                Address(South Korea) : Room 1816, Building B, Incheon Techno
-                Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon,
-                Republic of Korea
-              </span>
+              {showIndia ? (
+                <span className="text-[#777]">
+                  Address(India) : One World, S.V. Road, Near N L School, Malad
+                  West, Mumbai, Maharashtra 400064
+                </span>
+              ) : (
+                <span className="text-[#777]">
+                  Address(South Korea) : Room 1816, Building B, Incheon Techno
+                  Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon,
+                  Republic of Korea
+                </span>
+              )}
               <br />
               <span className="text-[#777]">
                 Personal information manager :{" "}

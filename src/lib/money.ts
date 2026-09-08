@@ -1,25 +1,81 @@
 import { SITE } from "@/lib/constants";
+import {
+  getActiveVersion,
+  getVersionConfig,
+  type SiteVersion,
+} from "@/lib/site-version";
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
-function getFormatter(currency: string) {
-  let formatter = formatters.get(currency);
+function getFormatter(currency: string, locale: string) {
+  // Cache key includes the locale: INR wants en-IN digit grouping (₹1,80,000),
+  // USD wants en-US grouping ($1,800.00).
+  const key = `${locale}:${currency}`;
+  let formatter = formatters.get(key);
   if (!formatter) {
-    // en-IN gives the Indian digit grouping the store uses (₹1,80,000 style).
-    formatter = new Intl.NumberFormat("en-IN", {
+    formatter = new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
     });
-    formatters.set(currency, formatter);
+    formatters.set(key, formatter);
   }
   return formatter;
+}
+
+export interface FormatMoneyOptions {
+  /**
+   * Site version whose display currency/locale to use. Defaults to the active
+   * version (env/domain, or the runtime override from the header switch).
+   */
+  version?: SiteVersion;
+  /**
+   * Display the amount in the version's display currency/locale. Defaults to
+   * true — storefront surfaces display in the version currency. Pass `false`
+   * to show the stored currency as-is (admin surfaces and historical order
+   * data, where the stored amount is the source of truth).
+   */
+  convert?: boolean;
 }
 
 /**
  * Format an amount stored in integer minor units (paise) as a currency string.
  * All money is persisted as integer minor units to avoid float drift; convert
  * here at the presentation edge only.
+ *
+ * The amount is formatted AS-IS — no fx conversion is applied. Callers that
+ * need a version-appropriate amount should use `priceForVersion` first and
+ * pass the result here. Storefront call sites keep their existing
+ * `formatMoney(x, currency)` shape — the active site version decides the
+ * display currency/locale. Admin call sites should pass `{ convert: false }`
+ * to keep showing the stored currency.
  */
-export function formatMoney(minorUnits: number, currency: string = SITE.currency) {
-  return getFormatter(currency).format(minorUnits / 100);
+export function formatMoney(
+  minorUnits: number,
+  currency: string = SITE.currency,
+  options: FormatMoneyOptions = {},
+) {
+  const version = options.version ?? getActiveVersion();
+  const config = getVersionConfig(version);
+  const convert = options.convert ?? true;
+  const displayCurrency = convert ? config.currency : currency;
+  const locale = convert ? config.locale : "en-IN";
+  const amount = minorUnits / 100;
+  return getFormatter(displayCurrency, locale).format(amount);
+}
+
+/**
+ * Pick the version-appropriate price for a product: the local (stored, INR)
+ * price on the local version, or the global (USD) price on the global version.
+ * Falls back to a display-only conversion (localCents / 83) when a product has
+ * no explicit global price yet.
+ */
+export function priceForVersion(
+  localCents: number,
+  globalCents: number | null | undefined,
+  version: SiteVersion = getActiveVersion(),
+): number {
+  if (version === "global") {
+    return globalCents ?? Math.max(1, Math.round(localCents / 83));
+  }
+  return localCents;
 }

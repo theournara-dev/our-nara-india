@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { formatMoney } from "@/lib/money";
 
 export const metadata: Metadata = { title: "Admin · Overview" };
 
@@ -32,7 +33,9 @@ export default async function AdminOverviewPage() {
     { label: "Pre-orders", value: preorders.toLocaleString() },
     {
       label: "Revenue (paid)",
-      value: `₹${((revenue._sum.totalCents ?? 0) / 100).toLocaleString("en-IN")}`,
+      value: formatMoney(revenue._sum.totalCents ?? 0, "INR", {
+        convert: false,
+      }),
     },
     { label: "Pending reviews", value: pendingReviews.toLocaleString() },
     { label: "Active coupons", value: activeCoupons.toLocaleString() },
