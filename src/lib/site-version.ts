@@ -92,6 +92,54 @@ export function resolveSiteVersion(): SiteVersion {
 export const SITE_VERSION: SiteVersion = resolveSiteVersion();
 
 /**
+ * Resolve the version from an incoming request host (the `Host` /
+ * `x-forwarded-host` header, or `window.location.hostname`).
+ *
+ * Both production domains are served from the SAME Vercel project/deployment,
+ * so the build-time env (NEXT_PUBLIC_SITE_URL) resolves identically for both.
+ * The host is the only thing that tells them apart: the global domain
+ * (our-nara.co.kr, incl. www) is "global", everything else is "local".
+ */
+export function resolveSiteVersionFromHost(
+  host: string | null | undefined,
+): SiteVersion {
+  if (!host) return DEFAULT_SITE_VERSION;
+  const normalized = host.trim().toLowerCase().replace(/:\d+$/, "");
+  if (
+    normalized === "our-nara.co.kr" ||
+    normalized.endsWith(".our-nara.co.kr")
+  ) {
+    return "global";
+  }
+  return "local";
+}
+
+/**
+ * Resolve the version for one server request. Precedence:
+ * 1. `NEXT_PUBLIC_SITE_VERSION` — explicit per-deployment override (use only
+ *    for deployments that should be one specific version).
+ * 2. The request host — makes the two custom domains self-identify even
+ *    though they share a deployment.
+ * 3. Default (local).
+ */
+export function resolveRequestSiteVersion(
+  host: string | null | undefined,
+): SiteVersion {
+  const explicit = process.env.NEXT_PUBLIC_SITE_VERSION;
+  if (explicit === "global" || explicit === "local") return explicit;
+  return resolveSiteVersionFromHost(host);
+}
+
+/**
+ * Canonical production URL for a version — used for canonical links, the root
+ * layout metadataBase and email footers so global-site content never points at
+ * the local domain and vice versa.
+ */
+export function getSiteUrl(version: SiteVersion = SITE_VERSION): string {
+  return SITE_DOMAINS[version];
+}
+
+/**
  * Runtime-active version. Server components always see `SITE_VERSION`;
  * the client provider calls `setActiveVersion` when the user switches, so
  * client-side renders (prices, buttons) react instantly.

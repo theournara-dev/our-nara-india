@@ -1,15 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
+import { headers } from "next/headers";
+import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version";
 
 export const metadata: Metadata = { title: "Help" };
 
 /** Help/guide page matching the original: HOME › HELP breadcrumb and the
  *  guide sections (How to Join / How to order / Payment / Shipping /
  *  Returns & Exchanges / Refunds / Other). */
-export default function HelpPage() {
-  const { paymentsEnabled } = getVersionConfig(SITE_VERSION);
+export default async function HelpPage() {
+  const headerList = await headers();
+  const requestVersion = resolveRequestSiteVersion(
+    headerList.get("x-forwarded-host") ?? headerList.get("host"),
+  );
+  const { paymentsEnabled } = getVersionConfig(requestVersion);
   const guideSections = [
     {
       title: "How to Join",

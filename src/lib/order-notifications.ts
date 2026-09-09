@@ -3,7 +3,7 @@ import { trackingUrl } from "@/lib/delhivery-client";
 import { getFromForVersion, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatusValue } from "@/lib/order-status";
-import type { SiteVersion } from "@/lib/site-version";
+import { getSiteUrl, type SiteVersion } from "@/lib/site-version";
 
 /**
  * Order notification emails (customer + admin). These are best-effort: every
@@ -285,7 +285,8 @@ export async function notifyAdminsNewOrder(
     });
     const itemsText = itemLines(order.items);
     const itemsHtml = itemRowsHtml(order.items);
-    const adminLink = `${SITE.url}/admin/orders/${order.id}`;
+    const version = versionForOrder(order.currency);
+    const adminLink = `${getSiteUrl(version)}/admin/orders/${order.id}`;
 
     const subject = `New order ${order.orderNumber} — ${SITE.name}`;
     const text = [
@@ -315,6 +316,7 @@ export async function notifyAdminsNewOrder(
 
     return await sendEmail({
       to: SITE.supportEmail,
+      from: getFromForVersion(version),
       subject,
       text,
       html,

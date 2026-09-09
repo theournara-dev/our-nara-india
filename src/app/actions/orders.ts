@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
+import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version";
 import { priceForVersion } from "@/lib/money";
 import { notifyAdminsNewOrder } from "@/lib/order-notifications";
 
@@ -46,9 +46,18 @@ export type CreateOrderInput = z.infer<typeof createOrderInput>;
 export async function createOrder(input: CreateOrderInput) {
   const data = createOrderInput.parse(input);
 
+  // Resolve the version from THIS request's host. Both production domains
+  // share one deployment, so the build-time default can't tell them
+  // apart — the host can.
+  const requestHeaders = await headers();
+  const requestVersion = resolveRequestSiteVersion(
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+  );
+  const requestConfig = getVersionConfig(requestVersion);
+
   // Payments are not enabled on this site version — refuse to create orders
   // so no PENDING order ever exists without a payment path behind it.
-  if (!getVersionConfig(SITE_VERSION).paymentsEnabled) {
+  if (!requestConfig.paymentsEnabled) {
     throw new Error(
       "Payment is not available yet on this site. Please check back soon.",
     );
@@ -163,13 +172,12 @@ export async function createOrder(input: CreateOrderInput) {
 
     // Effective unit price: variant price overrides the product base price
     // when the admin set one (see ProductVariant.priceCents). Prices are then
-    // resolved for the SERVER-side site version (SITE_VERSION — build-time,
-    // since getActiveVersion is a client-side module override): local stores
+    // resolved for this request's site version (from the host): local stores
     // INR, global stores the USD globalPriceCents.
     let unitPriceCents = priceForVersion(
       product.priceCents,
       product.globalPriceCents,
-      SITE_VERSION,
+      requestVersion,
     );
     let optionValue: string | null = null;
     let sku: string | null = null;
@@ -194,7 +202,7 @@ export async function createOrder(input: CreateOrderInput) {
         unitPriceCents = priceForVersion(
           variant.priceCents,
           variant.globalPriceCents ?? product.globalPriceCents,
-          SITE_VERSION,
+          requestVersion,
         );
       }
     }
@@ -210,7 +218,7 @@ export async function createOrder(input: CreateOrderInput) {
       sku,
       priceCents: unitPriceCents,
       quantity: item.quantity,
-      currency: getVersionConfig(SITE_VERSION).currency,
+      currency: requestConfig.currency,
     });
   }
 
@@ -229,7 +237,7 @@ export async function createOrder(input: CreateOrderInput) {
       "Your cart contains items in different currencies. Please check out separately.",
     );
   }
-  const currency = getVersionConfig(SITE_VERSION).currency;
+  const currency = requestConfig.currency;
 
   const orderNumber = `ON-${Date.now().toString(36)}${Math.random()
     .toString(36)

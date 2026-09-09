@@ -25,6 +25,8 @@ const baseURL = {
     "127.0.0.1:*",
     "our-nara.com",
     "www.our-nara.com",
+    "our-nara.co.kr",
+    "www.our-nara.co.kr",
     "our-nara-india.vercel.app",
     "*.vercel.app",
   ],
@@ -42,6 +44,8 @@ const trustedOrigins = [
   // Custom production domains + the Vercel deployment domain.
   "https://www.our-nara.com",
   "https://our-nara.com",
+  "https://www.our-nara.co.kr",
+  "https://our-nara.co.kr",
   "https://our-nara-india.vercel.app",
   process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`

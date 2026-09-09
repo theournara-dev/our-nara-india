@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
+import { headers } from "next/headers";
 import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -8,6 +9,10 @@ import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
 import { SiteVersionProvider } from "@/components/site-version-provider";
 import { SITE } from "@/lib/constants";
+import {
+  getSiteUrl,
+  resolveRequestSiteVersion,
+} from "@/lib/site-version";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -28,23 +33,40 @@ const notoSansKr = Noto_Sans_KR({
   weight: ["300", "400", "500", "700"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE.url),
-  title: {
-    default: SITE.name,
-    template: `%s · ${SITE.name}`,
-  },
-  description: `${SITE.tagline} — ${SITE.description}`,
-  openGraph: {
-    siteName: SITE.name,
-    title: SITE.name,
+/**
+ * Host-dependent metadata. Both production domains share one deployment, so
+ * the canonical base URL (and the version it implies) must come from the
+ * request host, not the build-time env.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const version = resolveRequestSiteVersion(host);
+  return {
+    metadataBase: new URL(getSiteUrl(version)),
+    title: {
+      default: SITE.name,
+      template: `%s · ${SITE.name}`,
+    },
     description: `${SITE.tagline} — ${SITE.description}`,
-    locale: "en_IN",
-    type: "website",
-  },
-};
+    openGraph: {
+      siteName: SITE.name,
+      title: SITE.name,
+      description: `${SITE.tagline} — ${SITE.description}`,
+      locale: version === "global" ? "en_US" : "en_IN",
+      type: "website",
+    },
+  };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Resolve this request's site version from the host so the global domain
+  // (our-nara.co.kr) renders global immediately — same deployment, two
+  // domains, so the build-time SITE_VERSION can't tell them apart.
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const initialVersion = resolveRequestSiteVersion(host);
+
   return (
     <html
       lang="en"
@@ -58,7 +80,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col overflow-x-clip">
-        <SiteVersionProvider>
+        <SiteVersionProvider initialVersion={initialVersion}>
           <CartProvider>
             <Header />
             <main className="flex-1">{children}</main>

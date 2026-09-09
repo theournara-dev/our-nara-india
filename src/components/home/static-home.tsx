@@ -19,7 +19,8 @@ import {
 } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
 import { tripleBannerBoxes } from "@/data/triple-banner";
-import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
+import { headers } from "next/headers";
+import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version";
 
 /**
  * The original, hardcoded homepage. Used as a fallback by the dynamic page
@@ -28,7 +29,9 @@ import { getVersionConfig, SITE_VERSION } from "@/lib/site-version";
  * drives the layout instead.
  */
 export async function StaticHome() {
-  const { preOrderEnabled } = getVersionConfig(SITE_VERSION);
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const { preOrderEnabled } = getVersionConfig(resolveRequestSiteVersion(host));
   const featured = await getFeaturedProducts(4);
   const shorts = await getShortsPicks();
   const longBanners = await getLongBanners();

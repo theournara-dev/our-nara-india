@@ -30,29 +30,39 @@ interface SiteVersionContextValue {
 
 const SiteVersionContext = createContext<SiteVersionContextValue | null>(null);
 
-function readStoredVersion(): SiteVersion {
-  if (typeof window === "undefined") return SITE_VERSION;
+function readStoredVersion(fallback: SiteVersion): SiteVersion {
+  if (typeof window === "undefined") return fallback;
   try {
     const stored = window.localStorage.getItem(SITE_VERSION_STORAGE_KEY);
-    return parseSiteVersion(stored) ?? SITE_VERSION;
+    return parseSiteVersion(stored) ?? fallback;
   } catch {
-    return SITE_VERSION;
+    return fallback;
   }
 }
 
 export function SiteVersionProvider({
   children,
+  initialVersion = SITE_VERSION,
 }: {
   children: React.ReactNode;
+  /**
+   * The version resolved for this request (from the host header in the server
+   * layout). Both prod domains share one deployment, so the build-time
+   * SITE_VERSION can't tell them apart — the host can. Falls back to
+   * SITE_VERSION when not provided.
+   */
+  initialVersion?: SiteVersion;
 }) {
-  const [version, setVersionState] = useState<SiteVersion>(SITE_VERSION);
+  const [version, setVersionState] = useState<SiteVersion>(initialVersion);
 
-  // Hydrate from localStorage once on mount (avoids SSR mismatch).
+  // Hydrate from localStorage once on mount (avoids SSR mismatch). A stored
+  // value represents an explicit user pick and wins over the host-derived
+  // default; without one the host-derived initial render stays.
   useEffect(() => {
-    const stored = readStoredVersion();
+    const stored = readStoredVersion(initialVersion);
     setVersionState(stored);
     setActiveVersion(stored);
-  }, []);
+  }, [initialVersion]);
 
   const setVersion = useCallback((next: SiteVersion) => {
     setVersionState(next);

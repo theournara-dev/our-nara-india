@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SITE } from "@/lib/constants";
 import {
   getVersionConfig,
   parseSiteVersion,
-  SITE_VERSION,
+  resolveRequestSiteVersion,
 } from "@/lib/site-version";
 import {
   FaFacebookF,
@@ -45,9 +45,15 @@ const socialLinks = [
 
 /** Storefront footer: CS center + socials, utility links and company address. */
 export async function Footer() {
-  const cookiesStore = await cookies();
+  const cookieStore = await cookies();
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
   const version =
-    parseSiteVersion(cookiesStore.get("site_version")?.value) ?? SITE_VERSION;
+    parseSiteVersion(cookieStore.get("site_version")?.value) ??
+    // Both prod domains share one deployment — resolve from the host so the
+    // global domain shows the global footer even on the first visit (the
+    // site_version cookie only exists after an explicit client-side pick).
+    resolveRequestSiteVersion(host);
   const config = getVersionConfig(version);
   const showIndia = config.showIndianAddress;
 
