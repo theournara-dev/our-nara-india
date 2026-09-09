@@ -58,7 +58,15 @@ export function formatMoney(
   const config = getVersionConfig(version);
   const convert = options.convert ?? true;
   const displayCurrency = convert ? config.currency : currency;
-  const locale = convert ? config.locale : "en-IN";
+  // When not converting, the stored currency is the source of truth, so the
+  // locale must match that currency (USD → en-US, INR → en-IN) rather than the
+  // active version's locale — otherwise a USD total would render with Indian
+  // digit grouping ($1,80,000.00).
+  const locale = convert
+    ? config.locale
+    : displayCurrency === "INR"
+      ? "en-IN"
+      : "en-US";
   const amount = minorUnits / 100;
   return getFormatter(displayCurrency, locale).format(amount);
 }

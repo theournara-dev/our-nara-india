@@ -16,7 +16,7 @@ import type { SiteVersion } from "@/lib/site-version";
  *  - EMAIL_FROM_LOCAL  : Verified sender for the local site (our-nara.com).
  *                        Defaults to EMAIL_FROM / no-reply@our-nara.com.
  *  - EMAIL_FROM_GLOBAL : Verified sender for the global site (our-nara.co.kr).
- *                        Defaults to EMAIL_FROM / no-reply@our-nara.com.
+ *                        Defaults to EMAIL_FROM.
  *  - RESEND_TEST_TO    : (dev only) If set, all mail is redirected to this inbox
  *                        instead of the real recipient, so you can test the flow
  *                        without a real address (Resend rejects example.com etc.).
@@ -63,6 +63,15 @@ export async function sendEmail({
 }: SendParams) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
+    if (process.env.NODE_ENV === "production") {
+      // Production must never silently swallow mail: without a key there is
+      // no provider, so report the failure loudly instead of pretending the
+      // email was sent.
+      console.error(
+        `[email] RESEND_API_KEY is not set in production — email to ${to} was NOT sent.`,
+      );
+      return { ok: false };
+    }
     // Dev fallback: surface the message in the server log.
     console.log(
       `\n[email:dev] To: ${to}\n[email:dev] Subject: ${subject}\n[email:dev] ${text}\n`,
@@ -70,8 +79,12 @@ export async function sendEmail({
     return { ok: true, dev: true };
   }
 
-  // In development, optionally redirect all mail to a test inbox.
-  const recipient = process.env.RESEND_TEST_TO || to;
+  // In development, optionally redirect all mail to a test inbox. Never in
+  // production — a stray RESEND_TEST_TO must not redirect real customer mail.
+  const recipient =
+    process.env.NODE_ENV !== "production" && process.env.RESEND_TEST_TO
+      ? process.env.RESEND_TEST_TO
+      : to;
   const sender =
     from ??
     (version ? getFromForVersion(version) : undefined) ??

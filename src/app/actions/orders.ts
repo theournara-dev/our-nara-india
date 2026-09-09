@@ -272,9 +272,10 @@ export async function createOrder(input: CreateOrderInput) {
     include: { items: true },
   });
 
-  // Fire-and-forget: alert admins about the new order without blocking
-  // checkout latency. The function is non-throwing anyway.
-  void notifyAdminsNewOrder(order);
+  // Notify admins about the new order. The function is non-throwing (it
+  // wraps its send in try/catch and returns { ok: false } on failure), so
+  // awaiting it can't break checkout.
+  await notifyAdminsNewOrder(order);
 
   return { orderId: order.id, orderNumber: order.orderNumber };
 }

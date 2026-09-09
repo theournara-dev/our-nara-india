@@ -108,6 +108,8 @@ export async function GET(request: Request) {
       select: {
         id: true,
         orderNumber: true,
+        email: true,
+        currency: true,
         totalCents: true,
         isPreOrder: true,
         items: true,
@@ -128,22 +130,55 @@ export async function GET(request: Request) {
       try {
         const rzpOrder = await getRazorpay().orders.fetch(payment.providerRef);
         if (rzpOrder.amount_paid >= order.totalCents) {
-          await db.$transaction([
-            db.payment.updateMany({
-              where: { orderId: order.id, provider: "razorpay", status: { not: "CAPTURED" } },
-              data: { status: "CAPTURED" },
-            }),
-            db.order.update({
-              where: { id: order.id },
-              // Mirror the webhook path: pre-orders must not be marked PAID.
+          // Atomic PENDING→PAID/PRE_ORDER flip: only a row still PENDING is
+          // updated, so a concurrent webhook that already paid the order makes
+          // this a no-op (count 0) and we skip the side effects below.
+          const paid = await db.$transaction(async (tx) => {
+            const res = await tx.order.updateMany({
+              where: { id: order.id, status: "PENDING" },
               data: { status: order.isPreOrder ? "PRE_ORDER" : "PAID" },
-            }),
-          ]);
-          summary.ordersPaid += 1;
-          await notifyOrderStatusChange(
-            order,
-            order.isPreOrder ? "PRE_ORDER" : "PAID",
-          );
+            });
+            if (res.count === 0) return false;
+
+            // Mirror the webhook captured path: decrement stock with the same
+            // oversell guard so a later real payment.captured webhook (which
+            // returns early on CAPTURED) doesn't lose the side effects, and
+            // refund restock stays consistent.
+            const shortages: string[] = [];
+            for (const item of order.items) {
+              if (!item.variantId) continue;
+              const r = await tx.productVariant.updateMany({
+                where: { id: item.variantId, stock: { gte: item.quantity } },
+                data: { stock: { decrement: item.quantity } },
+              });
+              if (r.count === 0) {
+                shortages.push(
+                  `variant ${item.variantId} (wanted ${item.quantity})`,
+                );
+              }
+            }
+            await tx.payment.updateMany({
+              where: {
+                orderId: order.id,
+                provider: "razorpay",
+                status: { not: "CAPTURED" },
+              },
+              data: { status: "CAPTURED", stockTaken: shortages.length === 0 },
+            });
+            if (shortages.length > 0) {
+              console.error(
+                `Oversell guard skipped decrement for order ${order.orderNumber}: ${shortages.join("; ")}`,
+              );
+            }
+            return true;
+          });
+          if (paid) {
+            summary.ordersPaid += 1;
+            await notifyOrderStatusChange(
+              order,
+              order.isPreOrder ? "PRE_ORDER" : "PAID",
+            );
+          }
         }
       } catch (err) {
         summary.errors.push(`razorpay order ${order.orderNumber}: ${String(err)}`);

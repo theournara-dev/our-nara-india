@@ -458,11 +458,10 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
     `A full refund arrived for payment ${rzpPaymentId}. The payment and order were marked REFUNDED${stockWasTaken ? " and stock was restored" : " (stock untouched — it was never decremented for this payment)"}.`,
   );
 
-  // Only plain orders flip to REFUNDED here (pre-orders keep the pre-order
-  // flow) — notify the customer only when the status actually changed.
-  if (!order.isPreOrder) {
-    await notifyOrderStatusChange(order, "REFUNDED");
-  }
+  // Notify the customer on every full refund. Plain orders flip to REFUNDED
+  // here; pre-orders keep the pre-order flow (status stays PRE_ORDER) but the
+  // customer still gets the refund email via the REFUNDED template.
+  await notifyOrderStatusChange(order, "REFUNDED");
 }
 
 export async function POST(request: Request) {

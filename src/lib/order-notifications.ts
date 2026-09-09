@@ -58,6 +58,16 @@ export type OrderForNotification = {
 
 const BRAND_COLOR = "#6f2dbd";
 
+/** Escape a value for safe interpolation into an HTML template. */
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 /** Version is inferred from the stored currency (INR=local, USD=global). */
 function versionForOrder(currency: string | null | undefined): SiteVersion {
   return currency === "USD" ? "global" : "local";
@@ -71,7 +81,7 @@ function itemRowsHtml(items: OrderNotificationItem[]): string {
   return items
     .map(
       (i) => `<tr>
-        <td style="padding:8px 0;border-bottom:1px solid #eee;color:#333">${i.name} × ${i.quantity}</td>
+        <td style="padding:8px 0;border-bottom:1px solid #eee;color:#333">${escapeHtml(i.name)} × ${i.quantity}</td>
       </tr>`,
     )
     .join("");
@@ -87,18 +97,18 @@ function wrapHtml(title: string, bodyHtml: string): string {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e9e9e9;border-radius:8px;overflow:hidden">
             <tr>
               <td style="background:${BRAND_COLOR};padding:20px 28px">
-                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:1px">${SITE.name}</span>
+                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:1px">${escapeHtml(SITE.name)}</span>
               </td>
             </tr>
             <tr>
               <td style="padding:28px">
-                <h1 style="margin:0 0 16px;font-size:20px;color:#222">${title}</h1>
+                <h1 style="margin:0 0 16px;font-size:20px;color:#222">${escapeHtml(title)}</h1>
                 ${bodyHtml}
               </td>
             </tr>
             <tr>
               <td style="padding:16px 28px;border-top:1px solid #eee;color:#888;font-size:12px">
-                ${SITE.name} · ${SITE.supportEmail} · ${SITE.url}
+                ${escapeHtml(SITE.name)} · ${escapeHtml(SITE.supportEmail)} · ${escapeHtml(SITE.url)}
               </td>
             </tr>
           </table>
@@ -138,9 +148,9 @@ function buildStatusMessage(
         html: wrapHtml(
           "Order confirmed",
           `<p>Thanks for your order! We're on it.</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
-           <p style="text-align:right;font-size:16px;font-weight:700;color:#222">Total: ${total}</p>
+           <p style="text-align:right;font-size:16px;font-weight:700;color:#222">Total: ${escapeHtml(total)}</p>
            ${preOrderNoteHtml}
            <p>We'll notify you when it ships.</p>`,
         ),
@@ -151,7 +161,7 @@ function buildStatusMessage(
         ? `\n\nTrack your package: ${trackingUrl(waybill)}`
         : "";
       const trackingHtml = waybill
-        ? `<p><a href="${trackingUrl(waybill)}" style="color:${BRAND_COLOR};font-weight:700">Track your package on Delhivery</a></p>`
+        ? `<p><a href="${escapeHtml(trackingUrl(waybill))}" style="color:${BRAND_COLOR};font-weight:700">Track your package on Delhivery</a></p>`
         : "";
       return {
         subject: `Order ${orderNumber} is on the way — ${SITE.name}`,
@@ -159,7 +169,7 @@ function buildStatusMessage(
         html: wrapHtml(
           "On the way",
           `<p>Good news — your order is on the way!</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
            ${trackingHtml}
            <p>Thanks for shopping with us!</p>`,
@@ -173,7 +183,7 @@ function buildStatusMessage(
         html: wrapHtml(
           "Delivered",
           `<p>Your order has been delivered!</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
            <p>We hope you love your K-beauty goodies. Enjoy!</p>`,
         ),
@@ -186,9 +196,9 @@ function buildStatusMessage(
         html: wrapHtml(
           "Order cancelled",
           `<p>Your order has been cancelled.</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
-           <p>If you have any questions, reply to this email or contact us at ${SITE.supportEmail}.</p>`,
+           <p>If you have any questions, reply to this email or contact us at ${escapeHtml(SITE.supportEmail)}.</p>`,
         ),
       };
     }
@@ -199,8 +209,8 @@ function buildStatusMessage(
         html: wrapHtml(
           "Refund processed",
           `<p>Your refund has been processed.</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
-           <p><strong>Amount refunded:</strong> ${total}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
+           <p><strong>Amount refunded:</strong> ${escapeHtml(total)}</p>
            <p>It may take a few business days for the refund to appear on your statement.</p>`,
         ),
       };
@@ -212,10 +222,10 @@ function buildStatusMessage(
         html: wrapHtml(
           "Payment failed",
           `<p>We couldn't process the payment for your order.</p>
-           <p><strong>Order number:</strong> ${orderNumber}</p>
+           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
-           <p><strong>Total:</strong> ${total}</p>
-           <p>Don't worry — nothing has been charged. You can retry the payment from your cart, or contact us at ${SITE.supportEmail} if you need help.</p>`,
+           <p><strong>Total:</strong> ${escapeHtml(total)}</p>
+           <p>Don't worry — nothing has been charged. You can retry the payment from your cart, or contact us at ${escapeHtml(SITE.supportEmail)} if you need help.</p>`,
         ),
       };
     }
@@ -306,12 +316,12 @@ export async function notifyAdminsNewOrder(
     const html = wrapHtml(
       "New order",
       `<p>A new order just came in.</p>
-       <p><strong>Order number:</strong> ${order.orderNumber}</p>
-       <p><strong>Customer:</strong> ${customerName}</p>
-       <p><strong>Email:</strong> ${order.email ?? "—"}</p>
-       <p><strong>Total:</strong> ${total}</p>
+       <p><strong>Order number:</strong> ${escapeHtml(order.orderNumber)}</p>
+       <p><strong>Customer:</strong> ${escapeHtml(customerName)}</p>
+       <p><strong>Email:</strong> ${escapeHtml(order.email ?? "—")}</p>
+       <p><strong>Total:</strong> ${escapeHtml(total)}</p>
        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
-       <p><a href="${adminLink}" style="color:${BRAND_COLOR};font-weight:700">View order in admin →</a></p>`,
+       <p><a href="${escapeHtml(adminLink)}" style="color:${BRAND_COLOR};font-weight:700">View order in admin →</a></p>`,
     );
 
     return await sendEmail({

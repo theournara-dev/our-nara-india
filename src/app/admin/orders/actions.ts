@@ -34,11 +34,17 @@ export async function updateOrderStatus(id: string, status: string) {
   });
   if (!order) throw new Error("Order not found.");
   const nextStatus = status as OrderStatusValue;
-  if (nextStatus !== order.status) {
-    await db.order.update({
-      where: { id },
-      data: { status: nextStatus },
-    });
+  if (nextStatus === order.status) {
+    revalidatePath("/admin/orders");
+    return;
+  }
+  // Atomic: only flip when the row still has the status we read, so two
+  // concurrent updates can't both win (and only the winner notifies).
+  const res = await db.order.updateMany({
+    where: { id, status: order.status },
+    data: { status: nextStatus },
+  });
+  if (res.count === 1) {
     const NOTIFIABLE_STATUSES = new Set<OrderStatusValue>([
       "PAID",
       "PRE_ORDER",
@@ -270,13 +276,17 @@ export async function syncShipment(waybill: string) {
       (await applyTrackingStatus(order.status, nextStatus)) ??
       applyShipmentBackout(order.status, nextStatus);
     if (target && target !== order.status) {
-      await db.order.update({
-        where: { id: order.id },
+      // Atomic: only flip when the row still has the status we read, so a
+      // concurrent update can't double-notify.
+      const res = await db.order.updateMany({
+        where: { id: order.id, status: order.status },
         data: { status: target },
       });
-      await notifyOrderStatusChange(order, target, {
-        waybill: shipment.waybill,
-      });
+      if (res.count === 1) {
+        await notifyOrderStatusChange(order, target, {
+          waybill: shipment.waybill,
+        });
+      }
     }
   }
 
