@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createRazorpayOrder } from "@/lib/razorpay";
 
@@ -10,6 +11,8 @@ import { createRazorpayOrder } from "@/lib/razorpay";
  * - The amount is read from the DB order, never from the client.
  * - The returned Razorpay order id is what the client opens in the Razorpay
  *   checkout modal.
+ * - Orders attached to a signed-in user are only payable by that user. Guest
+ *   orders stay open (the cuid order id is unguessable).
  */
 
 export const runtime = "nodejs";
@@ -30,6 +33,24 @@ export async function POST(request: Request) {
   if (!order) {
     return Response.json({ error: "Order not found" }, { status: 404 });
   }
+
+  // Ownership check: an order placed while signed in belongs to that user.
+  // Guests (userId null) stay open — their order id is an unguessable cuid.
+  if (order.userId) {
+    let session: Awaited<ReturnType<typeof auth.api.getSession>> | null = null;
+    try {
+      session = await auth.api.getSession({ headers: request.headers });
+    } catch {
+      session = null;
+    }
+    if (session?.user?.id !== order.userId) {
+      return Response.json(
+        { error: "Not authorized for this order" },
+        { status: 403 },
+      );
+    }
+  }
+
   // FAILED orders are retryable: a failed attempt (bank timeout, dropped
   // network) must not brick the cart — a fresh Razorpay order revives it.
   if (order.status !== "PENDING" && order.status !== "FAILED") {

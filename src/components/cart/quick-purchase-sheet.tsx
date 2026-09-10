@@ -13,7 +13,13 @@ import { formatMoney } from "@/lib/money";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { friendlyPaymentError } from "@/lib/payment-errors";
 import { notify, notifyErrorWithContact } from "@/lib/toast";
-import { UserInfoForm, useUserInfo } from "./user-info-form";
+import {
+  UserInfoForm,
+  useUserInfo,
+  validateUserInfo,
+  type UserInfoErrors,
+  type UserInfoValues,
+} from "./user-info-form";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
@@ -36,6 +42,7 @@ export function QuickPurchaseSheet({
   const items = useCart();
   const { values: userInfo, setValues: setUserInfo } = useUserInfo();
   const [placing, setPlacing] = useState(false);
+  const [infoErrors, setInfoErrors] = useState<UserInfoErrors>({});
   // Vertical offset so the drawer slides in below the header instead of
   // underneath it. Measured from the header bar (responsive height), clamped to
   // 0 when the page is scrolled and the header is off-screen.
@@ -102,11 +109,16 @@ export function QuickPurchaseSheet({
       );
       return;
     }
-    if (!userInfo.name.trim() || !userInfo.email.trim()) {
+    // Mirrors the server-side required fields (orders.ts) and reports exactly
+    // which inputs are missing — the inputs are not inside a <form>, so
+    // `required` attributes never fire; this guard is the real check.
+    const errors = validateUserInfo(userInfo);
+    if (Object.keys(errors).length > 0) {
+      setInfoErrors(errors);
       notify.error(
         "no-details",
         "Missing details",
-        "Please fill in your contact and shipping details.",
+        Object.values(errors).join(" "),
       );
       return;
     }
@@ -128,6 +140,9 @@ export function QuickPurchaseSheet({
         state: userInfo.state,
         postal: userInfo.postal,
         country: userInfo.country,
+        // The server recomputes prices and refuses when they no longer match
+        // what the customer saw in the cart.
+        expectedSubtotalCents: subtotalCents,
       });
       clearCart();
       notify.success(
@@ -280,7 +295,7 @@ export function QuickPurchaseSheet({
                                 updateCartItemQty(
                                   item.productId,
                                   item.option,
-                                  item.qty + 1,
+                                  Math.min(99, item.qty + 1),
                                 )
                               }
                               className="flex h-7 w-7 cursor-pointer items-center justify-center text-zinc-600 hover:text-point-500"
@@ -314,7 +329,21 @@ export function QuickPurchaseSheet({
                 </h3>
                 <UserInfoForm
                   values={userInfo}
-                  onChange={setUserInfo}
+                  onChange={(next) => {
+                    setUserInfo(next);
+                    setInfoErrors((prev) => {
+                      if (Object.keys(prev).length === 0) return prev;
+                      const fresh = validateUserInfo(next);
+                      const kept: UserInfoErrors = {};
+                      for (const key of Object.keys(
+                        prev,
+                      ) as (keyof UserInfoValues)[]) {
+                        if (fresh[key]) kept[key] = fresh[key];
+                      }
+                      return kept;
+                    });
+                  }}
+                  errors={infoErrors}
                 />
               </section>
             </div>

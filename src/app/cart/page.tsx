@@ -8,6 +8,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import {
   UserInfoForm,
   useUserInfo,
+  validateUserInfo,
+  type UserInfoErrors,
+  type UserInfoValues,
 } from "@/components/cart/user-info-form";
 import {
   clearCart,
@@ -27,6 +30,7 @@ export default function CartPage() {
   const items = useCart();
   const { values: userInfo, setValues } = useUserInfo();
   const [placing, setPlacing] = useState(false);
+  const [infoErrors, setInfoErrors] = useState<UserInfoErrors>({});
 
   const subtotalCents = items.reduce((s, i) => s + i.priceCents * i.qty, 0);
   const currency = items[0]?.currency ?? "INR";
@@ -43,11 +47,16 @@ export default function CartPage() {
       );
       return;
     }
-    if (!userInfo.name.trim() || !userInfo.email.trim()) {
+    // Mirrors the server-side required fields (orders.ts) and reports exactly
+    // which inputs are missing — the inputs are not inside a <form>, so
+    // `required` attributes never fire; this guard is the real check.
+    const errors = validateUserInfo(userInfo);
+    if (Object.keys(errors).length > 0) {
+      setInfoErrors(errors);
       notify.error(
         "no-details",
         "Missing details",
-        "Please fill in your contact and shipping details.",
+        Object.values(errors).join(" "),
       );
       return;
     }
@@ -69,6 +78,9 @@ export default function CartPage() {
         state: userInfo.state,
         postal: userInfo.postal,
         country: userInfo.country,
+        // The server recomputes prices and refuses when they no longer match
+        // what the customer saw in the cart.
+        expectedSubtotalCents: subtotalCents,
       });
       clearCart();
       notify.success(
@@ -166,7 +178,7 @@ export default function CartPage() {
                             updateCartItemQty(
                               item.productId,
                               item.option,
-                              item.qty + 1,
+                              Math.min(99, item.qty + 1),
                             )
                           }
                           className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
@@ -200,7 +212,22 @@ export default function CartPage() {
                 <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-500">
                   Your details
                 </h2>
-                <UserInfoForm values={userInfo} onChange={setValues} />
+                <UserInfoForm
+            values={userInfo}
+            onChange={(next) => {
+              setValues(next);
+              setInfoErrors((prev) => {
+                if (Object.keys(prev).length === 0) return prev;
+                const fresh = validateUserInfo(next);
+                const kept: UserInfoErrors = {};
+                for (const key of Object.keys(prev) as (keyof UserInfoValues)[]) {
+                  if (fresh[key]) kept[key] = fresh[key];
+                }
+                return kept;
+              });
+            }}
+            errors={infoErrors}
+          />
               </section>
             </div>
 

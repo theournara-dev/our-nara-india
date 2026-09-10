@@ -45,6 +45,8 @@ type Props = {
     compareAtCents: number | null;
     globalPriceCents: number | null;
     globalCompareAtCents: number | null;
+    /** Product-level stock for variantless products; null = untracked. */
+    stock: number | null;
     currency: string;
     isPreOrder: boolean;
     preOrderNotice: string | null;
@@ -119,6 +121,10 @@ export function ProductForm({
   );
   const [globalCompareAt, setGlobalCompareAt] = useState(
     toDollars(product?.globalCompareAtCents),
+  );
+  // Empty string = untracked (null). Only used by products without variants.
+  const [stock, setStock] = useState(
+    product?.stock != null ? String(product.stock) : "",
   );
   const [isPreOrder, setIsPreOrder] = useState(product?.isPreOrder ?? false);
   const [preOrderNotice, setPreOrderNotice] = useState(
@@ -301,6 +307,10 @@ export function ProductForm({
       globalCompareAtCents: globalCompareAt
         ? Math.round((parseFloat(globalCompareAt) || 0) * 100)
         : undefined,
+      stock:
+        stock.trim() === ""
+          ? null
+          : Math.max(0, Math.floor(Number(stock) || 0)),
       currency: "INR",
       isPreOrder,
       preOrderNotice: preOrderNotice.trim() || undefined,
@@ -574,6 +584,21 @@ export function ProductForm({
               onChange={(e) => setGlobalCompareAt(e.target.value)}
               className={inputCls}
             />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Stock (optional)</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              className={inputCls}
+            />
+            <span className="mt-1 block text-xs text-zinc-400">
+              Only for products without variants. Leave empty to not track
+              stock.
+            </span>
           </label>
           <label className="flex items-center gap-2 text-sm text-zinc-700 sm:col-span-2">
             <input

@@ -27,6 +27,32 @@ export const EMPTY_USER_INFO: UserInfoValues = {
   country: "IN",
 };
 
+/** Field-level validation messages for [UserInfoForm], keyed by field. */
+export type UserInfoErrors = Partial<Record<keyof UserInfoValues, string>>;
+
+const EMAIL_RE = /^\S+@\S+\.\S+$/;
+
+/**
+ * Client-side mirror of the server's required fields (see actions/orders.ts).
+ * The inputs aren't inside a <form>, so native `required` never fires — this
+ * is the real check, and it powers both the input highlights and the toast
+ * copy that names exactly what's missing.
+ */
+export function validateUserInfo(values: UserInfoValues): UserInfoErrors {
+  const errors: UserInfoErrors = {};
+  if (!values.name.trim()) errors.name = "Name is required";
+  if (!values.email.trim()) errors.email = "Email is required";
+  else if (!EMAIL_RE.test(values.email.trim()))
+    errors.email = "Enter a valid email address";
+  if (!values.phone.trim()) errors.phone = "Phone is required";
+  if (!values.addressLine1.trim())
+    errors.addressLine1 = "Address line 1 is required";
+  if (!values.city.trim()) errors.city = "City is required";
+  if (!values.postal.trim()) errors.postal = "Postal code is required";
+  if (!values.country.trim()) errors.country = "Country is required";
+  return errors;
+}
+
 type SessionUser = {
   name?: string | null;
   email?: string | null;
@@ -90,17 +116,25 @@ export function useUserInfo(): {
 export function UserInfoForm({
   values,
   onChange,
+  errors,
 }: {
   values: UserInfoValues;
   onChange: (values: UserInfoValues) => void;
+  /** Field-level messages; flagged inputs get a red border + inline message. */
+  errors?: UserInfoErrors;
 }) {
   function update<K extends keyof UserInfoValues>(key: K, value: string) {
     onChange({ ...values, [key]: value });
   }
 
-  const inputCls =
-    "h-10 w-full rounded border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none focus:border-point-500";
+  const inputCls = (hasError: boolean) =>
+    `h-10 w-full rounded border bg-white px-3 text-sm text-zinc-900 outline-none ${
+      hasError
+        ? "border-rose-400 focus:border-rose-500"
+        : "border-zinc-200 focus:border-point-500"
+    }`;
   const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
+  const errorCls = "mt-1 block text-xs text-rose-600";
 
   return (
     <div className="space-y-3">
@@ -112,8 +146,11 @@ export function UserInfoForm({
             onChange={(e) => update("name", e.target.value)}
             required
             autoComplete="name"
-            className={inputCls}
+            className={inputCls(!!errors?.name)}
           />
+          {errors?.name ? (
+            <span className={errorCls}>{errors.name}</span>
+          ) : null}
         </label>
         <label className="block">
           <span className={labelCls}>Phone</span>
@@ -122,8 +159,11 @@ export function UserInfoForm({
             value={values.phone}
             onChange={(e) => update("phone", e.target.value)}
             autoComplete="tel"
-            className={inputCls}
+            className={inputCls(!!errors?.phone)}
           />
+          {errors?.phone ? (
+            <span className={errorCls}>{errors.phone}</span>
+          ) : null}
         </label>
       </div>
       <label className="block">
@@ -134,8 +174,11 @@ export function UserInfoForm({
           onChange={(e) => update("email", e.target.value)}
           required
           autoComplete="email"
-          className={inputCls}
+          className={inputCls(!!errors?.email)}
         />
+        {errors?.email ? (
+          <span className={errorCls}>{errors.email}</span>
+        ) : null}
       </label>
 
       <div className="pt-1">
@@ -150,8 +193,11 @@ export function UserInfoForm({
               onChange={(e) => update("addressLine1", e.target.value)}
               required
               autoComplete="address-line1"
-              className={inputCls}
+              className={inputCls(!!errors?.addressLine1)}
             />
+            {errors?.addressLine1 ? (
+              <span className={errorCls}>{errors.addressLine1}</span>
+            ) : null}
           </label>
           <label className="block">
             <span className={labelCls}>Address line 2 (optional)</span>
@@ -159,7 +205,7 @@ export function UserInfoForm({
               value={values.addressLine2}
               onChange={(e) => update("addressLine2", e.target.value)}
               autoComplete="address-line2"
-              className={inputCls}
+              className={inputCls(false)}
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -170,8 +216,11 @@ export function UserInfoForm({
                 onChange={(e) => update("city", e.target.value)}
                 required
                 autoComplete="address-level2"
-                className={inputCls}
+                className={inputCls(!!errors?.city)}
               />
+              {errors?.city ? (
+                <span className={errorCls}>{errors.city}</span>
+              ) : null}
             </label>
             <label className="block">
               <span className={labelCls}>State</span>
@@ -179,7 +228,7 @@ export function UserInfoForm({
                 value={values.state}
                 onChange={(e) => update("state", e.target.value)}
                 autoComplete="address-level1"
-                className={inputCls}
+                className={inputCls(false)}
               />
             </label>
           </div>
@@ -191,8 +240,11 @@ export function UserInfoForm({
                 onChange={(e) => update("postal", e.target.value)}
                 required
                 autoComplete="postal-code"
-                className={inputCls}
+                className={inputCls(!!errors?.postal)}
               />
+              {errors?.postal ? (
+                <span className={errorCls}>{errors.postal}</span>
+              ) : null}
             </label>
             <label className="block">
               <span className={labelCls}>Country</span>
@@ -201,8 +253,11 @@ export function UserInfoForm({
                 onChange={(e) => update("country", e.target.value)}
                 required
                 autoComplete="country"
-                className={inputCls}
+                className={inputCls(!!errors?.country)}
               />
+              {errors?.country ? (
+                <span className={errorCls}>{errors.country}</span>
+              ) : null}
             </label>
           </div>
         </div>

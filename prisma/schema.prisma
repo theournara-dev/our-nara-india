@@ -196,6 +196,10 @@ model Product {
   // Nullable until admins fill it in; checkout/fulfillment falls back
   // to DEFAULT_PRODUCT_WEIGHT_GRAMS.
   weightGrams    Int?     @map("weight_grams")
+  // Optional product-level stock for products WITHOUT variants. Null means
+  // untracked/unlimited (old behavior); variant products keep per-variant
+  // stock and this field is ignored.
+  stock          Int?
   isActive       Boolean  @default(true) @map("is_active")
   // Feature rollout: enable Buy Now for this product. Effective value is
   // `product.flag || brand.flag` (see src/data/products.ts).
@@ -267,6 +271,10 @@ model Order {
   discountCents Int         @default(0) @map("discount_cents")
   totalCents    Int         @map("total_cents")
   isPreOrder    Boolean     @default(false) @map("is_pre_order")
+  // Set exactly once when the paid side effects (stock decrement, customer
+  // confirmation, admin alert) run — the atomic claim that makes retried
+  // captures/order.paid/cron reconciliation idempotent per order.
+  paidSideEffectsAt DateTime? @map("paid_side_effects_at")
   billing       Json?
   shipping      Json?
   createdAt     DateTime    @default(now()) @map("created_at")
@@ -357,6 +365,21 @@ model Payment {
   @@index([orderId])
   @@index([providerRef])
   @@map("payments")
+}
+
+// Audit trail for destructive admin actions on orders. Rows are standalone
+// (no relation) so they survive the order deletion they record.
+model OrderAuditLog {
+  id          String   @id @default(cuid())
+  orderId     String   @map("order_id")
+  orderNumber String   @map("order_number")
+  action      String // e.g. "DELETE"
+  actorEmail  String?  @map("actor_email")
+  snapshot    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([orderNumber])
+  @@map("order_audit_logs")
 }
 
 // ---------------------------------------------------------------------------

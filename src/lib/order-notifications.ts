@@ -217,15 +217,15 @@ function buildStatusMessage(
     }
     case "FAILED": {
       return {
-        subject: `Payment failed for order ${orderNumber} — ${SITE.name}`,
-        text: `We couldn't process the payment for your order.\n\nOrder number: ${orderNumber}\n\n${itemsText}\n\nTotal: ${total}\n\nDon't worry — nothing has been charged. You can retry the payment from your cart, or contact us at ${SITE.supportEmail} if you need help.`,
+        subject: `Payment failed — no order placed (${orderNumber}) — ${SITE.name}`,
+        text: `We couldn't process your payment, so no order was placed and nothing has been charged.\n\nReference: ${orderNumber}\n\n${itemsText}\n\nTotal: ${total}\n\nYou can retry the payment from your cart, or contact us at ${SITE.supportEmail} if you need help.`,
         html: wrapHtml(
           "Payment failed",
-          `<p>We couldn't process the payment for your order.</p>
-           <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
+          `<p>We couldn't process your payment, so <strong>no order was placed</strong> and nothing has been charged.</p>
+           <p><strong>Reference:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
            <p><strong>Total:</strong> ${escapeHtml(total)}</p>
-           <p>Don't worry — nothing has been charged. You can retry the payment from your cart, or contact us at ${escapeHtml(SITE.supportEmail)} if you need help.</p>`,
+           <p>You can retry the payment from your cart, or contact us at ${escapeHtml(SITE.supportEmail)} if you need help.</p>`,
         ),
       };
     }
@@ -298,9 +298,9 @@ export async function notifyAdminsNewOrder(
     const version = versionForOrder(order.currency);
     const adminLink = `${getSiteUrl(version)}/admin/orders/${order.id}`;
 
-    const subject = `New order ${order.orderNumber} — ${SITE.name}`;
+    const subject = `New paid order ${order.orderNumber} — ${SITE.name}`;
     const text = [
-      "New order received!",
+      "New paid order received!",
       "",
       `Order number: ${order.orderNumber}`,
       `Customer: ${customerName}`,
@@ -314,8 +314,8 @@ export async function notifyAdminsNewOrder(
     ].join("\n");
 
     const html = wrapHtml(
-      "New order",
-      `<p>A new order just came in.</p>
+      "New paid order",
+      `<p>A paid order just came in. Payment is confirmed.</p>
        <p><strong>Order number:</strong> ${escapeHtml(order.orderNumber)}</p>
        <p><strong>Customer:</strong> ${escapeHtml(customerName)}</p>
        <p><strong>Email:</strong> ${escapeHtml(order.email ?? "—")}</p>

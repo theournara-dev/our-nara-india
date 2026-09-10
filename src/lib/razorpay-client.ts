@@ -111,25 +111,15 @@ export async function checkoutWithRazorpay(
     );
   }
 
-  // 1. Create the internal PENDING order (server-side totals).
-  let order: { orderId: string; orderNumber: string };
-  try {
-    order = await createOrder({ ...input, cartToken: cartToken(input) });
-  } catch (err) {
-    // Server actions surface ZodError as a serialized JSON blob — show a
-    // readable message instead.
-    if (err instanceof Error && err.message.includes("Your cart is empty.")) {
-      throw new Error("Your cart is empty.");
-    }
-    if (
-      err instanceof Error &&
-      (err.message.includes("Name is required") ||
-        err.message.includes("Enter a valid email"))
-    ) {
-      throw new Error("Please enter a valid name and email address.");
-    }
-    throw err;
+  // 1. Create the internal PENDING order (server-side totals). The action
+  // returns structured results instead of throwing — production builds mask
+  // thrown Server Action messages with an opaque digest, so expected failures
+  // arrive as `ok: false` with a user-safe message.
+  const result = await createOrder({ ...input, cartToken: cartToken(input) });
+  if (!result.ok) {
+    throw new Error(result.message);
   }
+  const order = result;
 
   // 2. Create the Razorpay order.
   const res = await fetch("/api/razorpay/order", {

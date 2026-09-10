@@ -67,14 +67,39 @@ export async function updateOrderStatus(id: string, status: string) {
  * DB-level cascade, so everything is removed in one transaction. Admin-only.
  */
 export async function deleteOrder(id: string) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const order = await db.order.findUnique({
     where: { id },
-    select: { id: true, orderNumber: true },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      email: true,
+      currency: true,
+      totalCents: true,
+      createdAt: true,
+    },
   });
   if (!order) throw new Error("Order not found.");
 
   await db.$transaction([
+    // Audit first so the record exists even if the delete transaction is
+    // retried; the row is standalone and survives the order itself.
+    db.orderAuditLog.create({
+      data: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        action: "DELETE",
+        actorEmail: admin.user.email ?? null,
+        snapshot: {
+          status: order.status,
+          email: order.email,
+          currency: order.currency,
+          totalCents: order.totalCents,
+          createdAt: order.createdAt.toISOString(),
+        },
+      },
+    }),
     db.mileageLedger.deleteMany({ where: { orderId: id } }),
     db.couponRedemption.deleteMany({ where: { orderId: id } }),
     db.shipment.deleteMany({ where: { orderId: id } }),
@@ -131,6 +156,13 @@ export async function createShipment(input: {
     },
   });
   if (!order) throw new Error("Order not found.");
+
+  // Fulfillment only once money is actually in — PAID, or PRE_ORDER for paid
+  // pre-orders. The row UI hides the button, but this is the server-side
+  // guard that enforces it regardless of client state.
+  if (order.status !== "PAID" && order.status !== "PRE_ORDER") {
+    throw new Error("Only paid orders can be shipped.");
+  }
 
   const existing = await db.shipment.findFirst({
     where: {
@@ -205,9 +237,12 @@ export async function importShipment(orderId: string, waybill: string) {
 
   const order = await db.order.findUnique({
     where: { id: orderId },
-    select: { id: true, orderNumber: true },
+    select: { id: true, orderNumber: true, status: true },
   });
   if (!order) throw new Error("Order not found.");
+  if (order.status !== "PAID" && order.status !== "PRE_ORDER") {
+    throw new Error("Only paid orders can be shipped.");
+  }
 
   // Verify the waybill exists at Delhivery before attaching — a typo'd
   // waybill would otherwise attach silently.

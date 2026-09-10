@@ -9,6 +9,7 @@ import {
 import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { runPaidSideEffects } from "@/lib/paid-side-effects";
 
 /**
  * Daily Delhivery + Razorpay sync (Vercel Hobby: 1x/day cron is free).
@@ -112,7 +113,6 @@ export async function GET(request: Request) {
         currency: true,
         totalCents: true,
         isPreOrder: true,
-        items: true,
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -120,65 +120,47 @@ export async function GET(request: Request) {
     summary.ordersChecked = pendingOrders.length;
 
     for (const order of pendingOrders) {
-      // Find the internal order id we stored in the Razorpay order receipt.
-      const payment = await db.payment.findFirst({
-        where: { orderId: order.id, provider: "razorpay", providerRef: { not: null } },
-        select: { providerRef: true },
+      // Retries can leave several payment attempts on one order; check them
+      // newest-first and use the first one Razorpay reports as paid.
+      const payments = await db.payment.findMany({
+        where: {
+          orderId: order.id,
+          provider: "razorpay",
+          providerRef: { not: null },
+        },
+        select: { id: true, providerRef: true },
+        orderBy: { createdAt: "desc" },
       });
-      if (!payment?.providerRef) continue;
 
       try {
-        const rzpOrder = await getRazorpay().orders.fetch(payment.providerRef);
-        if (rzpOrder.amount_paid >= order.totalCents) {
-          // Atomic PENDING→PAID/PRE_ORDER flip: only a row still PENDING is
-          // updated, so a concurrent webhook that already paid the order makes
-          // this a no-op (count 0) and we skip the side effects below.
-          const paid = await db.$transaction(async (tx) => {
-            const res = await tx.order.updateMany({
-              where: { id: order.id, status: "PENDING" },
-              data: { status: order.isPreOrder ? "PRE_ORDER" : "PAID" },
-            });
-            if (res.count === 0) return false;
+        const paying = await findPayingAttempt(payments, order.totalCents);
+        if (!paying) continue;
 
-            // Mirror the webhook captured path: decrement stock with the same
-            // oversell guard so a later real payment.captured webhook (which
-            // returns early on CAPTURED) doesn't lose the side effects, and
-            // refund restock stays consistent.
-            const shortages: string[] = [];
-            for (const item of order.items) {
-              if (!item.variantId) continue;
-              const r = await tx.productVariant.updateMany({
-                where: { id: item.variantId, stock: { gte: item.quantity } },
-                data: { stock: { decrement: item.quantity } },
-              });
-              if (r.count === 0) {
-                shortages.push(
-                  `variant ${item.variantId} (wanted ${item.quantity})`,
-                );
-              }
-            }
-            await tx.payment.updateMany({
-              where: {
-                orderId: order.id,
-                provider: "razorpay",
-                status: { not: "CAPTURED" },
-              },
-              data: { status: "CAPTURED", stockTaken: shortages.length === 0 },
-            });
-            if (shortages.length > 0) {
-              console.error(
-                `Oversell guard skipped decrement for order ${order.orderNumber}: ${shortages.join("; ")}`,
-              );
-            }
-            return true;
+        // Atomic PENDING→PAID/PRE_ORDER flip: only a row still PENDING is
+        // updated, so a concurrent webhook that already paid the order makes
+        // this a no-op (count 0) and we skip the side effects below.
+        const paid = await db.$transaction(async (tx) => {
+          const res = await tx.order.updateMany({
+            where: { id: order.id, status: "PENDING" },
+            data: { status: order.isPreOrder ? "PRE_ORDER" : "PAID" },
           });
-          if (paid) {
-            summary.ordersPaid += 1;
-            await notifyOrderStatusChange(
-              order,
-              order.isPreOrder ? "PRE_ORDER" : "PAID",
-            );
-          }
+          if (res.count === 0) return false;
+
+          // Mirror the webhook captured path so a later real payment.captured
+          // webhook (which returns early on CAPTURED) doesn't lose the side
+          // effects, and refund restock stays consistent.
+          await tx.payment.updateMany({
+            where: {
+              id: paying.id,
+              status: { notIn: ["CAPTURED", "REFUNDED"] },
+            },
+            data: { status: "CAPTURED" },
+          });
+          return true;
+        });
+        if (paid) {
+          summary.ordersPaid += 1;
+          await runPaidSideEffects(order.id, paying.id);
         }
       } catch (err) {
         summary.errors.push(`razorpay order ${order.orderNumber}: ${String(err)}`);
@@ -212,4 +194,27 @@ async function advanceOrder(
     });
     await notifyOrderStatusChange(order, target, { waybill });
   }
+}
+
+/**
+ * First payment attempt Razorpay reports as fully paid, newest first. A single
+ * stale/unreachable Razorpay order must not hide an older paid attempt.
+ */
+async function findPayingAttempt(
+  payments: { id: string; providerRef: string | null }[],
+  totalCents: number,
+) {
+  for (const payment of payments) {
+    if (!payment.providerRef) continue;
+    try {
+      const rzpOrder = await getRazorpay().orders.fetch(payment.providerRef);
+      if (rzpOrder.amount_paid >= totalCents) return payment;
+    } catch (err) {
+      console.error(
+        `Razorpay fetch failed for ${payment.providerRef}:`,
+        err,
+      );
+    }
+  }
+  return null;
 }

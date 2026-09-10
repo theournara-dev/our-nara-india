@@ -3,6 +3,7 @@ import { SITE } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
 import { getRazorpay, verifyWebhookSignature } from "@/lib/razorpay";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { runPaidSideEffects } from "@/lib/paid-side-effects";
 
 /**
  * Razorpay webhook. Razorpay posts payment events here asynchronously; we use
@@ -105,8 +106,14 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
   }
 
   // Idempotency: Razorpay delivers at-least-once. A retried captured event
-  // must not re-decrement stock or re-send the confirmation email.
-  if (paymentRecord.status === "CAPTURED") return;
+  // must not re-decrement stock or re-send the confirmation email. REFUNDED
+  // rows are also skipped so a stale capture can't resurrect a refund.
+  if (
+    paymentRecord.status === "CAPTURED" ||
+    paymentRecord.status === "REFUNDED"
+  ) {
+    return;
+  }
 
   const order = await db.order.findUnique({
     where: { id: paymentRecord.orderId },
@@ -158,80 +165,12 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
         ]),
   ]);
 
-  // Side-effects: decrement stock and email the customer. Kept outside the
-  // transaction — stock is operational and the mail failure must not fail
-  // the webhook (Razorpay would otherwise retry a paid event).
+  // Side-effects: stock decrement, customer confirmation and admin alert.
+  // The shared helper claims the order atomically (`paidSideEffectsAt`), so
+  // retried captures / order.paid / cron reconciliation can never double-run
+  // them. Kept outside the transaction — mail failure must not fail the
+  // webhook (Razorpay would otherwise retry a paid event).
   await runPaidSideEffects(order.id, paymentRecord.id);
-}
-
-/** A non-fatal issue to flag to support (does not fail the webhook). */
-interface FriendlyIssue {
-  message: string;
-}
-
-/**
- * Paid-order side effects: decrement variant stock + confirmation email.
- * Shared by payment.captured and the order.paid fallback so a missed
- * captured event still reserves stock and mails the customer.
- * The decrement outcome is persisted on the payment row so the refund
- * handler knows whether stock was actually taken (phantom-restock guard).
- */
-async function runPaidSideEffects(
-  orderId: string,
-  paymentRowId: string,
-) {
-  const orderWithItems = await db.order.findUnique({
-    where: { id: orderId },
-    include: { items: true },
-  });
-  if (!orderWithItems) return;
-  const shortage = await decrementStock(orderWithItems.items);
-  // Record whether stock was actually taken — refunds restock only when true.
-  await db.payment.update({
-    where: { id: paymentRowId },
-    data: { stockTaken: !shortage },
-  });
-  if (shortage) {
-    console.error(
-      `Oversell guard skipped decrement for order ${orderWithItems.orderNumber}: ${shortage.message}`,
-    );
-    await notifySupport(
-      `[OUR:NARA] Oversell guard triggered — order ${orderWithItems.orderNumber}`,
-      `The paid order ${orderWithItems.orderNumber} could not decrement stock:\n${shortage.message}\n\nReview the order and product stock manually.`,
-    );
-  }
-  await notifyOrderStatusChange(
-    orderWithItems,
-    orderWithItems.isPreOrder ? "PRE_ORDER" : "PAID",
-  );
-}
-
-/**
- * Decrement ProductVariant.stock for the paid items. Uses per-variant
- * `updateMany` with an `stock >= qty` guard so a decrement never drives
- * stock negative. Returns ids the guard skipped — a skip is an oversell
- * symptom (stock changed between order creation and payment), surfaced in
- * the logs and flagged to support.
- */
-async function decrementStock(
-  items: { variantId: string | null; quantity: number }[],
-): Promise<FriendlyIssue | null> {
-  // Collect ALL shortages — an early return would leave the remaining paid
-  // items un-decremented, creating the next oversell.
-  const shortages: string[] = [];
-  for (const item of items) {
-    if (!item.variantId) continue;
-    const res = await db.productVariant.updateMany({
-      where: { id: item.variantId, stock: { gte: item.quantity } },
-      data: { stock: { decrement: item.quantity } },
-    });
-    if (res.count === 0) {
-      shortages.push(`variant ${item.variantId} (wanted ${item.quantity})`);
-    }
-  }
-  return shortages.length > 0
-    ? { message: `Stock shortage on ${shortages.join("; ")}.` }
-    : null;
 }
 
 /** Best-effort internal alert email; never throws. */
@@ -251,8 +190,13 @@ async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
   if (!paymentRecord) return;
 
   // A stale failure (e.g. attempt 1 of 2 failed, then a retry captured) must
-  // not overwrite a captured payment or a paid/protected order.
-  if (paymentRecord.status === "CAPTURED") return;
+  // not overwrite a captured/refunded payment or a paid/protected order.
+  if (
+    paymentRecord.status === "CAPTURED" ||
+    paymentRecord.status === "REFUNDED"
+  ) {
+    return;
+  }
 
   await db.payment.update({
     where: { id: paymentRecord.id },
@@ -418,7 +362,7 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
   const items = stockWasTaken
     ? await db.orderItem.findMany({
         where: { orderId: paymentRecord.orderId },
-        select: { variantId: true, quantity: true },
+        select: { variantId: true, productId: true, quantity: true },
       })
     : [];
 
@@ -445,11 +389,18 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
         ]),
     // Give the stock back atomically with the status flip so a restock
     // failure aborts the flip and the webhook retry can make progress.
+    // Variantless items restock the product-level counter (only when the
+    // product actually tracks stock — null means untracked/unlimited).
     ...items.map((item) =>
-      db.productVariant.update({
-        where: { id: item.variantId! },
-        data: { stock: { increment: item.quantity } },
-      }),
+      item.variantId
+        ? db.productVariant.update({
+            where: { id: item.variantId },
+            data: { stock: { increment: item.quantity } },
+          })
+        : db.product.updateMany({
+            where: { id: item.productId, stock: { not: null } },
+            data: { stock: { increment: item.quantity } },
+          }),
     ),
   ]);
 
