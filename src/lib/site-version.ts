@@ -26,6 +26,8 @@ export interface SiteVersionConfig {
   showIndianAddress: boolean;
   /** Legal entity shown as the personal information manager in the footer. */
   personalInformationManager: string;
+  /** Contact email shown in the privacy policy. */
+  privacyContactEmail: string;
   /**
    * Display-only FX rate: how many minor units of the STORED currency (INR
    * paise) equal one minor unit of the DISPLAY currency. Local = 1.
@@ -45,6 +47,7 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     preOrderEnabled: true,
     showIndianAddress: true,
     personalInformationManager: "Seoulveda Trading LLP",
+    privacyContactEmail: "consumeraffairs@seoulveda.com",
     fxRate: 1,
     flags: {},
   },
@@ -55,6 +58,7 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     preOrderEnabled: false,
     showIndianAddress: false,
     personalInformationManager: "The Firstteam Corp",
+    privacyContactEmail: "tft@thefirstteam.co.kr",
     fxRate: 1 / 98, // 1 USD cent = 98 INR paise (display-only)
     flags: {},
   },
