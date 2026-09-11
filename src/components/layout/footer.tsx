@@ -141,7 +141,7 @@ export async function Footer() {
                   href={`mailto:${SITE.supportEmail}`}
                   className="hover:opacity-50"
                 >
-                  Seoulveda Trading LLP ({SITE.supportEmail})
+                  {config.personalInformationManager} ({SITE.supportEmail})
                 </a>
               </span>
               <br />

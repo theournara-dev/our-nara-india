@@ -24,6 +24,8 @@ export interface SiteVersionConfig {
   preOrderEnabled: boolean;
   /** Whether India-specific UI (footer address, support phone, etc.) is shown. */
   showIndianAddress: boolean;
+  /** Legal entity shown as the personal information manager in the footer. */
+  personalInformationManager: string;
   /**
    * Display-only FX rate: how many minor units of the STORED currency (INR
    * paise) equal one minor unit of the DISPLAY currency. Local = 1.
@@ -42,6 +44,7 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     paymentsEnabled: true,
     preOrderEnabled: true,
     showIndianAddress: true,
+    personalInformationManager: "Seoulveda Trading LLP",
     fxRate: 1,
     flags: {},
   },
@@ -51,7 +54,8 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     paymentsEnabled: false,
     preOrderEnabled: false,
     showIndianAddress: false,
-    fxRate: 1 / 83, // 1 USD cent = 83 INR paise (display-only)
+    personalInformationManager: "The Firstteam Corp",
+    fxRate: 1 / 98, // 1 USD cent = 98 INR paise (display-only)
     flags: {},
   },
 };
