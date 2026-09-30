@@ -1,10 +1,21 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
+import {
+  getVersionConfig,
+  resolveRequestSiteVersion,
+} from "@/lib/site-version";
 
 export const metadata: Metadata = { title: "Privacy Policy" };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const headerStore = await headers();
+  const host = headerStore.get("x-forwarded-host") ?? headerStore.get("host");
+  const version = resolveRequestSiteVersion(host);
+  const config = getVersionConfig(version);
+  const legalEntity = config.personalInformationManager;
+
   return (
     <div>
       <PageHeader eyebrow="Legal" title="Terms of use & Privacy Policy" />
@@ -12,7 +23,7 @@ export default function PrivacyPage() {
       <Container className="mx-auto max-w-3xl space-y-6 pb-16 text-sm leading-relaxed text-zinc-600">
     <p>
       Please read these Terms of use & Privacy Policy carefully before using <strong className="text-zinc-900">OUR NARA</strong>,
-      owned and operated by <strong className="text-zinc-900">Seoulveda Trading LLP</strong>. By accessing or using
+      owned and operated by <strong className="text-zinc-900">{legalEntity}</strong>. By accessing or using
       this website, you agree to be bound by these terms.
     </p>
 
@@ -20,7 +31,7 @@ export default function PrivacyPage() {
       <strong className="text-zinc-900">1. Ownership of the Site.</strong>{" "}
       All content, including text, images, graphics, logos, trademarks, software,
       and other materials on this website are the intellectual property of
-      Seoulveda Trading LLP and are protected by applicable copyright and
+      {legalEntity} and are protected by applicable copyright and
       trademark laws. Unauthorized copying, reproduction, or distribution is
       prohibited.
     </p>
@@ -48,7 +59,7 @@ export default function PrivacyPage() {
 
     <p>
       <strong className="text-zinc-900">5. User Content.</strong>{" "}
-      Any content submitted to the website may be used by Seoulveda Trading LLP
+      Any content submitted to the website may be used by {legalEntity}
       in accordance with these Terms. You must ensure that your submissions do
       not violate any third-party rights.
     </p>
@@ -62,7 +73,7 @@ export default function PrivacyPage() {
     <p>
       <strong className="text-zinc-900">7. Limitation of Liability.</strong>{" "}
       The website and its services are provided &quot;as is&quot; without
-      warranties of any kind. Seoulveda Trading LLP shall not be liable for
+      warranties of any kind. {legalEntity} shall not be liable for
       indirect, incidental, or consequential damages arising from the use of
       this website.
     </p>
@@ -83,7 +94,8 @@ export default function PrivacyPage() {
     <p>
       <strong className="text-zinc-900">10. Contact Us.</strong>{" "}
       If you have any questions regarding these Terms of use & Privacy Policy, please
-      contact us via email:consumeraffairs@seoulveda.com , phone:+91-88283383323, or the address provided on our Contact page.
+      contact us via email:{config.privacyContactEmail}
+      {config.showIndianAddress && `, phone:${"+91-88283383323"}`}, or the address provided on our Contact page.
     </p>
       </Container>
     </div>

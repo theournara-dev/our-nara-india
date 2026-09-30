@@ -24,10 +24,14 @@ export interface SiteVersionConfig {
   preOrderEnabled: boolean;
   /** Whether India-specific UI (footer address, support phone, etc.) is shown. */
   showIndianAddress: boolean;
+  /** Legal entity shown as the personal information manager in the footer. */
+  personalInformationManager: string;
+  /** Contact email shown in the privacy policy. */
+  privacyContactEmail: string;
   /**
    * Display-only FX rate: how many minor units of the STORED currency (INR
    * paise) equal one minor unit of the DISPLAY currency. Local = 1.
-   * Global = 1 USD cent per 83 INR paise (1/83). Display-only — orders are
+   * Global = 1 USD cent per 98 INR paise (1/98). Display-only — orders are
    * still stored and charged in the stored currency.
    */
   fxRate: number;
@@ -49,6 +53,8 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     paymentsEnabled: true,
     preOrderEnabled: true,
     showIndianAddress: true,
+    personalInformationManager: "Seoulveda Trading LLP",
+    privacyContactEmail: "consumeraffairs@seoulveda.com",
     fxRate: 1,
     label: "India",
     priceHint: "₹ INR",
@@ -61,7 +67,9 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     paymentsEnabled: false,
     preOrderEnabled: false,
     showIndianAddress: false,
-    fxRate: 1 / 83, // 1 USD cent = 83 INR paise (display-only)
+    personalInformationManager: "The Firstteam Corp",
+    privacyContactEmail: "tft@thefirstteam.co.kr",
+    fxRate: 1 / 98, // 1 USD cent = 98 INR paise (display-only)
     label: "International",
     priceHint: "$ USD",
     note: "Worldwide shipping · Pay in $",

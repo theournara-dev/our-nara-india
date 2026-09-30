@@ -31,6 +31,7 @@ export interface ProductBlockView {
 
 export interface ProductDetail extends ProductCardView {
   description?: string;
+  stock: number | null;
   seoTitle?: string;
   seoDescription?: string;
   /** Per-product INFO override; empty means "use the global template". */
@@ -56,6 +57,7 @@ type ProductRow = {
   summary: string | null;
   shortTags: string[];
   description: string | null;
+  stock: number | null;
   priceCents: number;
   compareAtCents: number | null;
   globalPriceCents: number | null;
@@ -135,6 +137,7 @@ function toDetail(p: ProductRow): ProductDetail {
   return {
     ...toCard(p),
     description: p.description ?? undefined,
+    stock: p.stock,
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
     infoRows: parseInfoRows(p.infoRows),
