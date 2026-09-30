@@ -57,19 +57,20 @@ export default async function AdminOrderDetailPage({
   });
   if (!order) notFound();
 
-  const shipping = (order.shipping as
-    | {
-        name?: string;
-        phone?: string | null;
-        addressLine1?: string | null;
-        addressLine2?: string | null;
-        city?: string | null;
-        state?: string | null;
-        postal?: string | null;
-        country?: string | null;
-      }
-    | null
-    | undefined) ?? {};
+  const shipping =
+    (order.shipping as
+      | {
+          name?: string;
+          phone?: string | null;
+          addressLine1?: string | null;
+          addressLine2?: string | null;
+          city?: string | null;
+          state?: string | null;
+          postal?: string | null;
+          country?: string | null;
+        }
+      | null
+      | undefined) ?? {};
 
   // Latest non-terminal shipment drives the fulfillment controls, matching
   // the orders list; cancelled/failed history stays visible in the table.
@@ -103,6 +104,15 @@ export default async function AdminOrderDetailPage({
             Pre-order
           </span>
         )}
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+            order.siteVersion === "global"
+              ? "bg-violet-100 text-violet-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}
+        >
+          {order.siteVersion === "global" ? "Global" : "Local"}
+        </span>
         <span className="text-sm text-zinc-500">
           Placed {formatDate(order.createdAt)}
         </span>
@@ -121,9 +131,13 @@ export default async function AdminOrderDetailPage({
                 <thead>
                   <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
                     <th className="px-5 py-2.5 font-medium">Item</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Price</th>
+                    <th className="px-5 py-2.5 text-right font-medium">
+                      Price
+                    </th>
                     <th className="px-5 py-2.5 text-center font-medium">Qty</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Total</th>
+                    <th className="px-5 py-2.5 text-right font-medium">
+                      Total
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -143,7 +157,9 @@ export default async function AdminOrderDetailPage({
                         )}
                       </td>
                       <td className="px-5 py-3 text-right text-zinc-600">
-                        {formatMoney(item.priceCents, item.currency)}
+                        {formatMoney(item.priceCents, item.currency, {
+                          convert: false,
+                        })}
                       </td>
                       <td className="px-5 py-3 text-center text-zinc-600">
                         {item.quantity}
@@ -152,6 +168,7 @@ export default async function AdminOrderDetailPage({
                         {formatMoney(
                           item.priceCents * item.quantity,
                           item.currency,
+                          { convert: false },
                         )}
                       </td>
                     </tr>
@@ -187,7 +204,9 @@ export default async function AdminOrderDetailPage({
                       {PAYMENT_STATUS_LABELS[p.status] ?? p.status}
                     </span>
                     <span className="ml-auto font-medium text-zinc-900">
-                      {formatMoney(p.amountCents, p.currency)}
+                      {formatMoney(p.amountCents, p.currency, {
+                        convert: false,
+                      })}
                     </span>
                     <span className="w-full text-xs text-zinc-400 sm:w-auto">
                       {formatDate(p.createdAt)}
@@ -261,7 +280,9 @@ export default async function AdminOrderDetailPage({
               <div className="flex justify-between gap-4">
                 <dt className="text-zinc-500">Subtotal</dt>
                 <dd className="text-zinc-900">
-                  {formatMoney(order.subtotalCents, order.currency)}
+                  {formatMoney(order.subtotalCents, order.currency, {
+                    convert: false,
+                  })}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
@@ -269,21 +290,28 @@ export default async function AdminOrderDetailPage({
                 <dd className="text-zinc-900">
                   {order.shippingCents === 0
                     ? "Free"
-                    : formatMoney(order.shippingCents, order.currency)}
+                    : formatMoney(order.shippingCents, order.currency, {
+                        convert: false,
+                      })}
                 </dd>
               </div>
               {order.discountCents > 0 && (
                 <div className="flex justify-between gap-4">
                   <dt className="text-zinc-500">Discount</dt>
                   <dd className="text-zinc-900">
-                    −{formatMoney(order.discountCents, order.currency)}
+                    −
+                    {formatMoney(order.discountCents, order.currency, {
+                      convert: false,
+                    })}
                   </dd>
                 </div>
               )}
               <div className="mt-2 flex justify-between gap-4 border-t border-zinc-100 pt-2.5">
                 <dt className="font-semibold text-zinc-900">Total</dt>
                 <dd className="font-semibold text-zinc-900">
-                  {formatMoney(order.totalCents, order.currency)}
+                  {formatMoney(order.totalCents, order.currency, {
+                    convert: false,
+                  })}
                 </dd>
               </div>
             </dl>

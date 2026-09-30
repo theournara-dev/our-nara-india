@@ -352,6 +352,7 @@ async function createOrderImpl(
         email: data.email.trim().toLowerCase(),
         status: "PENDING",
         currency,
+        siteVersion: requestVersion,
         subtotalCents,
         shippingCents,
         discountCents,

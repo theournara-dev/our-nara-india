@@ -30,7 +30,11 @@ function pageList(current: number, total: number): (number | "…")[] {
   return result;
 }
 
-type SearchParams = Promise<{ page?: string; status?: string }>;
+type SearchParams = Promise<{
+  page?: string;
+  status?: string;
+  version?: string;
+}>;
 
 export default async function AdminOrdersPage({
   searchParams,
@@ -46,8 +50,16 @@ export default async function AdminOrdersPage({
   )
     ? (params.status as OrderStatus)
     : "";
+  // Site version filter (local = India/INR, global = international/USD).
+  const version =
+    params.version === "local" || params.version === "global"
+      ? params.version
+      : "";
 
-  const where = status ? { status: status as OrderStatus } : {};
+  const where = {
+    ...(status ? { status: status as OrderStatus } : {}),
+    ...(version ? { siteVersion: version } : {}),
+  };
 
   const [orders, total] = await Promise.all([
     db.order.findMany({
@@ -77,6 +89,7 @@ export default async function AdminOrdersPage({
   function href(overrides: Record<string, string | undefined>) {
     const sp = new URLSearchParams();
     if (status) sp.set("status", status);
+    if (version) sp.set("version", version);
     for (const [k, v] of Object.entries(overrides)) {
       if (v) sp.set(k, v);
       else sp.delete(k);
@@ -98,7 +111,7 @@ export default async function AdminOrdersPage({
       </div>
 
       {/* Status filter */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <Link
           href={href({ status: undefined, page: undefined })}
           className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
@@ -124,13 +137,40 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
+      {/* Store-version filter */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+          Store
+        </span>
+        {(
+          [
+            { value: "", label: "All stores" },
+            { value: "local", label: "Local (India)" },
+            { value: "global", label: "Global" },
+          ] as const
+        ).map((opt) => (
+          <Link
+            key={opt.value || "all"}
+            href={href({ version: opt.value || undefined, page: undefined })}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              version === opt.value
+                ? "bg-point-500 text-white"
+                : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            }`}
+          >
+            {opt.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
               <th className="px-4 py-3 font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Customer</th>
               <th className="px-4 py-3 font-medium">Items</th>
+              <th className="px-4 py-3 font-medium">Store</th>
               <th className="px-4 py-3 font-medium">Total</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Date</th>
@@ -142,7 +182,7 @@ export default async function AdminOrdersPage({
             {orders.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-10 text-center text-zinc-500"
                 >
                   No orders found.
@@ -200,8 +240,21 @@ export default async function AdminOrdersPage({
                     <td className="px-4 py-3 text-zinc-600">
                       {itemCount} {itemCount === 1 ? "item" : "items"}
                     </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          o.siteVersion === "global"
+                            ? "bg-violet-100 text-violet-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {o.siteVersion === "global" ? "Global" : "Local"}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 font-medium text-zinc-900">
-                      {formatMoney(o.totalCents, o.currency)}
+                      {formatMoney(o.totalCents, o.currency, {
+                        convert: false,
+                      })}
                     </td>
                     <td className="px-4 py-3">
                       <span

@@ -200,3 +200,17 @@ export function parseSiteVersion(
   if (value === "global" || value === "local") return value;
   return null;
 }
+
+/**
+ * The store version an order belongs to. Prefers the explicit `siteVersion`
+ * stored at checkout; falls back to the stored currency (USD = global) for
+ * orders that predate that column or trimmed selects that omit it.
+ */
+export function versionForOrder(order: {
+  siteVersion?: string | null;
+  currency?: string | null;
+}): SiteVersion {
+  const explicit = parseSiteVersion(order.siteVersion);
+  if (explicit) return explicit;
+  return order.currency === "USD" ? "global" : "local";
+}

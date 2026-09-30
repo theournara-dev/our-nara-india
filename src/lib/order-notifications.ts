@@ -3,7 +3,11 @@ import { trackingUrl } from "@/lib/delhivery-client";
 import { getFromForVersion, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatusValue } from "@/lib/order-status";
-import { getSiteUrl, type SiteVersion } from "@/lib/site-version";
+import {
+  getSiteUrl,
+  versionForOrder,
+  type SiteVersion,
+} from "@/lib/site-version";
 
 /**
  * Order notification emails (customer + admin). These are best-effort: every
@@ -16,10 +20,7 @@ import { getSiteUrl, type SiteVersion } from "@/lib/site-version";
  * `getFromForVersion` picks the matching verified Resend sender.
  */
 
-export type OrderNotificationStatus = Exclude<
-  OrderStatusValue,
-  "PENDING"
->;
+export type OrderNotificationStatus = Exclude<OrderStatusValue, "PENDING">;
 
 /** Statuses that produce a customer email. PENDING is a no-op. */
 const NOTIFIABLE_STATUSES = new Set<OrderNotificationStatus>([
@@ -50,6 +51,7 @@ export type OrderForNotification = {
   orderNumber: string;
   email?: string | null;
   currency?: string | null;
+  siteVersion?: string | null;
   totalCents: number;
   isPreOrder?: boolean;
   shipping?: unknown;
@@ -66,11 +68,6 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
-}
-
-/** Version is inferred from the stored currency (INR=local, USD=global). */
-function versionForOrder(currency: string | null | undefined): SiteVersion {
-  return currency === "USD" ? "global" : "local";
 }
 
 function itemLines(items: OrderNotificationItem[]): string {
@@ -251,7 +248,7 @@ export async function notifyOrderStatusChange(
       );
       return { ok: false };
     }
-    const version: SiteVersion = versionForOrder(order.currency);
+    const version: SiteVersion = versionForOrder(order);
     const { subject, text, html } = buildStatusMessage(
       order,
       newStatus as OrderNotificationStatus,
@@ -295,7 +292,7 @@ export async function notifyAdminsNewOrder(
     });
     const itemsText = itemLines(order.items);
     const itemsHtml = itemRowsHtml(order.items);
-    const version = versionForOrder(order.currency);
+    const version = versionForOrder(order);
     const adminLink = `${getSiteUrl(version)}/admin/orders/${order.id}`;
 
     const subject = `New paid order ${order.orderNumber} — ${SITE.name}`;

@@ -327,6 +327,10 @@ model Order {
   email         String
   status        OrderStatus @default(PENDING)
   currency      String      @default("INR")
+  // Which storefront version placed the order (local = India/INR,
+  // global = international/USD). Set from the request version at checkout and
+  // used for admin filtering and per-account payment routing.
+  siteVersion   String      @default("local") @map("site_version")
   subtotalCents Int         @map("subtotal_cents")
   shippingCents Int         @default(0) @map("shipping_cents")
   discountCents Int         @default(0) @map("discount_cents")
@@ -350,6 +354,7 @@ model Order {
 
   @@index([userId])
   @@index([status])
+  @@index([siteVersion])
   @@map("orders")
 }
 
