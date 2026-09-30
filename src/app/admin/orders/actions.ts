@@ -13,6 +13,8 @@ import {
 import { ORDER_STATUSES, type OrderStatusValue } from "@/lib/order-status";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { versionForOrder } from "@/lib/site-version";
+import { parseInput, safeText } from "@/lib/validation";
+import { z } from "zod";
 
 /**
  * Admin order actions: manual status changes plus the Delhivery fulfillment
@@ -24,9 +26,11 @@ import { versionForOrder } from "@/lib/site-version";
  * the admin see a friendly, actionable error.
  */
 
-/** Result shape returned by the shipment actions. */
-export type ShipmentActionResult =
-  { ok: true } | { ok: false; message: string };
+/** Result shape returned by the order actions (survives production masking). */
+export type ActionResult = { ok: true } | { ok: false; message: string };
+
+/** Alias used by the shipment actions. */
+export type ShipmentActionResult = ActionResult;
 
 /** Delhivery is India-only; global orders ship manually (FedEx). */
 const DELHIVERY_LOCAL_ONLY =
@@ -123,6 +127,67 @@ export async function deleteOrder(id: string) {
 
 function revalidate() {
   revalidatePath("/admin/orders");
+  revalidatePath("/account/orders");
+}
+
+/**
+ * Update an order's shipping/contact details. Admins use this to complete or
+ * fix a customer address (e.g. a missing/invalid postal code) so a shipment
+ * can be created. Required fields are enforced so a saved address is shippable.
+ */
+const shippingInput = z.object({
+  name: safeText(120, { min: 1, message: "Name is required" }),
+  phone: safeText(40, { min: 1, message: "Phone is required" }),
+  addressLine1: safeText(200, {
+    min: 1,
+    message: "Address line 1 is required",
+  }),
+  addressLine2: safeText(200),
+  city: safeText(120, { min: 1, message: "City is required" }),
+  state: safeText(120),
+  postal: safeText(20, { min: 1, message: "Postal code is required" }),
+  country: safeText(120, { min: 1, message: "Country is required" }),
+});
+export type ShippingInput = z.infer<typeof shippingInput>;
+
+export async function updateOrderShipping(
+  orderId: string,
+  input: ShippingInput,
+): Promise<ActionResult> {
+  await requireAdmin();
+  try {
+    const data = parseInput(shippingInput, input, "orders.shipping");
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { id: true },
+    });
+    if (!order) throw new Error("Order not found.");
+
+    await db.order.update({
+      where: { id: orderId },
+      data: {
+        shipping: {
+          name: data.name,
+          phone: data.phone || null,
+          addressLine1: data.addressLine1,
+          addressLine2: data.addressLine2 || null,
+          city: data.city,
+          state: data.state || null,
+          postal: data.postal,
+          country: data.country,
+        },
+      },
+    });
+
+    revalidate();
+    return { ok: true };
+  } catch (err) {
+    console.error(`[orders] updateOrderShipping failed for ${orderId}:`, err);
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
 }
 
 /** Per-item weight: product override or the global default. */

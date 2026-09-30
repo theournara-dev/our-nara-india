@@ -22,6 +22,7 @@ import {
   type OrderStatusValue,
   type ShipmentStatusValue,
 } from "@/lib/order-status";
+import { OrderAddressDialog } from "./order-address-dialog";
 
 export interface ShipmentSummary {
   waybill: string;
@@ -111,6 +112,10 @@ export function OrderRowActions({
   const canFulfill = status === "PAID" || status === "PRE_ORDER";
   // Delhivery is India-only; global orders are fulfilled manually (FedEx).
   const isLocal = siteVersion !== "global";
+  // Delhivery needs a 6-digit Indian PIN and a phone number. Flag when the
+  // order's address can't be shipped so the admin can fix it first.
+  const addressShippable =
+    Boolean(shipping.phone?.trim()) && /^\d{6}$/.test(shipping.postal ?? "");
   const btn =
     "inline-flex h-7 items-center rounded-md border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50";
   const btnGhost =
@@ -184,46 +189,62 @@ export function OrderRowActions({
           </div>
         </div>
       ) : (
-        canFulfill &&
-        (isLocal ? (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() =>
-                run("Creating shipment", async () => {
-                  return createShipment({
-                    orderId: id,
-                    orderNumber,
-                    customerName: shipping.name ?? "Customer",
-                    phone: shipping.phone ?? "",
-                    addressLine1: shipping.addressLine1 ?? "",
-                    addressLine2: shipping.addressLine2 ?? undefined,
-                    city: shipping.city ?? "",
-                    state: shipping.state ?? undefined,
-                    postal: shipping.postal ?? "",
-                    amountCents: totalCents,
-                  });
-                })
-              }
-              className="inline-flex h-7 items-center rounded-md bg-point-500 px-2.5 text-[11px] font-medium text-white transition-colors hover:bg-point-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Create shipment
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => setImportOpen((v) => !v)}
-              className={btnGhost}
-            >
-              Import
-            </button>
+        canFulfill && (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isLocal ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      run("Creating shipment", async () => {
+                        return createShipment({
+                          orderId: id,
+                          orderNumber,
+                          customerName: shipping.name ?? "Customer",
+                          phone: shipping.phone ?? "",
+                          addressLine1: shipping.addressLine1 ?? "",
+                          addressLine2: shipping.addressLine2 ?? undefined,
+                          city: shipping.city ?? "",
+                          state: shipping.state ?? undefined,
+                          postal: shipping.postal ?? "",
+                          amountCents: totalCents,
+                        });
+                      })
+                    }
+                    className="inline-flex h-7 items-center rounded-md bg-point-500 px-2.5 text-[11px] font-medium text-white transition-colors hover:bg-point-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Create shipment
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => setImportOpen((v) => !v)}
+                    className={btnGhost}
+                  >
+                    Import
+                  </button>
+                </>
+              ) : (
+                <span className="rounded-md bg-zinc-50 px-2 py-1 text-[11px] text-zinc-500">
+                  Global order — fulfil manually (FedEx).
+                </span>
+              )}
+              <OrderAddressDialog
+                orderId={id}
+                siteVersion={siteVersion}
+                shipping={shipping}
+              />
+            </div>
+            {isLocal && !addressShippable && (
+              <p className="text-[11px] text-amber-600">
+                Address incomplete — add a phone and a 6-digit PIN before
+                shipping.
+              </p>
+            )}
           </div>
-        ) : (
-          <p className="rounded-md bg-zinc-50 px-2 py-1 text-[11px] text-zinc-500">
-            Global order — fulfil manually (FedEx).
-          </p>
-        ))
+        )
       )}
 
       {/* Row 3 (conditional): waybill import input */}
