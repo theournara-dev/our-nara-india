@@ -11,6 +11,7 @@ export type ProductCard = ProductCardView;
 
 export interface ProductDetail extends ProductCardView {
   description?: string;
+  stock: number | null;
   seoTitle?: string;
   seoDescription?: string;
   /** Effective Buy Now flag: product override OR its brand's flag. */
@@ -32,6 +33,7 @@ type ProductRow = {
   summary: string | null;
   shortTags: string[];
   description: string | null;
+  stock: number | null;
   priceCents: number;
   compareAtCents: number | null;
   globalPriceCents: number | null;
@@ -90,6 +92,7 @@ function toDetail(p: ProductRow): ProductDetail {
   return {
     ...toCard(p),
     description: p.description ?? undefined,
+    stock: p.stock,
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
     buyNowEnabled: p.buyNowEnabled || p.brand.buyNowEnabled,

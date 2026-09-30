@@ -18,7 +18,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const brand = await getBrandBySlug(slug);
-  return brand ? { title: brand.name } : {};
+  if (!brand) return {};
+
+  return {
+    title: `${brand.name} Korean Beauty Products`,
+    description: brand.description
+      ? `Shop ${brand.name} Korean beauty products in India at OUR:NARA. ${brand.description}`
+      : `Shop ${brand.name} Korean beauty products in India at OUR:NARA. Discover products selected by OUR:NARA.`,
+  };
 }
 
 export default async function BrandPage({
