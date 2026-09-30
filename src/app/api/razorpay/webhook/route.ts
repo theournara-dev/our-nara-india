@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { SITE } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
-import { getRazorpay, verifyWebhookSignature } from "@/lib/razorpay";
+import { getRazorpay, verifyWebhookSignatureAnyVersion } from "@/lib/razorpay";
+import { versionForOrder } from "@/lib/site-version";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
 import { runPaidSideEffects } from "@/lib/paid-side-effects";
 
@@ -250,13 +251,19 @@ async function handleOrderPaid(order: RazorpayOrderEntity) {
   // the captured webhook (which normally records it) was missed.
   let rzpPaymentId: string | null = null;
   try {
-    const rzpPayments = await getRazorpay().orders.fetchPayments(rzpOrderId);
+    // Use the account that owns this payment (local vs global).
+    const rzpPayments = await getRazorpay(
+      versionForOrder(paymentRecord),
+    ).orders.fetchPayments(rzpOrderId);
     rzpPaymentId =
       rzpPayments.items?.find((p) => p.status === "captured")?.id ??
       rzpPayments.items?.[0]?.id ??
       null;
   } catch (err) {
-    console.error(`Could not fetch payments for razorpay order ${rzpOrderId}:`, err);
+    console.error(
+      `Could not fetch payments for razorpay order ${rzpOrderId}:`,
+      err,
+    );
   }
 
   await db.$transaction([
@@ -306,7 +313,9 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
     },
   });
   if (!paymentRecord) {
-    console.error(`No payment row for razorpay payment ${rzpPaymentId} (refund)`);
+    console.error(
+      `No payment row for razorpay payment ${rzpPaymentId} (refund)`,
+    );
     await notifySupport(
       `[OUR:NARA] Unmatched refund webhook for payment ${rzpPaymentId}`,
       `A refund arrived for payment ${rzpPaymentId} but no local payment row stores that id (e.g. the order was paid via the order.paid fallback). Reconcile the refund manually.`,
@@ -337,7 +346,8 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
       // refunds still reconcile, and keep the prior payload for audit.
       data: {
         rawPayload: {
-          ...((paymentRecord.rawPayload as Record<string, unknown> | null) ?? {}),
+          ...((paymentRecord.rawPayload as Record<string, unknown> | null) ??
+            {}),
           lastPartialRefund: refund,
         } as unknown as object,
       },
@@ -353,7 +363,8 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
   // the captured path (the oversell guard can capture payment without
   // decrementing); for rows written before that flag existed, fall back to
   // the CAPTURED status heuristic.
-  const stockWasTaken = paymentRecord.stockTaken || paymentRecord.status === "CAPTURED";
+  const stockWasTaken =
+    paymentRecord.stockTaken || paymentRecord.status === "CAPTURED";
 
   // Items to give back — resolved BEFORE the transaction so the restock runs
   // inside it (a restock failure then aborts the status flip and the webhook
@@ -419,7 +430,10 @@ export async function POST(request: Request) {
   const body = await request.text();
   const signature = request.headers.get("x-razorpay-signature");
 
-  if (!verifyWebhookSignature(body, signature)) {
+  // Accept the signature from either account's webhook secret. The event is
+  // reconciled to its order via the payment's providerRef, so the account is
+  // unambiguous once we find the row.
+  if (!verifyWebhookSignatureAnyVersion(body, signature)) {
     return new Response("Invalid signature", { status: 401 });
   }
 

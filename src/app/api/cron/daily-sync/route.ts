@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getRazorpay } from "@/lib/razorpay";
-import { fetchShipment, isConfigured as delhiveryConfigured } from "@/lib/delhivery";
+import { versionForOrder, type SiteVersion } from "@/lib/site-version";
+import {
+  fetchShipment,
+  isConfigured as delhiveryConfigured,
+} from "@/lib/delhivery";
 import {
   applyShipmentBackout,
   applyTrackingStatus,
@@ -111,6 +115,7 @@ export async function GET(request: Request) {
         orderNumber: true,
         email: true,
         currency: true,
+        siteVersion: true,
         totalCents: true,
         isPreOrder: true,
       },
@@ -133,7 +138,11 @@ export async function GET(request: Request) {
       });
 
       try {
-        const paying = await findPayingAttempt(payments, order.totalCents);
+        const paying = await findPayingAttempt(
+          payments,
+          order.totalCents,
+          versionForOrder(order),
+        );
         if (!paying) continue;
 
         // Atomic PENDING→PAID/PRE_ORDER flip: only a row still PENDING is
@@ -163,7 +172,9 @@ export async function GET(request: Request) {
           await runPaidSideEffects(order.id, paying.id);
         }
       } catch (err) {
-        summary.errors.push(`razorpay order ${order.orderNumber}: ${String(err)}`);
+        summary.errors.push(
+          `razorpay order ${order.orderNumber}: ${String(err)}`,
+        );
       }
     }
   } catch (err) {
@@ -203,17 +214,17 @@ async function advanceOrder(
 async function findPayingAttempt(
   payments: { id: string; providerRef: string | null }[],
   totalCents: number,
+  version: SiteVersion,
 ) {
   for (const payment of payments) {
     if (!payment.providerRef) continue;
     try {
-      const rzpOrder = await getRazorpay().orders.fetch(payment.providerRef);
+      const rzpOrder = await getRazorpay(version).orders.fetch(
+        payment.providerRef,
+      );
       if (rzpOrder.amount_paid >= totalCents) return payment;
     } catch (err) {
-      console.error(
-        `Razorpay fetch failed for ${payment.providerRef}:`,
-        err,
-      );
+      console.error(`Razorpay fetch failed for ${payment.providerRef}:`, err);
     }
   }
   return null;

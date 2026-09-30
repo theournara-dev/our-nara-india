@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { createRazorpayOrder } from "@/lib/razorpay";
+import { createRazorpayOrder, razorpayAccountFor } from "@/lib/razorpay";
+import { versionForOrder } from "@/lib/site-version";
 
 /**
  * Creates a Razorpay order for an existing internal Order that is still
@@ -66,7 +67,12 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Route to the Razorpay account that owns this order (local vs global),
+    // derived from the order — never the request — so retries and webhooks
+    // always hit the same account.
+    const version = versionForOrder(order);
     const rzpOrder = await createRazorpayOrder({
+      version,
       orderId: order.id,
       amountMinor: order.totalCents,
       currency: order.currency,
@@ -80,18 +86,22 @@ export async function POST(request: Request) {
         providerRef: rzpOrder.id,
         amountCents: order.totalCents,
         currency: order.currency,
+        siteVersion: version,
         status: "CREATED",
       },
     });
 
     return Response.json({
-      keyId: process.env.RAZORPAY_KEY_ID,
+      keyId: razorpayAccountFor(version).keyId,
       razorpayOrderId: rzpOrder.id,
       amountMinor: order.totalCents,
       currency: order.currency,
     });
   } catch (error) {
     console.error("Failed to create Razorpay order:", error);
-    return Response.json({ error: "Could not initiate payment" }, { status: 500 });
+    return Response.json(
+      { error: "Could not initiate payment" },
+      { status: 500 },
+    );
   }
 }

@@ -419,6 +419,9 @@ model Payment {
   providerRef String?       @map("provider_ref")
   amountCents Int           @map("amount_cents")
   currency    String        @default("INR")
+  // Store version / Razorpay account this payment belongs to. Derived from the
+  // order at creation so reconciliation and refunds use the right account.
+  siteVersion String        @default("local") @map("site_version")
   status      PaymentStatus @default(CREATED)
   // Did the captured path actually decrement stock? Refunds restock only
   // when true (the oversell guard can capture payment without decrement).

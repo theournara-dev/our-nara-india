@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { verifyPaymentSignature } from "@/lib/razorpay";
+import { versionForOrder } from "@/lib/site-version";
 
 /**
  * Server-side verification of the Razorpay checkout handler result. The
@@ -26,7 +27,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid request body" }, { status: 400 });
   }
 
+  // Look up the payment first to find which Razorpay account signed this
+  // checkout, then verify with that account's key secret.
+  const payment = await db.payment.findFirst({
+    where: { provider: "razorpay", providerRef: parsed.razorpay_order_id },
+  });
+  if (!payment) {
+    return Response.json({ verified: false }, { status: 400 });
+  }
+
   const valid = verifyPaymentSignature({
+    version: versionForOrder(payment),
     razorpayOrderId: parsed.razorpay_order_id,
     razorpayPaymentId: parsed.razorpay_payment_id,
     signature: parsed.razorpay_signature,
@@ -39,23 +50,18 @@ export async function POST(request: Request) {
   // Record the payment id so refunds can reconcile against it. Merge into
   // any existing payload — if the captured webhook already ran, its full
   // entity must not be clobbered.
-  const payment = await db.payment.findFirst({
-    where: { provider: "razorpay", providerRef: parsed.razorpay_order_id },
-  });
-  if (payment) {
-    const existingPayload =
-      (payment.rawPayload as Record<string, unknown> | null) ?? {};
-    if (!existingPayload.razorpay_payment_id) {
-      await db.payment.update({
-        where: { id: payment.id },
-        data: {
-          rawPayload: {
-            ...existingPayload,
-            razorpay_payment_id: parsed.razorpay_payment_id,
-          },
+  const existingPayload =
+    (payment.rawPayload as Record<string, unknown> | null) ?? {};
+  if (!existingPayload.razorpay_payment_id) {
+    await db.payment.update({
+      where: { id: payment.id },
+      data: {
+        rawPayload: {
+          ...existingPayload,
+          razorpay_payment_id: parsed.razorpay_payment_id,
         },
-      });
-    }
+      },
+    });
   }
 
   return Response.json({ verified: true });

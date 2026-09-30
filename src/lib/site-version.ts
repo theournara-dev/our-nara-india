@@ -18,7 +18,12 @@ export interface SiteVersionConfig {
   currency: "INR" | "USD";
   /** Intl locale used to format money for this version. */
   locale: string;
-  /** Whether checkout/payment is enabled. Global is disabled while the new gateway is prepared. */
+  /**
+   * Whether checkout/payment is enabled. The global version stays disabled
+   * until its own Razorpay account is configured
+   * (`RAZORPAY_KEY_ID_GLOBAL` / `_SECRET_GLOBAL` / `_WEBHOOK_SECRET_GLOBAL`);
+   * flip it to true once those env vars are set.
+   */
   paymentsEnabled: boolean;
   /** Whether the pre-order feature is available. Global sells everything directly. */
   preOrderEnabled: boolean;
