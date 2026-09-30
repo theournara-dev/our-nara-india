@@ -69,7 +69,7 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
   global: {
     currency: "USD",
     locale: "en-US",
-    paymentsEnabled: false,
+    paymentsEnabled: true,
     preOrderEnabled: false,
     showIndianAddress: false,
     personalInformationManager: "The Firstteam Corp",

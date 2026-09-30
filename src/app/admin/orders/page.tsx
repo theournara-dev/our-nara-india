@@ -282,6 +282,7 @@ export default async function AdminOrdersPage({
                       <OrderRowActions
                         id={o.id}
                         status={o.status as OrderStatusValue}
+                        siteVersion={o.siteVersion}
                         shipment={
                           activeShipment
                             ? {

@@ -11,6 +11,7 @@ import {
   importShipment,
   syncShipment,
   updateOrderStatus,
+  type ShipmentActionResult,
 } from "./actions";
 import {
   ORDER_STATUSES,
@@ -43,6 +44,7 @@ interface ShippingInfo {
 export function OrderRowActions({
   id,
   status,
+  siteVersion,
   shipment,
   shipping,
   totalCents,
@@ -50,6 +52,8 @@ export function OrderRowActions({
 }: {
   id: string;
   status: OrderStatusValue;
+  /** Store version — Delhivery controls are local-only. */
+  siteVersion: string;
   shipment?: {
     waybill: string;
     status: string;
@@ -64,18 +68,33 @@ export function OrderRowActions({
   const [importOpen, setImportOpen] = useState(false);
   const [waybillInput, setWaybillInput] = useState("");
 
-  function run(label: string, fn: () => Promise<void>, toastId?: string) {
+  function run(
+    label: string,
+    fn: () => Promise<ShipmentActionResult | void>,
+    toastId?: string,
+  ) {
     startTransition(async () => {
       const id = toastId ?? notify.loading(`${label}…`);
       try {
-        await fn();
+        const result = await fn();
+        // Shipment actions return a structured result so the real reason
+        // survives production (thrown Server Action errors are masked).
+        if (result && !result.ok) {
+          const friendly = friendlyShipmentError(new Error(result.message));
+          notifyErrorWithContact(id, friendly.title, friendly.hint, {
+            message: result.message,
+          });
+          return;
+        }
         notify.success(id, `${label} done`);
         setImportOpen(false);
         setWaybillInput("");
       } catch (err) {
         const friendly = friendlyShipmentError(err);
         const trace =
-          err instanceof Error ? { name: err.name, message: err.message } : undefined;
+          err instanceof Error
+            ? { name: err.name, message: err.message }
+            : undefined;
         notifyErrorWithContact(id, friendly.title, friendly.hint, trace);
       }
     });
@@ -90,6 +109,8 @@ export function OrderRowActions({
 
   // Shared button base so every action reads as part of one toolbar.
   const canFulfill = status === "PAID" || status === "PRE_ORDER";
+  // Delhivery is India-only; global orders are fulfilled manually (FedEx).
+  const isLocal = siteVersion !== "global";
   const btn =
     "inline-flex h-7 items-center rounded-md border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50";
   const btnGhost =
@@ -125,13 +146,16 @@ export function OrderRowActions({
             </span>
             <span className="shrink-0 text-[11px] text-zinc-400">
               {shipment.lastSyncedAt
-                ? `Synced ${new Date(shipment.lastSyncedAt).toLocaleString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}`
+                ? `Synced ${new Date(shipment.lastSyncedAt).toLocaleString(
+                    "en-IN",
+                    {
+                      day: "numeric",
+                      month: "short",
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    },
+                  )}`
                 : "Not synced yet"}
             </span>
           </div>
@@ -150,7 +174,7 @@ export function OrderRowActions({
               disabled={pending}
               onClick={() =>
                 run("Syncing shipment", async () => {
-                  await syncShipment(shipment.waybill);
+                  return syncShipment(shipment.waybill);
                 })
               }
               className="shrink-0 rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[11px] font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -160,14 +184,15 @@ export function OrderRowActions({
           </div>
         </div>
       ) : (
-        canFulfill && (
+        canFulfill &&
+        (isLocal ? (
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
               disabled={pending}
               onClick={() =>
                 run("Creating shipment", async () => {
-                  await createShipment({
+                  return createShipment({
                     orderId: id,
                     orderNumber,
                     customerName: shipping.name ?? "Customer",
@@ -194,7 +219,11 @@ export function OrderRowActions({
               Import
             </button>
           </div>
-        )
+        ) : (
+          <p className="rounded-md bg-zinc-50 px-2 py-1 text-[11px] text-zinc-500">
+            Global order — fulfil manually (FedEx).
+          </p>
+        ))
       )}
 
       {/* Row 3 (conditional): waybill import input */}
@@ -211,7 +240,7 @@ export function OrderRowActions({
             disabled={pending || !waybillInput.trim()}
             onClick={() =>
               run("Importing shipment", async () => {
-                await importShipment(id, waybillInput.trim());
+                return importShipment(id, waybillInput.trim());
               })
             }
             className={`${btn} shrink-0`}

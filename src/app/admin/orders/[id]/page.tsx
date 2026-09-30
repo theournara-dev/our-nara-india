@@ -380,6 +380,7 @@ export default async function AdminOrderDetailPage({
               <OrderRowActions
                 id={order.id}
                 status={order.status}
+                siteVersion={order.siteVersion}
                 shipment={
                   activeShipment
                     ? {

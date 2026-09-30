@@ -65,6 +65,8 @@ export async function GET(request: Request) {
         status: {
           in: ["CREATED", "PICKUP_SCHEDULED", "IN_TRANSIT"] as ShipmentStatus[],
         },
+        // Delhivery is India-only; global orders ship outside this pipeline.
+        order: { siteVersion: "local" },
       },
       select: {
         waybill: true,

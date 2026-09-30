@@ -16,6 +16,16 @@ const SHIPMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
     hint: "This order is missing a phone number. Add it to the order before creating a shipment.",
   },
   {
+    match: /only paid orders can be shipped/i,
+    title: "Order not paid",
+    hint: "Only paid orders (or paid pre-orders) can be shipped.",
+  },
+  {
+    match: /only available for local \(india\) orders/i,
+    title: "Local orders only",
+    hint: "Delhivery fulfillment is only available for local (India) orders. Fulfil global orders manually (FedEx).",
+  },
+  {
     match: /already has an active shipment/i,
     title: "Shipment already exists",
     hint: "This order already has an active shipment. Refresh the list to see it.",
@@ -71,7 +81,8 @@ const SHIPMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
     hint: "Delhivery took too long to respond. Please try again.",
   },
   {
-    match: /fetch failed|failed to fetch|econnrefused|econnreset|enotfound|network/i,
+    match:
+      /fetch failed|failed to fetch|econnrefused|econnreset|enotfound|network/i,
     title: "Connection problem",
     hint: "Couldn't reach Delhivery. Check your internet connection and try again.",
   },
@@ -183,7 +194,9 @@ export function friendlyShipmentError(err: unknown): FriendlyShipmentError {
   // "Delhivery rejected the shipment: <reason>" — surface a plain-language
   // explanation for known reasons; otherwise quote the reason so support can
   // act instead of seeing a guess.
-  const rejectedMatch = message.match(/^delhivery rejected the shipment: (.+)$/i);
+  const rejectedMatch = message.match(
+    /^delhivery rejected the shipment: (.+)$/i,
+  );
   if (rejectedMatch) {
     const reason = rejectedMatch[1] ?? "unknown error";
     for (const r of KNOWN_REASONS) {
