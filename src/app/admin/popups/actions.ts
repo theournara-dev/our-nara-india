@@ -5,16 +5,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseInput, safeMultiline, safeText } from "@/lib/validation";
 import { POPUP_PLACEMENTS, POPUP_FREQUENCIES } from "./lib";
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
 const popupInput = z.object({
-  title: z.string().optional(),
-  body: z.string().optional(),
-  image: z.string().optional(),
-  ctaLabel: z.string().optional(),
-  ctaHref: z.string().optional(),
+  title: safeText(200).optional(),
+  body: safeMultiline(2000).optional(),
+  image: safeText(2000).optional(),
+  ctaLabel: safeText(80).optional(),
+  ctaHref: safeText(2000).optional(),
   placement: z.enum(POPUP_PLACEMENTS).default("center"),
   frequency: z.enum(POPUP_FREQUENCIES).default("once"),
   isActive: z.boolean().default(true),
@@ -45,7 +46,7 @@ function revalidateCatalog() {
 
 export async function createPopup(input: PopupInput, backHref: string) {
   await requireAdmin();
-  const data = popupInput.parse(input);
+  const data = parseInput(popupInput, input, "popups.create");
   await db.popup.create({
     data: {
       title: data.title?.trim() || null,
@@ -66,7 +67,7 @@ export async function createPopup(input: PopupInput, backHref: string) {
 
 export async function updatePopup(id: string, input: PopupInput) {
   await requireAdmin();
-  const data = popupInput.parse(input);
+  const data = parseInput(popupInput, input, "popups.update");
   await db.popup.update({
     where: { id },
     data: {

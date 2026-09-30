@@ -1,61 +1,43 @@
 "use server";
 
-import { headers } from "next/headers";
 import { z } from "zod";
 import { SITE } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { getClientIp } from "@/lib/client-ip";
+import { createRateLimiter } from "@/lib/rate-limit";
+import { scanForInjection } from "@/lib/sanitize";
+import { safeEmail, safeMultiline, safeText } from "@/lib/validation";
 
 const feedbackSchema = z.object({
-  email: z.string().email("Enter a valid email").max(200),
-  message: z.string().min(5, "Please describe the issue.").max(5000),
+  email: safeEmail(),
+  message: safeMultiline(5000, {
+    min: 5,
+    message: "Please describe the issue.",
+  }),
   /** Client-side error trace/context (optional). */
   error: z
     .object({
-      name: z.string().max(200).optional(),
-      message: z.string().max(1000).optional(),
-      digest: z.string().max(100).optional(),
-      url: z.string().max(2000).optional(),
-      userAgent: z.string().max(500).optional(),
+      name: safeText(200).optional(),
+      // Server-generated DB errors may legitimately contain SQL fragments, so
+      // the trace message opts out of the injection heuristic.
+      message: safeText(1000, { allowSql: true }).optional(),
+      digest: safeText(100).optional(),
+      url: safeText(2000).optional(),
+      userAgent: safeText(500).optional(),
     })
     .optional(),
 });
 
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
 
-export type FeedbackResult =
-  | { ok: true }
-  | { ok: false; error: string };
+export type FeedbackResult = { ok: true } | { ok: false; error: string };
 
 /**
- * Simple in-memory per-IP rate limit: 3 submissions per 10 minutes. Best-effort
- * (resets on server restart) but stops casual spam of the DB + support inbox.
- * Serverless instances each keep their own map, which only makes spam cheaper
- * to absorb, not easier.
+ * Per-IP rate limit: 3 submissions per 10 minutes. Best-effort per instance
+ * (resets on restart) but stops casual spam of the DB + support inbox.
  */
-const RATE_LIMIT_MAX = 3;
-const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const hits = new Map<string, number[]>();
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS,
-  );
-  if (recent.length >= RATE_LIMIT_MAX) {
-    hits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  // Opportunistic cleanup so the map can't grow unbounded.
-  if (hits.size > 1000) {
-    for (const [k, v] of hits) {
-      if (v.every((t) => now - t >= RATE_LIMIT_WINDOW_MS)) hits.delete(k);
-    }
-  }
-  return false;
-}
+const limiter = createRateLimiter(3, 10 * 60 * 1000);
 
 /** User-submitted feedback, optionally with a client error trace attached. */
 export async function submitFeedback(
@@ -63,6 +45,14 @@ export async function submitFeedback(
 ): Promise<FeedbackResult> {
   const parsed = feedbackSchema.safeParse(input);
   if (!parsed.success) {
+    const hits = scanForInjection(input);
+    if (hits.length) {
+      console.warn(
+        `[security] rejected "feedback.submit": possible SQL-injection payload at ${hits
+          .map((h) => h.path)
+          .join(", ")}`,
+      );
+    }
     return {
       ok: false,
       error: parsed.error.issues[0]?.message ?? "Check the form and try again.",
@@ -71,23 +61,13 @@ export async function submitFeedback(
   const data = parsed.data;
 
   // Attach the server-visible client IP for support triage (best effort).
-  let ip: string | null = null;
-  try {
-    const h = await headers();
-    ip =
-      h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-      h.get("x-real-ip") ??
-      null;
-  } catch {
-    ip = null;
-  }
+  const ip = await getClientIp();
 
   // Rate limit after IP resolution; fall back to a shared bucket if unknown.
-  if (isRateLimited(ip ?? "unknown")) {
+  if (limiter.check(ip ?? "unknown")) {
     return {
       ok: false,
-      error:
-        "Too many messages sent. Please wait a bit before trying again.",
+      error: "Too many messages sent. Please wait a bit before trying again.",
     };
   }
 
@@ -97,7 +77,7 @@ export async function submitFeedback(
   try {
     await db.feedback.create({
       data: {
-        email: data.email.trim(),
+        email: data.email,
         message: data.message,
         errorName: trace.name ?? null,
         errorMessage: trace.message ?? null,

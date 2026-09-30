@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
+import { VersionSwitcher } from "@/components/layout/version-switcher";
 import { getSubcategorySlugByName } from "@/data/subcategories";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
 import { useSiteVersion } from "@/components/site-version-provider";
-import { SITE_DOMAINS } from "@/lib/site-version";
 import { notify } from "@/lib/toast";
 
 /**
@@ -93,7 +93,7 @@ const loggedInLinks = [
 
 export function Header() {
   const router = useRouter();
-  const { version: siteVersion, setVersion, config } = useSiteVersion();
+  const { config } = useSiteVersion();
   const [allCateOpen, setAllCateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -115,19 +115,6 @@ export function Header() {
     : isPending
       ? null
       : logStateLinks;
-
-  // In dev, toggle the runtime version variable (persists localStorage +
-  // cookie). In production, navigate to the other version's domain — each
-  // domain resolves its own version, so we don't call setVersion here.
-  const isDev = process.env.NODE_ENV !== "production";
-  function handleVersionSwitch() {
-    const next = siteVersion === "local" ? "global" : "local";
-    if (isDev) {
-      setVersion(next);
-    } else {
-      window.location.href = SITE_DOMAINS[next];
-    }
-  }
 
   return (
     <div>
@@ -266,8 +253,8 @@ export function Header() {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] items-center max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
-                <div className="relative z-[39] max-md:w-full max-md:min-w-0">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
+                <div className="relative z-[39] min-w-0 max-md:w-full max-md:min-w-0">
                   <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-x-clip max-md:h-9 max-md:w-full max-md:overflow-y-hidden">
                     {navItems.map((item, index) => (
                       <li
@@ -340,36 +327,9 @@ export function Header() {
             <div className="relative flex items-center">
               {/* User / log state (desktop-only; drawer covers mobile) */}
               <ul className="inline-flex">
-                {/* Version switch (leftmost) */}
-                <li className="relative min-w-6 px-1">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={siteVersion === "global"}
-                    aria-label="Switch site version"
-                    title="Switch site version"
-                    onClick={handleVersionSwitch}
-                    className="flex h-7 items-center rounded-full border border-zinc-200 bg-zinc-50 p-0.5 text-[11px] font-medium transition-colors hover:border-zinc-300"
-                  >
-                    <span
-                      className={`flex h-6 items-center rounded-full px-2 transition-colors ${
-                        siteVersion === "local"
-                          ? "bg-point-500 text-white"
-                          : "text-zinc-400"
-                      }`}
-                    >
-                      LOCAL
-                    </span>
-                    <span
-                      className={`flex h-6 items-center rounded-full px-2 transition-colors ${
-                        siteVersion === "global"
-                          ? "bg-point-500 text-white"
-                          : "text-zinc-400"
-                      }`}
-                    >
-                      GLOBAL
-                    </span>
-                  </button>
+                {/* Store switcher (leftmost) */}
+                <li className="relative flex items-center px-1">
+                  <VersionSwitcher />
                 </li>
                 <li className="group relative min-w-6 px-1 max-md:hidden">
                   <div>
@@ -590,35 +550,8 @@ export function Header() {
                     </Link>
                   </div>
                 </div>
-                {/* Version switch (mobile) */}
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={siteVersion === "global"}
-                  aria-label="Switch site version"
-                  title="Switch site version"
-                  onClick={handleVersionSwitch}
-                  className="mt-4 inline-flex h-8 items-center rounded-full border border-zinc-200 bg-zinc-50 p-0.5 text-xs font-medium transition-colors hover:border-zinc-300"
-                >
-                  <span
-                    className={`flex h-7 items-center rounded-full px-3 transition-colors ${
-                      siteVersion === "local"
-                        ? "bg-point-500 text-white"
-                        : "text-zinc-400"
-                    }`}
-                  >
-                    LOCAL
-                  </span>
-                  <span
-                    className={`flex h-7 items-center rounded-full px-3 transition-colors ${
-                      siteVersion === "global"
-                        ? "bg-point-500 text-white"
-                        : "text-zinc-400"
-                    }`}
-                  >
-                    GLOBAL
-                  </span>
-                </button>
+                {/* Store switcher (mobile) */}
+                <VersionSwitcher className="mt-4" />
                 {/* Account quick links */}
                 <div className="mt-6 flex w-4/5 flex-wrap gap-x-4 gap-y-2 text-[13px]">
                   <span>

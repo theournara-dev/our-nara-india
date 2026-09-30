@@ -206,12 +206,17 @@ model Product {
   buyNowEnabled  Boolean  @default(false) @map("buy_now_enabled")
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
+  // INFO tab: optional per-product override of the storewide
+  // ProductInfoTemplate blocks. Null = use the global default.
+  infoRows       Json?    @map("info_rows")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   brand       Brand            @relation(fields: [brandId], references: [id])
   category    Category         @relation(fields: [categoryId], references: [id])
   variants    ProductVariant[]
+  blocks      ProductBlock[]
+  questions   ProductQA[]
   reviews     Review[]
   orderItems  OrderItem[]
   preorders   Preorder[]
@@ -242,6 +247,62 @@ model ProductVariant {
 
   @@index([productId])
   @@map("product_variants")
+}
+
+// An ordered content block that makes up a product's DETAIL tab. `type` maps to
+// a renderer + config schema in the product-blocks registry
+// (src/lib/product-blocks), and `config` holds type-specific settings (text,
+// image size, alignment, styling…). Mirrors the page-builder's PageSection so
+// admins can compose the detail page freely.
+model ProductBlock {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  type      String // registry key, e.g. "rich-text"
+  title     String? // admin label
+  config    Json // type-specific settings
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_blocks")
+}
+
+// Storewide INFO ("MORE INFORMATION": payment / shipping / returns / inquiry)
+// content, shown on every product page unless a product overrides it with its
+// own `Product.infoRows`. `blocks` is an ordered list of { heading, body }.
+model ProductInfoTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique @default("default")
+  blocks    Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("product_info_templates")
+}
+
+// A curated Q&A entry on a product page. Admins author these directly and can
+// promote a good user submission (source = USER) into the visible list;
+// `sortOrder` drives manual ordering. Only status = PUBLISHED is shown.
+model ProductQA {
+  id            String   @id @default(cuid())
+  productId     String   @map("product_id")
+  question      String
+  answer        String?
+  sortOrder     Int      @default(0) @map("sort_order")
+  isVisible     Boolean  @default(true) @map("is_visible")
+  source        String   @default("ADMIN") // ADMIN | USER
+  status        String   @default("PUBLISHED") // PUBLISHED | PENDING | DISCARDED
+  submittedById String?  @map("submitted_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+  @@map("product_qa")
 }
 
 // ---------------------------------------------------------------------------
@@ -512,6 +573,9 @@ model Review {
   images     String[]
   isVerified Boolean  @default(false) @map("is_verified")
   status     String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  // Visibility on the storefront. Reviews are shown by default once they pass
+  // validation; admins can hide any review.
+  isVisible  Boolean  @default(true) @map("is_visible")
   createdAt  DateTime @default(now()) @map("created_at")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)

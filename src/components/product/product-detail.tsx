@@ -3,16 +3,28 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import type { ProductDetail } from "@/data/products";
+import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { PreorderDialog } from "./preorder-dialog";
+import { ProductBlocks } from "./blocks/block-renderer";
+import { ReviewForm } from "./review-form";
+import { AskQuestionDialog } from "./ask-question-dialog";
+import type { ProductReviewView, ReviewSummary } from "@/data/reviews";
+import type { QAView } from "@/data/qa";
 
 interface ProductDetailProps {
   product: ProductDetail;
+  /** Effective INFO rows (product override or the storewide default). */
+  infoRows: InfoRow[];
+  reviews: ProductReviewView[];
+  reviewSummary: ReviewSummary;
+  questions: QAView[];
+  /** True when a user is signed in — gates review/question submission. */
+  canInteract: boolean;
 }
 
 /**
@@ -23,16 +35,24 @@ interface ProductDetailProps {
  * adds to the cart and opens the quick-purchase sheet (payment is
  * wired up in the commerce milestone).
  */
-export function ProductDetail({ product }: ProductDetailProps) {
+export function ProductDetail({
+  product,
+  infoRows,
+  reviews,
+  reviewSummary,
+  questions,
+  canInteract,
+}: ProductDetailProps) {
   const { config } = useSiteVersion();
   const { openQuickPurchase } = useCartSheet();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
   const [preorderOpen, setPreorderOpen] = useState(false);
-  const [tab, setTab] = useState<"DETAIL" | "INFO" | "REVIEW" | "Q&A">(
-    "DETAIL",
+  const [tab, setTab] = useState<"REVIEW" | "DETAIL" | "INFO" | "Q&A">(
+    "REVIEW",
   );
+  const [askOpen, setAskOpen] = useState(false);
 
   const hasDiscount =
     product.compareAtCents != null &&
@@ -124,10 +144,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-semibold text-point-500">
               {formatMoney(
-                priceForVersion(
-                  product.priceCents,
-                  product.globalPriceCents,
-                ),
+                priceForVersion(product.priceCents, product.globalPriceCents),
                 product.currency,
               )}
             </span>
@@ -246,67 +263,196 @@ export function ProductDetail({ product }: ProductDetailProps) {
 
       {/* ── Tabs ── */}
       <div className="mt-12">
-        <ul className="flex justify-center border-b border-[#e9e9e9] text-sm">
-          {(["DETAIL", "INFO", "REVIEW", "Q&A"] as const).map((t) => (
-            <li key={t}>
+        <ul className="flex w-full border-b border-[#e9e9e9] text-sm">
+          {(["REVIEW", "DETAIL", "INFO", "Q&A"] as const).map((t) => (
+            <li key={t} className="flex-1">
               <button
                 type="button"
                 onClick={() => setTab(t)}
-                className={`cursor-pointer px-6 py-3 font-semibold transition-colors ${
+                className={`w-full cursor-pointer px-6 py-3 font-semibold transition-colors ${
                   tab === t
                     ? "border-b-2 border-point-500 text-point-500"
                     : "text-[#888] hover:text-[#222]"
                 }`}
               >
-                {t === "REVIEW" ? "REVIEW(0)" : t}
+                {t === "REVIEW" ? `REVIEW(${reviewSummary.count})` : t}
               </button>
             </li>
           ))}
         </ul>
 
-        <div className="min-h-40 px-2 py-10 text-sm leading-relaxed text-[#555]">
-          {tab === "DETAIL" &&
-            (product.description ?? (
-              <p className="text-zinc-400">Product detail coming soon.</p>
-            ))}
-          {tab === "INFO" && (
-            <div className="mx-auto max-w-xl">
-              <table className="w-full border-collapse text-left text-sm">
-                <tbody>
-                  <tr className="border-b border-[#eee]">
-                    <th className="w-32 py-2 pr-3 font-semibold text-[#222]">
-                      Name
-                    </th>
-                    <td className="py-2 text-[#555]">{product.name}</td>
-                  </tr>
-                  <tr className="border-b border-[#eee]">
-                    <th className="py-2 pr-3 font-semibold text-[#222]">
-                      Brand
-                    </th>
-                    <td className="py-2 text-[#555]">{product.brand.name}</td>
-                  </tr>
-                  <tr className="border-b border-[#eee]">
-                    <th className="py-2 pr-3 font-semibold text-[#222]">
-                      Shipping Fee
-                    </th>
-                    <td className="py-2 text-[#555]">Free</td>
-                  </tr>
-                </tbody>
-              </table>
+        <div className="min-h-40 py-10 text-sm leading-relaxed text-[#555]">
+          {tab === "REVIEW" && (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-[#555]">
+                  {reviewSummary.count === 0
+                    ? "There are no posts to show"
+                    : `${reviewSummary.average.toFixed(1)} ★ · ${reviewSummary.count} review${reviewSummary.count === 1 ? "" : "s"}`}
+                </span>
+                {canInteract ? (
+                  <ReviewForm productId={product.id} />
+                ) : (
+                  <Link
+                    href="/login"
+                    className="rounded border border-ink px-5 py-2 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+                  >
+                    Write a Review
+                  </Link>
+                )}
+              </div>
+
+              {reviews.length === 0 ? (
+                <p className="text-center text-zinc-400">
+                  Be the first to review this product.
+                </p>
+              ) : (
+                <ul className="space-y-4 text-left">
+                  {reviews.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-xl border border-[#e9e9e9] p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-point-500">
+                          {"★".repeat(r.rating)}
+                          <span className="text-zinc-300">
+                            {"★".repeat(5 - r.rating)}
+                          </span>
+                        </span>
+                        <span className="text-xs text-[#888]">
+                          {r.createdAt.slice(0, 10)}
+                        </span>
+                      </div>
+                      {r.title && (
+                        <p className="mt-1 font-semibold text-ink">{r.title}</p>
+                      )}
+                      <p className="mt-1 whitespace-pre-line text-sm text-[#555]">
+                        {r.body}
+                      </p>
+                      <p className="mt-2 text-xs text-[#888]">
+                        — {r.authorName}
+                        {r.isVerified ? " · Verified purchase" : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
-          {tab === "REVIEW" && (
-            <p className="text-center text-zinc-400">No reviews yet.</p>
-          )}
+
+          {tab === "DETAIL" &&
+            (product.blocks.length > 0 ? (
+              <ProductBlocks blocks={product.blocks} />
+            ) : product.description ? (
+              <p className="whitespace-pre-line">{product.description}</p>
+            ) : (
+              <p className="text-center text-zinc-400">
+                Product detail coming soon.
+              </p>
+            ))}
+
+          {tab === "INFO" &&
+            (infoRows.length > 0 ? (
+              <div className="space-y-6">
+                {infoRows.map((row, i) => (
+                  <div key={i}>
+                    {row.heading && (
+                      <h3 className="mb-1 text-sm font-semibold text-[#222]">
+                        {row.heading}
+                      </h3>
+                    )}
+                    <p className="whitespace-pre-line text-sm leading-relaxed text-[#555]">
+                      {row.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>
+                <table className="w-full border-collapse text-left text-sm">
+                  <tbody>
+                    <tr className="border-b border-[#eee]">
+                      <th className="w-32 py-2 pr-3 font-semibold text-[#222]">
+                        Name
+                      </th>
+                      <td className="py-2 text-[#555]">{product.name}</td>
+                    </tr>
+                    <tr className="border-b border-[#eee]">
+                      <th className="py-2 pr-3 font-semibold text-[#222]">
+                        Brand
+                      </th>
+                      <td className="py-2 text-[#555]">{product.brand.name}</td>
+                    </tr>
+                    <tr className="border-b border-[#eee]">
+                      <th className="py-2 pr-3 font-semibold text-[#222]">
+                        Shipping Fee
+                      </th>
+                      <td className="py-2 text-[#555]">Free</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            ))}
+
           {tab === "Q&A" && (
-            <p className="text-center text-zinc-400">
-              <Link
-                href="/community/product-qa"
-                className="text-point-500 hover:underline"
-              >
-                Product Questions
-              </Link>
-            </p>
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm text-[#555]">
+                  {questions.length === 0
+                    ? "There are no posts to show"
+                    : `${questions.length} question${questions.length === 1 ? "" : "s"}`}
+                </span>
+                {canInteract ? (
+                  <button
+                    type="button"
+                    onClick={() => setAskOpen(true)}
+                    className="rounded border border-ink px-5 py-2 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+                  >
+                    Ask a question
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="rounded border border-ink px-5 py-2 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+                  >
+                    Ask a question
+                  </Link>
+                )}
+              </div>
+
+              {questions.length === 0 ? (
+                <p className="text-center text-zinc-400">
+                  No questions yet. Be the first to ask.
+                </p>
+              ) : (
+                <ul className="space-y-3 text-left">
+                  {questions.map((q) => (
+                    <li
+                      key={q.id}
+                      className="rounded-xl border border-[#e9e9e9] p-4"
+                    >
+                      <p className="font-semibold text-ink">Q. {q.question}</p>
+                      {q.answer ? (
+                        <p className="mt-1 whitespace-pre-line text-sm text-[#555]">
+                          A. {q.answer}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm text-zinc-400">
+                          Awaiting answer
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <AskQuestionDialog
+                open={askOpen}
+                productId={product.id}
+                onClose={() => setAskOpen(false)}
+              />
+            </div>
           )}
         </div>
       </div>

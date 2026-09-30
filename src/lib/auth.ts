@@ -50,7 +50,9 @@ const trustedOrigins = [
   process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
     : null,
-  process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null,
+  process.env.VERCEL_BRANCH_URL
+    ? `https://${process.env.VERCEL_BRANCH_URL}`
+    : null,
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   // Any local port (dev runs on a random free port).
   "http://localhost:*",
@@ -169,4 +171,34 @@ export async function requireAdmin() {
     throw new Error("Unauthorized");
   }
   return session;
+}
+
+/**
+ * Resolve the current session and throw if no user is signed in. Used by
+ * server actions that require a verified account (reviews, product questions).
+ */
+export async function requireUser() {
+  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
+  try {
+    session = await auth.api.getSession({ headers: await headers() });
+  } catch {
+    session = null;
+  }
+  if (!session?.user) {
+    throw new Error("You must be signed in to do that.");
+  }
+  return session;
+}
+
+/**
+ * Return the signed-in user, or null. Used by server components that render
+ * different UI depending on whether the visitor is authenticated.
+ */
+export async function getCurrentUser() {
+  try {
+    const session = await auth.api.getSession({ headers: await headers() });
+    return session?.user ?? null;
+  } catch {
+    return null;
+  }
 }

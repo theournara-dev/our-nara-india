@@ -9,10 +9,34 @@ import type { ProductCardView } from "@/data/catalog";
 
 export type ProductCard = ProductCardView;
 
+/** A single row of the INFO ("MORE INFORMATION") tab. */
+export interface InfoRow {
+  heading: string;
+  body: string;
+  /**
+   * Whether this row shows on the storefront. Global-template rows are always
+   * visible; per-product overrides can hide individual rows.
+   */
+  visible?: boolean;
+}
+
+/** A DETAIL-tab content block, as stored in `ProductBlock`. */
+export interface ProductBlockView {
+  id: string;
+  type: string;
+  title?: string;
+  config: Record<string, unknown>;
+  sortOrder: number;
+}
+
 export interface ProductDetail extends ProductCardView {
   description?: string;
   seoTitle?: string;
   seoDescription?: string;
+  /** Per-product INFO override; empty means "use the global template". */
+  infoRows: InfoRow[];
+  /** Ordered, active DETAIL blocks. */
+  blocks: ProductBlockView[];
   /** Effective Buy Now flag: product override OR its brand's flag. */
   buyNowEnabled: boolean;
   variants: {
@@ -43,6 +67,7 @@ type ProductRow = {
   isActive: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
+  infoRows: unknown;
   buyNowEnabled: boolean;
   brand: {
     slug: string;
@@ -57,14 +82,34 @@ type ProductRow = {
     stock: number;
     globalPriceCents: number | null;
   }[];
+  // Only selected on the detail query (not on card lists).
+  blocks?: {
+    id: string;
+    type: string;
+    title: string | null;
+    config: unknown;
+    sortOrder: number;
+  }[];
 };
 
-const include = {
+/** Shared relation set for card/list queries. */
+const listInclude = {
   brand: {
     select: { slug: true, name: true, buyNowEnabled: true },
   },
   variants: true,
 } as const;
+
+/** Detail query additionally loads the active DETAIL blocks in order. */
+const detailInclude = {
+  ...listInclude,
+  blocks: {
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" as const },
+  },
+} as const;
+
+const include = listInclude;
 
 function toCard(p: ProductRow): ProductCard {
   return {
@@ -92,6 +137,14 @@ function toDetail(p: ProductRow): ProductDetail {
     description: p.description ?? undefined,
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
+    infoRows: parseInfoRows(p.infoRows),
+    blocks: (p.blocks ?? []).map((b) => ({
+      id: b.id,
+      type: b.type,
+      title: b.title ?? undefined,
+      config: isRecord(b.config) ? b.config : {},
+      sortOrder: b.sortOrder,
+    })),
     buyNowEnabled: p.buyNowEnabled || p.brand.buyNowEnabled,
     variants: p.variants.map((v) => ({
       id: v.id,
@@ -101,6 +154,40 @@ function toDetail(p: ProductRow): ProductDetail {
       stock: v.stock,
     })),
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Coerce a stored JSON value (from `Product.infoRows` or a
+ * `ProductInfoTemplate.blocks`) into a clean `InfoRow[]`. Tolerates malformed
+ * or legacy data by dropping entries that aren't `{ heading, body }` strings.
+ */
+export function parseInfoRows(value: unknown): InfoRow[] {
+  if (!Array.isArray(value)) return [];
+  const rows: InfoRow[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry)) continue;
+    const heading = typeof entry.heading === "string" ? entry.heading : "";
+    const body = typeof entry.body === "string" ? entry.body : "";
+    if (!heading && !body) continue;
+    rows.push({ heading, body, visible: entry.visible !== false });
+  }
+  return rows;
+}
+
+/**
+ * Storewide INFO blocks (payment / shipping / returns / inquiry). Products
+ * without their own `infoRows` fall back to these.
+ */
+export async function getProductInfoTemplate(): Promise<InfoRow[]> {
+  const row = await db.productInfoTemplate.findUnique({
+    where: { key: "default" },
+    select: { blocks: true },
+  });
+  return parseInfoRows(row?.blocks);
 }
 
 export async function getFeaturedProducts(
@@ -184,7 +271,7 @@ export async function getProductBySlug(
 ): Promise<ProductDetail | null> {
   const row = (await db.product.findFirst({
     where: { slug, isActive: true },
-    include,
+    include: detailInclude,
   })) as ProductRow | null;
   return row ? toDetail(row) : null;
 }

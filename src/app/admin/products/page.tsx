@@ -13,6 +13,7 @@ import {
 import { ProductRowActions } from "./row-actions";
 import { ProductFilters } from "./filters";
 import { FeatureToggle } from "@/components/admin/feature-toggle";
+import { ProductsTabs } from "@/components/admin/products-tabs";
 import { currentQuery } from "./lib";
 
 export const dynamic = "force-dynamic";
@@ -120,6 +121,7 @@ export default async function AdminProductsPage({
 
   return (
     <div>
+      <ProductsTabs active="products" />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="mb-1 text-2xl font-semibold text-zinc-900">

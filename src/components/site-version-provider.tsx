@@ -60,6 +60,10 @@ export function SiteVersionProvider({
   // default; without one the host-derived initial render stays.
   useEffect(() => {
     const stored = readStoredVersion(initialVersion);
+    // Hydrate from localStorage after mount. This can't move to a lazy
+    // initializer without an SSR/client hydration mismatch, and the linter
+    // can't model "read an external store on mount".
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVersionState(stored);
     setActiveVersion(stored);
   }, [initialVersion]);

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getProductInfoTemplate } from "@/data/products";
 import { ProductForm } from "@/components/admin/product-form";
 import { buildBackHref } from "../lib";
 
@@ -20,7 +21,7 @@ export default async function NewProductPage({
   const params = await searchParams;
   const backHref = buildBackHref(params);
 
-  const [brands, categories] = await Promise.all([
+  const [brands, categories, globalInfoRows] = await Promise.all([
     db.brand.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
@@ -29,6 +30,7 @@ export default async function NewProductPage({
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true },
     }),
+    getProductInfoTemplate(),
   ]);
 
   return (
@@ -39,6 +41,11 @@ export default async function NewProductPage({
         brands={brands}
         categories={categories}
         backHref={backHref}
+        globalInfoRows={globalInfoRows.map((r) => ({
+          heading: r.heading,
+          body: r.body,
+          visible: true,
+        }))}
       />
     </div>
   );

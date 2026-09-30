@@ -12,6 +12,7 @@ import {
   parseSiteVersion,
   resolveRequestSiteVersion,
 } from "@/lib/site-version";
+import { parseInput, safeEmail, safeText } from "@/lib/validation";
 
 /**
  * Create an internal Order (PENDING) from the cart. This is the server-side
@@ -31,19 +32,20 @@ const orderItemInput = z.object({
   quantity: z.coerce.number().int().min(1).max(99),
 });
 
-const requiredText = (message: string) => z.string().trim().min(1, message);
+const requiredText = (message: string, max = 200) =>
+  safeText(max, { min: 1, message });
 
 const createOrderInput = z.object({
   items: z.array(orderItemInput).min(1, "Your cart is empty."),
-  name: requiredText("Name is required"),
-  email: z.string().email("Enter a valid email"),
-  phone: requiredText("Phone number is required"),
-  addressLine1: requiredText("Address line 1 is required"),
-  addressLine2: z.string().optional(),
-  city: requiredText("City is required"),
-  state: z.string().optional(),
-  postal: requiredText("Postal code is required"),
-  country: requiredText("Country is required"),
+  name: requiredText("Name is required", 120),
+  email: safeEmail(),
+  phone: requiredText("Phone number is required", 40),
+  addressLine1: requiredText("Address line 1 is required", 200),
+  addressLine2: safeText(200).optional(),
+  city: requiredText("City is required", 120),
+  state: safeText(120).optional(),
+  postal: requiredText("Postal code is required", 20),
+  country: requiredText("Country is required", 120),
   /**
    * Subtotal the client showed in the cart (from its stored prices). The
    * server recomputes prices from the DB and refuses when they differ, so the
@@ -94,7 +96,7 @@ export async function createOrder(
 async function createOrderImpl(
   input: CreateOrderInput,
 ): Promise<CreateOrderResult> {
-  const data = createOrderInput.parse(input);
+  const data = parseInput(createOrderInput, input, "orders.create");
 
   // Resolve the site version. The client-side switcher writes a cookie, so it
   // wins when present; default visitors (no cookie) fall back to the host —

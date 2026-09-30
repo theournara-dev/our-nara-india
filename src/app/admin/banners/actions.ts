@@ -5,17 +5,18 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { parseInput, safeText } from "@/lib/validation";
 import { BANNER_PLACEMENTS } from "./lib";
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
 const bannerInput = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: safeText(200, { min: 1, message: "Title is required" }),
   placement: z.enum(BANNER_PLACEMENTS).default("long"),
-  image: z.string().min(1, "Image is required"),
-  mobileImage: z.string().optional(),
-  alt: z.string().optional(),
-  href: z.string().optional(),
+  image: safeText(2000, { min: 1, message: "Image is required" }),
+  mobileImage: safeText(2000).optional(),
+  alt: safeText(200).optional(),
+  href: safeText(2000).optional(),
   sortOrder: z.coerce.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
   // Optional schedule sent as `datetime-local` strings; empty means "no limit".
@@ -44,7 +45,7 @@ function revalidateCatalog() {
 
 export async function createBanner(input: BannerInput, backHref: string) {
   await requireAdmin();
-  const data = bannerInput.parse(input);
+  const data = parseInput(bannerInput, input, "banners.create");
   await db.banner.create({
     data: {
       title: data.title.trim(),
@@ -65,7 +66,7 @@ export async function createBanner(input: BannerInput, backHref: string) {
 
 export async function updateBanner(id: string, input: BannerInput) {
   await requireAdmin();
-  const data = bannerInput.parse(input);
+  const data = parseInput(bannerInput, input, "banners.update");
   await db.banner.update({
     where: { id },
     data: {

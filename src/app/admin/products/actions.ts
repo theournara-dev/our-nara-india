@@ -4,15 +4,26 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { normalizeBlockConfig } from "@/lib/product-blocks/normalize";
 import { slugify } from "@/lib/slug";
+import { parseInput, safeMultiline, safeText } from "@/lib/validation";
+import { Prisma } from "@/generated/prisma/client";
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
+const blockInput = z.object({
+  id: z.string().optional(),
+  type: z.string().min(1, "Block type is required"),
+  title: safeText(120).optional(),
+  config: z.record(z.string(), z.unknown()).default({}),
+  isActive: z.boolean().default(true),
+});
+
 const variantInput = z.object({
   id: z.string().optional(),
-  optionLabel: z.string().optional(),
-  optionValue: z.string().min(1, "Variant option is required"),
-  sku: z.string().min(1, "Variant SKU is required"),
+  optionLabel: safeText(60).optional(),
+  optionValue: safeText(120, { min: 1, message: "Variant option is required" }),
+  sku: safeText(80, { min: 1, message: "Variant SKU is required" }),
   priceCents: z.coerce.number().int().nonnegative().optional(),
   globalPriceCents: z.coerce.number().int().nonnegative().nullable().optional(),
   stock: z.coerce.number().int().nonnegative().default(0),
@@ -20,33 +31,45 @@ const variantInput = z.object({
 });
 
 const productInput = z.object({
-  name: z.string().min(1, "Name is required"),
-  slug: z
-    .string()
-    .min(1, "Slug is required")
-    .regex(
-      /^[a-z0-9-]+$/,
-      "Slug must be lowercase letters, numbers and hyphens",
-    ),
+  name: safeText(200, { min: 1, message: "Name is required" }),
+  slug: safeText(120, { min: 1, message: "Slug is required" }).refine(
+    (v) => /^[a-z0-9-]+$/.test(v),
+    { message: "Slug must be lowercase letters, numbers and hyphens" },
+  ),
   brandId: z.string().min(1, "Brand is required"),
   categoryId: z.string().min(1, "Category is required"),
-  summary: z.string().optional(),
-  shortTags: z.array(z.string()).default([]),
-  description: z.string().optional(),
+  summary: safeMultiline(500).optional(),
+  shortTags: z.array(safeText(60)).default([]),
+  description: safeMultiline(50000).optional(),
   priceCents: z.coerce.number().int().nonnegative("Price must be 0 or more"),
   compareAtCents: z.coerce.number().int().nonnegative().optional(),
   globalPriceCents: z.coerce.number().int().nonnegative().nullable().optional(),
-  globalCompareAtCents: z.coerce.number().int().nonnegative().nullable().optional(),
+  globalCompareAtCents: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .nullable()
+    .optional(),
   /** Product-level stock for variantless products; null = untracked. */
   stock: z.coerce.number().int().nonnegative().nullable().optional(),
   currency: z.string().default("INR"),
   isPreOrder: z.boolean().default(false),
-  preOrderNotice: z.string().optional(),
+  preOrderNotice: safeText(300).optional(),
   images: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
-  seoTitle: z.string().optional(),
-  seoDescription: z.string().optional(),
+  seoTitle: safeText(200).optional(),
+  seoDescription: safeMultiline(500).optional(),
   variants: z.array(variantInput).default([]),
+  blocks: z.array(blockInput).default([]),
+  infoRows: z
+    .array(
+      z.object({
+        heading: safeText(120).optional(),
+        body: safeMultiline(4000).optional(),
+        visible: z.boolean().default(true),
+      }),
+    )
+    .default([]),
 });
 
 export type ProductInput = z.infer<typeof productInput>;
@@ -79,7 +102,7 @@ function revalidateCatalog() {
 
 export async function createProduct(input: ProductInput) {
   await requireAdmin();
-  const data = productInput.parse(input);
+  const data = parseInput(productInput, input, "products.create");
   const slug = await uniqueSlug(slugify(data.slug));
 
   const product = await db.product.create({
@@ -103,6 +126,7 @@ export async function createProduct(input: ProductInput) {
       isActive: data.isActive,
       seoTitle: data.seoTitle || null,
       seoDescription: data.seoDescription || null,
+      infoRows: data.infoRows as Prisma.InputJsonValue,
       variants: {
         create: data.variants.map((v) => ({
           optionLabel: v.optionLabel || null,
@@ -112,6 +136,18 @@ export async function createProduct(input: ProductInput) {
           globalPriceCents: v.globalPriceCents ?? null,
           stock: v.stock,
           isActive: v.isActive,
+        })),
+      },
+      blocks: {
+        create: data.blocks.map((b, i) => ({
+          type: b.type,
+          title: b.title || null,
+          config: normalizeBlockConfig(
+            b.type,
+            b.config,
+          ) as Prisma.InputJsonValue,
+          sortOrder: i,
+          isActive: b.isActive,
         })),
       },
     },
@@ -124,7 +160,7 @@ export async function createProduct(input: ProductInput) {
 
 export async function updateProduct(id: string, input: ProductInput) {
   await requireAdmin();
-  const data = productInput.parse(input);
+  const data = parseInput(productInput, input, "products.update");
   const slug = await uniqueSlug(slugify(data.slug), id);
 
   await db.$transaction([
@@ -150,9 +186,11 @@ export async function updateProduct(id: string, input: ProductInput) {
         isActive: data.isActive,
         seoTitle: data.seoTitle || null,
         seoDescription: data.seoDescription || null,
+        infoRows: data.infoRows as Prisma.InputJsonValue,
       },
     }),
     db.productVariant.deleteMany({ where: { productId: id } }),
+    db.productBlock.deleteMany({ where: { productId: id } }),
     ...data.variants.map((v) =>
       db.productVariant.create({
         data: {
@@ -164,6 +202,21 @@ export async function updateProduct(id: string, input: ProductInput) {
           globalPriceCents: v.globalPriceCents ?? null,
           stock: v.stock,
           isActive: v.isActive,
+        },
+      }),
+    ),
+    ...data.blocks.map((b, i) =>
+      db.productBlock.create({
+        data: {
+          productId: id,
+          type: b.type,
+          title: b.title || null,
+          config: normalizeBlockConfig(
+            b.type,
+            b.config,
+          ) as Prisma.InputJsonValue,
+          sortOrder: i,
+          isActive: b.isActive,
         },
       }),
     ),

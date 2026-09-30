@@ -31,6 +31,13 @@ export interface SiteVersionConfig {
    * still stored and charged in the stored currency.
    */
   fxRate: number;
+  // ── Display metadata (used by the version switcher UI) ────────────────────
+  /** Human label for the store, e.g. "India". */
+  label: string;
+  /** Short price hint shown next to the label, e.g. "₹ INR". */
+  priceHint: string;
+  /** One-line description shown as the store's note in the switcher. */
+  note: string;
   /** Arbitrary UI toggles — add new flags here as the versions diverge. */
   flags: Record<string, boolean>;
 }
@@ -43,6 +50,9 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     preOrderEnabled: true,
     showIndianAddress: true,
     fxRate: 1,
+    label: "India",
+    priceHint: "₹ INR",
+    note: "Ships within India · Pay in ₹",
     flags: {},
   },
   global: {
@@ -52,6 +62,9 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     preOrderEnabled: false,
     showIndianAddress: false,
     fxRate: 1 / 83, // 1 USD cent = 83 INR paise (display-only)
+    label: "International",
+    priceHint: "$ USD",
+    note: "Worldwide shipping · Pay in $",
     flags: {},
   },
 };
@@ -173,7 +186,9 @@ export function versionFlag(
 }
 
 /** Parse a raw value (cookie/localStorage/env) into a valid version. */
-export function parseSiteVersion(value: string | null | undefined): SiteVersion | null {
+export function parseSiteVersion(
+  value: string | null | undefined,
+): SiteVersion | null {
   if (value === "global" || value === "local") return value;
   return null;
 }

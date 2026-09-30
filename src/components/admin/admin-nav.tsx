@@ -19,7 +19,6 @@ const nav: NavItem[] = [
   { label: "Feedback", href: "/admin/feedback" },
   // Not built yet — kept visible but disabled so the roadmap is visible.
   { label: "Coupons", href: "/admin/coupons", disabled: true },
-  { label: "Reviews", href: "/admin/reviews", disabled: true },
   { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },
 ];
