@@ -50,7 +50,7 @@ export default async function AdminOrdersPage({
   )
     ? (params.status as OrderStatus)
     : "";
-  // Site version filter (local = India/INR, global = international/USD).
+  // Site version filter (local = India, global = international).
   const version =
     params.version === "local" || params.version === "global"
       ? params.version

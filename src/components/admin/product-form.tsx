@@ -38,7 +38,6 @@ type VariantDraft = {
   optionValue: string;
   sku: string;
   price: string; // rupees, optional
-  globalPrice: string; // dollars, optional
   stock: number;
   isActive: boolean;
 };
@@ -56,8 +55,6 @@ type Props = {
     description: string | null;
     priceCents: number;
     compareAtCents: number | null;
-    globalPriceCents: number | null;
-    globalCompareAtCents: number | null;
     /** Product-level stock for variantless products; null = untracked. */
     stock: number | null;
     currency: string;
@@ -73,7 +70,6 @@ type Props = {
       optionValue: string;
       sku: string;
       priceCents: number | null;
-      globalPriceCents: number | null;
       stock: number;
       isActive: boolean;
     }[];
@@ -108,12 +104,6 @@ const CURRENCY_SYMBOL = formatMoney(100, "INR", { convert: false }).replace(
 );
 
 function toRupees(cents: number | null | undefined): string {
-  if (cents == null) return "";
-  return (cents / 100).toFixed(2).replace(/\.00$/, "");
-}
-
-// Cents (USD) → decimal dollars string for the global price inputs.
-function toDollars(cents: number | null | undefined): string {
   if (cents == null) return "";
   return (cents / 100).toFixed(2).replace(/\.00$/, "");
 }
@@ -159,12 +149,6 @@ export function ProductForm({
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(toRupees(product?.priceCents));
   const [compareAt, setCompareAt] = useState(toRupees(product?.compareAtCents));
-  const [globalPrice, setGlobalPrice] = useState(
-    toDollars(product?.globalPriceCents),
-  );
-  const [globalCompareAt, setGlobalCompareAt] = useState(
-    toDollars(product?.globalCompareAtCents),
-  );
   // Empty string = untracked (null). Only used by products without variants.
   const [stock, setStock] = useState(
     product?.stock != null ? String(product.stock) : "",
@@ -186,7 +170,6 @@ export function ProductForm({
       optionValue: v.optionValue,
       sku: v.sku,
       price: toRupees(v.priceCents),
-      globalPrice: toDollars(v.globalPriceCents),
       stock: v.stock,
       isActive: v.isActive,
     })),
@@ -340,7 +323,6 @@ export function ProductForm({
         optionValue: "",
         sku: "",
         price: "",
-        globalPrice: "",
         stock: 0,
         isActive: true,
       },
@@ -368,12 +350,6 @@ export function ProductForm({
       compareAtCents: compareAt
         ? Math.round((parseFloat(compareAt) || 0) * 100)
         : undefined,
-      globalPriceCents: globalPrice
-        ? Math.round((parseFloat(globalPrice) || 0) * 100)
-        : undefined,
-      globalCompareAtCents: globalCompareAt
-        ? Math.round((parseFloat(globalCompareAt) || 0) * 100)
-        : undefined,
       stock:
         stock.trim() === ""
           ? null
@@ -392,9 +368,6 @@ export function ProductForm({
         sku: v.sku.trim(),
         priceCents: v.price
           ? Math.round((parseFloat(v.price) || 0) * 100)
-          : undefined,
-        globalPriceCents: v.globalPrice
-          ? Math.round((parseFloat(v.globalPrice) || 0) * 100)
           : undefined,
         stock: v.stock,
         isActive: v.isActive,
@@ -708,30 +681,6 @@ export function ProductForm({
                 />
               </label>
               <label className="block">
-                <span className={labelCls}>Global price ($)</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={globalPrice}
-                  onChange={(e) => setGlobalPrice(e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>
-                  Global compare-at ($, optional)
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={globalCompareAt}
-                  onChange={(e) => setGlobalCompareAt(e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
                 <span className={labelCls}>Stock (optional)</span>
                 <input
                   type="number"
@@ -900,21 +849,6 @@ export function ProductForm({
                         value={v.price}
                         onChange={(e) =>
                           updateVariant(i, { price: e.target.value })
-                        }
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={labelCls}>
-                        Global price ($, optional)
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={v.globalPrice}
-                        onChange={(e) =>
-                          updateVariant(i, { globalPrice: e.target.value })
                         }
                         className={inputCls}
                       />

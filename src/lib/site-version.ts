@@ -1,6 +1,10 @@
 /**
  * Site-version system: "local" (our-nara.com — INR, Razorpay, pre-orders)
- * vs "global" (our-nara.co.kr — USD, payment disabled for now, no pre-orders).
+ * vs "global" (our-nara.co.kr — INR, Razorpay, worldwide shipping).
+ *
+ * Both stores price in INR because Razorpay only settles INR, so currency,
+ * locale and fxRate are identical across versions. The versions still differ in
+ * pre-orders, the India-specific address, and the legal entity.
  *
  * Every version-specific decision in the app should read from this module
  * instead of hardcoding. To add a new per-version behavior, add a field to
@@ -19,10 +23,9 @@ export interface SiteVersionConfig {
   /** Intl locale used to format money for this version. */
   locale: string;
   /**
-   * Whether checkout/payment is enabled. The global version stays disabled
-   * until its own Razorpay account is configured
-   * (`RAZORPAY_KEY_ID_GLOBAL` / `_SECRET_GLOBAL` / `_WEBHOOK_SECRET_GLOBAL`);
-   * flip it to true once those env vars are set.
+   * Whether checkout/payment is enabled. Both stores are live: each has its own
+   * Razorpay account (global uses `RAZORPAY_KEY_ID_GLOBAL` / `_SECRET_GLOBAL` /
+   * `_WEBHOOK_SECRET_GLOBAL`).
    */
   paymentsEnabled: boolean;
   /** Whether the pre-order feature is available. Global sells everything directly. */
@@ -35,9 +38,9 @@ export interface SiteVersionConfig {
   privacyContactEmail: string;
   /**
    * Display-only FX rate: how many minor units of the STORED currency (INR
-   * paise) equal one minor unit of the DISPLAY currency. Local = 1.
-   * Global = 1 USD cent per 98 INR paise (1/98). Display-only — orders are
-   * still stored and charged in the stored currency.
+   * paise) equal one minor unit of the DISPLAY currency. Both stores now price
+   * and display in INR, so this is 1 — kept for a future non-INR display
+   * currency.
    */
   fxRate: number;
   // ── Display metadata (used by the version switcher UI) ────────────────────
@@ -67,17 +70,17 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
     flags: {},
   },
   global: {
-    currency: "USD",
-    locale: "en-US",
+    currency: "INR",
+    locale: "en-IN",
     paymentsEnabled: true,
     preOrderEnabled: false,
     showIndianAddress: false,
     personalInformationManager: "The Firstteam Corp",
     privacyContactEmail: "tft@thefirstteam.co.kr",
-    fxRate: 1 / 98, // 1 USD cent = 98 INR paise (display-only)
+    fxRate: 1, // both stores price in INR
     label: "International",
-    priceHint: "$ USD",
-    note: "Worldwide shipping · Pay in $",
+    priceHint: "₹ INR",
+    note: "Worldwide shipping · Pay in ₹",
     flags: {},
   },
 };
@@ -208,8 +211,8 @@ export function parseSiteVersion(
 
 /**
  * The store version an order belongs to. Prefers the explicit `siteVersion`
- * stored at checkout; falls back to the stored currency (USD = global) for
- * orders that predate that column or trimmed selects that omit it.
+ * stored at checkout; falls back to the stored currency for legacy orders that
+ * predate that column (a legacy USD order = global).
  */
 export function versionForOrder(order: {
   siteVersion?: string | null;

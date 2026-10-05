@@ -2,12 +2,15 @@
 
 One codebase, two shops:
 
-| | Local (India) | Global (international) |
-|---|---|---|
-| Domain | our-nara.com | our-nara.co.kr |
-| Currency | INR (₹) | USD ($) |
-| Payment | Razorpay (live) | Disabled — "coming soon" |
-| Pre-orders | Enabled | Disabled — everything buyable directly |
+|            | Local (India)   | Global (international)                 |
+| ---------- | --------------- | -------------------------------------- |
+| Domain     | our-nara.com    | our-nara.co.kr                         |
+| Currency   | INR (₹)         | INR (₹)                                |
+| Payment    | Razorpay (live) | Razorpay (live, own account)           |
+| Pre-orders | Enabled         | Disabled — everything buyable directly |
+
+Both stores price in **INR** because Razorpay only settles INR. The global store
+uses its own Razorpay account but the same currency.
 
 The site detects which shop to show from the **domain name** the visitor opened.
 In development (localhost) the header switch just flips a preview variable;
@@ -31,8 +34,8 @@ Single source of truth: `src/lib/site-version.ts`.
 
 ```ts
 export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
-  local:  { currency: "INR", paymentsEnabled: true,  preOrderEnabled: true,  showIndianAddress: true,  ... },
-  global: { currency: "USD", paymentsEnabled: false, preOrderEnabled: false, showIndianAddress: false, ... },
+  local:  { currency: "INR", paymentsEnabled: true, preOrderEnabled: true,  showIndianAddress: true,  ... },
+  global: { currency: "INR", paymentsEnabled: true, preOrderEnabled: false, showIndianAddress: false, ... },
 };
 ```
 
@@ -53,12 +56,13 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
 
 **Related mechanics:**
 
-- Prices: `priceForVersion()` in `src/lib/money.ts` picks the local (INR)
-  or global (USD) product price; `formatMoney()` formats with the correct
-  locale per currency. Admins enter both prices on the product form.
-- Checkout: `createOrder` prices and guards by request-host version, so
-  global orders are created in USD and blocked while payments are disabled.
-- Emails: sender domain follows the order currency
+- Prices: both stores price in INR, so `priceForVersion()` in
+  `src/lib/money.ts` returns the stored product price for every version (the
+  legacy global USD price is ignored); `formatMoney()` formats it with the
+  version's locale.
+- Checkout: `createOrder` prices and guards by request-host version; global
+  orders are created in INR and charged through the global Razorpay account.
+- Emails: sender domain follows the store version
   (`EMAIL_FROM_LOCAL` / `EMAIL_FROM_GLOBAL` in `src/lib/email.ts`).
 - Header switch: dev flips the local preview variable; production navigates
   to `SITE_DOMAINS[other]`. Per-browser override lives in localStorage +

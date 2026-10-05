@@ -1,22 +1,51 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  getVersionConfig,
   parseSiteVersion,
   resolveSiteVersionFromHost,
   versionForOrder,
 } from "../src/lib/site-version";
+import { priceForVersion } from "../src/lib/money";
+
+test("both stores price in INR", () => {
+  assert.equal(getVersionConfig("local").currency, "INR");
+  // Razorpay only settles INR, so the global store must be INR too.
+  assert.equal(getVersionConfig("global").currency, "INR");
+});
+
+test("priceForVersion ignores legacy global USD prices", () => {
+  assert.equal(priceForVersion(180000, 2169, "global"), 180000);
+  assert.equal(priceForVersion(180000, 2169, "local"), 180000);
+  assert.equal(priceForVersion(180000, null, "global"), 180000);
+});
 
 test("versionForOrder prefers the explicit siteVersion", () => {
-  assert.equal(versionForOrder({ siteVersion: "global", currency: "INR" }), "global");
-  assert.equal(versionForOrder({ siteVersion: "local", currency: "USD" }), "local");
+  assert.equal(
+    versionForOrder({ siteVersion: "global", currency: "INR" }),
+    "global",
+  );
+  assert.equal(
+    versionForOrder({ siteVersion: "local", currency: "USD" }),
+    "local",
+  );
 });
 
 test("versionForOrder falls back to currency", () => {
-  assert.equal(versionForOrder({ siteVersion: null, currency: "USD" }), "global");
-  assert.equal(versionForOrder({ siteVersion: null, currency: "INR" }), "local");
+  assert.equal(
+    versionForOrder({ siteVersion: null, currency: "USD" }),
+    "global",
+  );
+  assert.equal(
+    versionForOrder({ siteVersion: null, currency: "INR" }),
+    "local",
+  );
   assert.equal(versionForOrder({ currency: "USD" }), "global");
   assert.equal(versionForOrder({}), "local");
-  assert.equal(versionForOrder({ siteVersion: "bogus", currency: "USD" }), "global");
+  assert.equal(
+    versionForOrder({ siteVersion: "bogus", currency: "USD" }),
+    "global",
+  );
 });
 
 test("parseSiteVersion only accepts known versions", () => {

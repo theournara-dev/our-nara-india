@@ -98,10 +98,23 @@ export async function POST(request: Request) {
       currency: order.currency,
     });
   } catch (error) {
-    console.error("Failed to create Razorpay order:", error);
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(
+      `Failed to create Razorpay order for ${order.orderNumber}:`,
+      detail,
+      error,
+    );
+    // A misconfigured account (e.g. a currency the account isn't enabled for)
+    // is not transient — surface a specific message the storefront can explain
+    // instead of a generic "gateway" error.
+    const currencyIssue = /currency is not supported/i.test(detail);
     return Response.json(
-      { error: "Could not initiate payment" },
-      { status: 500 },
+      {
+        error: currencyIssue
+          ? "Payment is not available for this store yet."
+          : "Could not initiate payment",
+      },
+      { status: currencyIssue ? 503 : 500 },
     );
   }
 }

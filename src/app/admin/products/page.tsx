@@ -184,7 +184,6 @@ export default async function AdminProductsPage({
               <th className="px-2 py-2 font-medium">Brand</th>
               <th className="px-2 py-2 font-medium">Category</th>
               <th className="px-2 py-2 font-medium">Price</th>
-              <th className="px-2 py-2 font-medium">Global price</th>
               <th className="px-2 py-2 font-medium">Stock</th>
               <th className="px-2 py-2 font-medium">Pre-orders</th>
               <th className="px-2 py-2 font-medium">Status</th>
@@ -197,7 +196,7 @@ export default async function AdminProductsPage({
             {products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={11}
+                  colSpan={10}
                   className="px-2 py-8 text-center text-sm text-zinc-500"
                 >
                   No products found.
@@ -249,15 +248,6 @@ export default async function AdminProductsPage({
                       {formatMoney(p.priceCents, p.currency, {
                         convert: false,
                       })}
-                    </td>
-                    <td className="px-2 py-1.5 text-sm text-zinc-900">
-                      {p.globalPriceCents != null ? (
-                        formatMoney(p.globalPriceCents, "USD", {
-                          convert: false,
-                        })
-                      ) : (
-                        <span className="text-xs text-zinc-400">Auto</span>
-                      )}
                     </td>
                     <td className="px-2 py-1.5 text-sm text-zinc-600">
                       {stock}

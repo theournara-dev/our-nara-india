@@ -25,7 +25,6 @@ const variantInput = z.object({
   optionValue: safeText(120, { min: 1, message: "Variant option is required" }),
   sku: safeText(80, { min: 1, message: "Variant SKU is required" }),
   priceCents: z.coerce.number().int().nonnegative().optional(),
-  globalPriceCents: z.coerce.number().int().nonnegative().nullable().optional(),
   stock: z.coerce.number().int().nonnegative().default(0),
   isActive: z.boolean().default(true),
 });
@@ -43,13 +42,6 @@ const productInput = z.object({
   description: safeMultiline(50000).optional(),
   priceCents: z.coerce.number().int().nonnegative("Price must be 0 or more"),
   compareAtCents: z.coerce.number().int().nonnegative().optional(),
-  globalPriceCents: z.coerce.number().int().nonnegative().nullable().optional(),
-  globalCompareAtCents: z.coerce
-    .number()
-    .int()
-    .nonnegative()
-    .nullable()
-    .optional(),
   /** Product-level stock for variantless products; null = untracked. */
   stock: z.coerce.number().int().nonnegative().nullable().optional(),
   currency: z.string().default("INR"),
@@ -116,8 +108,6 @@ export async function createProduct(input: ProductInput) {
       description: data.description || null,
       priceCents: data.priceCents,
       compareAtCents: data.compareAtCents ?? null,
-      globalPriceCents: data.globalPriceCents ?? null,
-      globalCompareAtCents: data.globalCompareAtCents ?? null,
       stock: data.stock ?? null,
       currency: data.currency,
       isPreOrder: data.isPreOrder,
@@ -133,7 +123,6 @@ export async function createProduct(input: ProductInput) {
           optionValue: v.optionValue,
           sku: v.sku,
           priceCents: v.priceCents ?? null,
-          globalPriceCents: v.globalPriceCents ?? null,
           stock: v.stock,
           isActive: v.isActive,
         })),
@@ -176,8 +165,6 @@ export async function updateProduct(id: string, input: ProductInput) {
         description: data.description || null,
         priceCents: data.priceCents,
         compareAtCents: data.compareAtCents ?? null,
-        globalPriceCents: data.globalPriceCents ?? null,
-        globalCompareAtCents: data.globalCompareAtCents ?? null,
         stock: data.stock ?? null,
         currency: data.currency,
         isPreOrder: data.isPreOrder,
@@ -199,7 +186,6 @@ export async function updateProduct(id: string, input: ProductInput) {
           optionValue: v.optionValue,
           sku: v.sku,
           priceCents: v.priceCents ?? null,
-          globalPriceCents: v.globalPriceCents ?? null,
           stock: v.stock,
           isActive: v.isActive,
         },

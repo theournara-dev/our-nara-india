@@ -1,8 +1,5 @@
 import { useSyncExternalStore } from "react";
-import {
-  getActiveVersion,
-  getVersionConfig,
-} from "@/lib/site-version";
+import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
 import { priceForVersion } from "@/lib/money";
 
 /**
@@ -76,9 +73,8 @@ export function getCart(): CartItem[] {
  * detail page share one code path.
  *
  * The stored price/currency are resolved for the ACTIVE site version at add
- * time: local stores INR `priceCents`, global stores the USD
- * `globalPriceCents` (falling back to a display conversion when unset) with
- * the version's currency. Cart totals therefore always match the version the
+ * time. Both stores price in INR (Razorpay only settles INR), so the stored
+ * `priceCents` is used as-is and the cart total always matches the version the
  * customer is shopping in.
  */
 export function addProductToCart(
@@ -89,7 +85,6 @@ export function addProductToCart(
     images: string[];
     priceCents: number;
     currency: string;
-    globalPriceCents?: number | null;
   },
   qty = 1,
   option?: string,
@@ -100,11 +95,7 @@ export function addProductToCart(
     slug: product.slug,
     name: product.name,
     image: product.images[0] ?? "",
-    priceCents: priceForVersion(
-      product.priceCents,
-      product.globalPriceCents,
-      version,
-    ),
+    priceCents: priceForVersion(product.priceCents, undefined, version),
     currency: getVersionConfig(version).currency,
     qty,
     option,

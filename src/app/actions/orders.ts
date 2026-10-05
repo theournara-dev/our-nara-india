@@ -196,9 +196,9 @@ async function createOrderImpl(
     }
 
     // Effective unit price: variant price overrides the product base price
-    // when the admin set one (see ProductVariant.priceCents). Prices are then
-    // resolved for this request's site version: local stores INR, global
-    // stores the USD globalPriceCents.
+    // when the admin set one (see ProductVariant.priceCents). Both stores price
+    // in INR, so `priceForVersion` resolves to the same stored price (the legacy
+    // global USD price is ignored).
     let unitPriceCents = priceForVersion(
       product.priceCents,
       product.globalPriceCents,

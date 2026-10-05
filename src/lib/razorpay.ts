@@ -86,6 +86,27 @@ export function getRazorpay(version: SiteVersion = "local"): Razorpay {
   return client;
 }
 
+/**
+ * Pull a readable reason out of a Razorpay SDK error. The SDK throws a plain
+ * object like `{ statusCode, error: { code, description, reason } }` rather
+ * than an Error, so `.message` is empty and the detail is lost.
+ */
+function describeRazorpayError(err: unknown, context: string): string {
+  const body = err as
+    | { error?: { description?: string; code?: string }; statusCode?: number }
+    | undefined;
+  const description = body?.error?.description;
+  if (description) return `Razorpay ${context} failed: ${description}`;
+  if (err instanceof Error && err.message) {
+    return `Razorpay ${context} failed: ${err.message}`;
+  }
+  try {
+    return `Razorpay ${context} failed: ${JSON.stringify(err)}`;
+  } catch {
+    return `Razorpay ${context} failed: unknown error`;
+  }
+}
+
 export interface CreateOrderInput {
   /** Store version whose account should create the Razorpay order. */
   version: SiteVersion;
@@ -97,6 +118,10 @@ export interface CreateOrderInput {
 /**
  * Create a Razorpay "order" for a checkout. `receipt` is your internal order
  * reference and comes back on webhooks so we can reconcile it.
+ *
+ * Throws `RazorpayError` with Razorpay's own `description` on failure (e.g.
+ * "Order Currency is not supported" when an account isn't enabled for the
+ * order's currency — a configuration issue, not a transient error).
  */
 export async function createRazorpayOrder({
   version,
@@ -104,12 +129,19 @@ export async function createRazorpayOrder({
   amountMinor,
   currency = "INR",
 }: CreateOrderInput) {
-  return getRazorpay(version).orders.create({
-    amount: amountMinor,
-    currency,
-    receipt: orderId,
-    notes: { internalOrderId: orderId },
-  });
+  try {
+    return await getRazorpay(version).orders.create({
+      amount: amountMinor,
+      currency,
+      receipt: orderId,
+      notes: { internalOrderId: orderId },
+    });
+  } catch (err) {
+    throw new RazorpayError(
+      describeRazorpayError(err, `${version} order (${currency})`),
+      err,
+    );
+  }
 }
 
 /** Constant-time string comparison (guards against timing side-channels). */

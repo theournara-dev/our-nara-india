@@ -41,6 +41,11 @@ const PAYMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
     hint: "This order was already paid or cancelled. Please check your orders or start a new checkout.",
   },
   {
+    match: /payment is not available for this store/i,
+    title: "Payment unavailable",
+    hint: "Online payment isn't set up for this store yet. Please contact support.",
+  },
+  {
     match: /gateway|razorpay|initiate payment/i,
     title: "Payment gateway issue",
     hint: "We couldn't reach the payment service. Please try again in a moment.",
