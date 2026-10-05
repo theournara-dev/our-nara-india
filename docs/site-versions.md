@@ -62,6 +62,12 @@ export const SITE_VERSIONS: Record<SiteVersion, SiteVersionConfig> = {
   version's locale.
 - Checkout: `createOrder` prices and guards by request-host version; global
   orders are created in INR and charged through the global Razorpay account.
+  Legacy orders stored in USD are refused at the Razorpay-order route (and the
+  client never opens the modal for them) — customers are asked to re-order.
+- Razorpay accounts: each version charges through its own account. The global
+  live account requires `customer_details` (name and address) on order
+  creation, so `createRazorpayOrder` forwards the checkout's contact and
+  shipping details and converts the country to ISO alpha-3.
 - Emails: sender domain follows the store version
   (`EMAIL_FROM_LOCAL` / `EMAIL_FROM_GLOBAL` in `src/lib/email.ts`).
 - Header switch: dev flips the local preview variable; production navigates

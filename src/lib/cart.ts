@@ -34,12 +34,32 @@ const EMPTY_CART: CartItem[] = [];
 // changes (avoids infinite re-renders). Cleared on every mutation.
 let cache: CartItem[] | null = null;
 
+/**
+ * Drop cart lines whose stored currency isn't the active store's currency.
+ *
+ * Prices are captured at add-time, so a cart saved while a store priced in a
+ * different currency (e.g. the global store used USD before it moved to INR)
+ * holds minor-unit amounts that are meaningless in the current currency — and
+ * checkout would reject them as stale. Dropping the stale lines self-heals
+ * returning customers instead of showing wrong money.
+ */
+export function pruneStaleCurrency(
+  items: CartItem[],
+  currency: string,
+): CartItem[] {
+  return items.filter((item) => item.currency === currency);
+}
+
 function read(): CartItem[] {
   if (cache) return cache;
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? (JSON.parse(raw) as CartItem[]) : [];
-    cache = Array.isArray(parsed) ? parsed : [];
+    const stored = Array.isArray(parsed) ? parsed : [];
+    const current = getVersionConfig(getActiveVersion()).currency;
+    const fresh = pruneStaleCurrency(stored, current);
+    cache = fresh;
+    if (fresh.length !== stored.length) save(fresh);
   } catch {
     cache = [];
   }

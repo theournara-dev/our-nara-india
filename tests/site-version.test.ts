@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   getVersionConfig,
   parseSiteVersion,
+  resolveRequestSiteVersion,
   resolveSiteVersionFromHost,
   versionForOrder,
 } from "../src/lib/site-version";
@@ -12,6 +13,12 @@ test("both stores price in INR", () => {
   assert.equal(getVersionConfig("local").currency, "INR");
   // Razorpay only settles INR, so the global store must be INR too.
   assert.equal(getVersionConfig("global").currency, "INR");
+});
+
+test("the global domain resolves to the INR global store", () => {
+  const version = resolveRequestSiteVersion("our-nara.co.kr");
+  assert.equal(version, "global");
+  assert.equal(getVersionConfig(version).currency, "INR");
 });
 
 test("priceForVersion ignores legacy global USD prices", () => {

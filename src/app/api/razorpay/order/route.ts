@@ -2,7 +2,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createRazorpayOrder, razorpayAccountFor } from "@/lib/razorpay";
-import { versionForOrder } from "@/lib/site-version";
+import { getVersionConfig, versionForOrder } from "@/lib/site-version";
 
 /**
  * Creates a Razorpay order for an existing internal Order that is still
@@ -21,6 +21,15 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   orderId: z.string().min(1),
 });
+
+/** `shipping` is an untyped Json column; read a string field safely. */
+function shippingField(shipping: unknown, key: string): string | null {
+  if (shipping && typeof shipping === "object") {
+    const value = (shipping as Record<string, unknown>)[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
 
 export async function POST(request: Request) {
   let parsed: z.infer<typeof bodySchema>;
@@ -71,11 +80,43 @@ export async function POST(request: Request) {
     // derived from the order — never the request — so retries and webhooks
     // always hit the same account.
     const version = versionForOrder(order);
+
+    // Legacy orders were stored in the store's old currency (the global store
+    // priced in USD before it moved to INR). Razorpay can only settle the
+    // account's currency, so refuse instead of opening a checkout modal with
+    // a currency the account can't charge.
+    const currency = getVersionConfig(version).currency;
+    if (order.currency !== currency) {
+      return Response.json(
+        {
+          error:
+            "This order was placed in a currency we no longer support. Please place a new order.",
+        },
+        { status: 409 },
+      );
+    }
+
     const rzpOrder = await createRazorpayOrder({
       version,
       orderId: order.id,
       amountMinor: order.totalCents,
-      currency: order.currency,
+      currency,
+      // The checkout always collects these (name/phone/address are required by
+      // the create-order action); forward them for accounts that require
+      // customer identification on order creation.
+      customer: {
+        name: shippingField(order.shipping, "name"),
+        contact: shippingField(order.shipping, "phone"),
+        email: order.email,
+        address: {
+          line1: shippingField(order.shipping, "addressLine1"),
+          line2: shippingField(order.shipping, "addressLine2"),
+          city: shippingField(order.shipping, "city"),
+          state: shippingField(order.shipping, "state"),
+          postal: shippingField(order.shipping, "postal"),
+          country: shippingField(order.shipping, "country"),
+        },
+      },
     });
 
     // Persist the payment so the webhook can reconcile it to this order.
@@ -85,7 +126,7 @@ export async function POST(request: Request) {
         provider: "razorpay",
         providerRef: rzpOrder.id,
         amountCents: order.totalCents,
-        currency: order.currency,
+        currency,
         siteVersion: version,
         status: "CREATED",
       },
@@ -95,7 +136,7 @@ export async function POST(request: Request) {
       keyId: razorpayAccountFor(version).keyId,
       razorpayOrderId: rzpOrder.id,
       amountMinor: order.totalCents,
-      currency: order.currency,
+      currency,
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

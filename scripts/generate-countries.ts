@@ -5,11 +5,13 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const URL = "https://raw.githubusercontent.com/mledoze/countries/master/countries.json";
+const URL =
+  "https://raw.githubusercontent.com/mledoze/countries/master/countries.json";
 
 type RawCountry = {
   name: { common: string };
   cca2: string;
+  cca3: string;
   idd: { root: string; suffixes: string[] };
 };
 
@@ -30,6 +32,7 @@ async function main() {
     .map((c) => ({
       name: c.name.common,
       code: c.cca2,
+      code3: c.cca3,
       phone: callingCode(c),
     }))
     .filter((c) => c.code && c.phone)
@@ -39,20 +42,32 @@ async function main() {
     "export type Country = {",
     "  name: string;",
     "  code: string; // ISO 3166-1 alpha-2",
+    "  code3: string; // ISO 3166-1 alpha-3 (Razorpay requires alpha-3)",
     "  phone: string; // dialing code",
     "};",
     "",
     `export const COUNTRIES: Country[] = [`,
     ...countries.map(
-      (c) => `  { name: ${JSON.stringify(c.name)}, code: ${JSON.stringify(c.code)}, phone: ${JSON.stringify(c.phone)} },`,
+      (c) =>
+        `  { name: ${JSON.stringify(c.name)}, code: ${JSON.stringify(c.code)}, code3: ${JSON.stringify(c.code3)}, phone: ${JSON.stringify(c.phone)} },`,
     ),
     "];",
     "",
     "export function findCountry(codeOrName: string): Country | undefined {",
     "  const q = codeOrName.trim().toLowerCase();",
     "  return COUNTRIES.find(",
-    "    (c) => c.code.toLowerCase() === q || c.name.toLowerCase() === q,",
+    "    (c) =>",
+    "      c.code.toLowerCase() === q ||",
+    "      c.code3.toLowerCase() === q ||",
+    "      c.name.toLowerCase() === q,",
     "  );",
+    "}",
+    "",
+    "/** Convert an ISO alpha-2 code, alpha-3 code, or country name to alpha-3. */",
+    "export function toAlpha3(codeOrName: string): string | undefined {",
+    "  const trimmed = codeOrName.trim();",
+    "  if (/^[A-Za-z]{3}$/.test(trimmed)) return trimmed.toUpperCase();",
+    "  return findCountry(trimmed)?.code3;",
     "}",
     "",
   ];

@@ -1,6 +1,8 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import Razorpay from "razorpay";
+import type { Orders } from "razorpay/dist/types/orders";
+import { toAlpha3 } from "@/data/countries";
 import type { SiteVersion } from "@/lib/site-version";
 
 /**
@@ -113,6 +115,25 @@ export interface CreateOrderInput {
   orderId: string;
   amountMinor: number;
   currency?: string;
+  /**
+   * Customer details collected at checkout. Accounts with customer
+   * identification enabled (the global store's live account) reject order
+   * creation without a customer name and address, so these are forwarded as
+   * Razorpay's `customer_details` when available.
+   */
+  customer?: {
+    name?: string | null;
+    contact?: string | null;
+    email?: string | null;
+    address?: {
+      line1?: string | null;
+      line2?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postal?: string | null;
+      country?: string | null;
+    } | null;
+  };
 }
 
 /**
@@ -128,14 +149,55 @@ export async function createRazorpayOrder({
   orderId,
   amountMinor,
   currency = "INR",
+  customer,
 }: CreateOrderInput) {
+  const name = customer?.name?.trim();
+  const contact = customer?.contact?.trim();
+  const email = customer?.email?.trim();
+  const line1 = customer?.address?.line1?.trim();
+  const city = customer?.address?.city?.trim();
+  const postal = customer?.address?.postal?.trim();
+  const country = customer?.address?.country?.trim();
+  // Razorpay demands ISO alpha-3 ("IND", not "IN") — the checkout stores the
+  // code the customer entered, so convert at the API edge.
+  const country3 = country ? (toAlpha3(country) ?? country) : undefined;
+  // Razorpay requires `state` (when present) to be 3–50 characters, but
+  // customers routinely type 2-letter codes ("MH", "NY") — omit it rather
+  // than fail order creation over an optional field.
+  const state = customer?.address?.state?.trim();
+  const validState =
+    state && state.length >= 3 && state.length <= 50 ? state : undefined;
   try {
-    return await getRazorpay(version).orders.create({
+    const payload: Orders.RazorpayOrderCreateRequestBody = {
       amount: amountMinor,
       currency,
       receipt: orderId,
       notes: { internalOrderId: orderId },
-    });
+    };
+    // Razorpay accounts with customer identification enabled (the global
+    // store's live account) refuse order creation without a customer name
+    // and address. Billing mirrors shipping — checkout collects one address.
+    if (name) {
+      const customerDetails = {
+        name,
+        contact: contact ?? "",
+        email: email ?? "",
+      } as Orders.CustomerDetails;
+      if (line1 && city && postal && country3) {
+        const address = {
+          line1,
+          line2: customer?.address?.line2?.trim() || undefined,
+          zipcode: postal,
+          city,
+          state: validState,
+          country: country3,
+        };
+        customerDetails.shipping_address = address;
+        customerDetails.billing_address = address;
+      }
+      payload.customer_details = customerDetails;
+    }
+    return await getRazorpay(version).orders.create(payload);
   } catch (err) {
     throw new RazorpayError(
       describeRazorpayError(err, `${version} order (${currency})`),

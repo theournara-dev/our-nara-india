@@ -138,6 +138,16 @@ export async function checkoutWithRazorpay(
     throw new Error(data.error ?? "Could not initiate payment.");
   }
 
+  // Defense in depth: never open the modal with a currency other than the one
+  // the active store charges in. A legacy order (e.g. one priced in USD before
+  // the global store moved to INR) must not reach the payment modal.
+  const expectedCurrency = getVersionConfig(getActiveVersion()).currency;
+  if (data.currency && data.currency !== expectedCurrency) {
+    throw new Error(
+      "This order was placed in a currency we no longer support. Please place a new order.",
+    );
+  }
+
   // 3. Load the checkout script and open the modal.
   await loadCheckoutScript();
   const RazorpayCtor = window.Razorpay;
@@ -150,7 +160,7 @@ export async function checkoutWithRazorpay(
     const options: RazorpayCheckoutOptions = {
       key: data.keyId!,
       amount: data.amountMinor!,
-      currency: data.currency ?? "INR",
+      currency: data.currency ?? expectedCurrency,
       name: SITE.name,
       description: `Order ${order.orderNumber}`,
       order_id: data.razorpayOrderId!,
