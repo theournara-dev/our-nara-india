@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { ImageField } from "@/components/admin/image-field";
-import { StorePickerCards } from "@/components/layout/store-picker-cards";
+import {
+  StorePickerCards,
+  STORE_PICKER_PANEL_CLASS,
+} from "@/components/layout/store-picker-cards";
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
@@ -340,9 +343,7 @@ function TopBannerEditor({
                 <ColorInput
                   label="Background"
                   value={block.background}
-                  onChange={(background) =>
-                    update(i, { ...block, background })
-                  }
+                  onChange={(background) => update(i, { ...block, background })}
                 />
                 <ColorInput
                   label="Text colour"
@@ -374,9 +375,7 @@ function TopBannerEditor({
                 <ColorInput
                   label="Background"
                   value={block.background}
-                  onChange={(background) =>
-                    update(i, { ...block, background })
-                  }
+                  onChange={(background) => update(i, { ...block, background })}
                 />
                 <label className="block">
                   <span className={labelCls}>Link (optional)</span>
@@ -465,9 +464,7 @@ function StorePickerEditor({
 
   return (
     <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-      <h2 className="mb-1 text-sm font-semibold text-zinc-900">
-        Store picker
-      </h2>
+      <h2 className="mb-1 text-sm font-semibold text-zinc-900">Store picker</h2>
       <p className="mb-4 text-xs text-zinc-400">
         The popup shown when a visitor opens the store switcher. It describes
         both stores, so this one editor applies to both sites.
@@ -564,7 +561,9 @@ function StorePickerEditor({
             <ImageField
               label="Card image (optional)"
               value={block.image ?? ""}
-              onChange={(image) => updateBlock(i, { image: image || undefined })}
+              onChange={(image) =>
+                updateBlock(i, { image: image || undefined })
+              }
               hint="Wide banner image shown at the top of the card."
             />
           </div>
@@ -573,13 +572,13 @@ function StorePickerEditor({
 
       <div className="mt-4">
         <span className={labelCls}>Preview</span>
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-          <div className="mb-4 text-center">
-            <p className="font-display text-xl font-semibold text-ink">
-              {content.title}
-            </p>
+        {/* Same panel class as the storefront dropdown, so the preview is the
+            exact size of the real thing. */}
+        <div className={`${STORE_PICKER_PANEL_CLASS} bg-zinc-50`}>
+          <div className="mb-3 px-1 text-center">
+            <p className="text-sm font-semibold text-ink">{content.title}</p>
             {content.subtitle && (
-              <p className="mt-1 text-xs text-[#888]">{content.subtitle}</p>
+              <p className="mt-0.5 text-xs text-[#888]">{content.subtitle}</p>
             )}
           </div>
           <StorePickerCards content={content} activeStore="local" />
