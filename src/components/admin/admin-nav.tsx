@@ -17,9 +17,10 @@ const nav: NavItem[] = [
   { label: "Brands", href: "/admin/brands" },
   { label: "Pre-orders", href: "/admin/preorders" },
   { label: "Orders", href: "/admin/orders" },
+  { label: "Invoices", href: "/admin/invoices" },
   { label: "Feedback", href: "/admin/feedback" },
-  // Not built yet — kept visible but disabled so the roadmap is visible.
-  { label: "Coupons", href: "/admin/coupons", disabled: true },
+  { label: "Coupons", href: "/admin/coupons" },
+  { label: "Ambassadors", href: "/admin/ambassadors" },
   { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },
   { label: "Site settings", href: "/admin/site" },

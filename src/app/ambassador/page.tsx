@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Button } from "@/components/ui/button";
+import { AmbassadorApplyButton } from "@/components/ambassador/apply-dialog";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -31,9 +31,7 @@ export default function AmbassadorPage() {
             ))}
           </ul>
           <div className="mt-8 text-center">
-            <Button href="mailto:theournara@gmail.com">
-              Apply to become an ambassador
-            </Button>
+            <AmbassadorApplyButton />
             <p className="mt-3 text-xs text-zinc-400">
               We’ll get back to you by email.
             </p>
