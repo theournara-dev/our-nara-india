@@ -26,17 +26,9 @@ export interface SectionFormOptions {
     slug: string;
     name: string;
     image: string;
-    hoverImage?: string;
     brandSlug: string;
     brandName: string;
-    categorySlug: string;
     isPreOrder: boolean;
-    preOrderNotice?: string;
-    shortTags: string[];
-    priceCents: number;
-    currency: string;
-    /** ISO timestamp — the storefront sources order by newest first. */
-    createdAt: string;
     summary?: string;
   }[];
   banners: { id: string; title: string; image: string; placement: string }[];
@@ -160,6 +152,161 @@ export function SelectField({
         ))}
       </select>
     </label>
+  );
+}
+
+// ── Storefront link builder ─────────────────────────────────────────────────
+
+/** Kinds of storefront pages a section link can point at. */
+const LINK_KINDS = [
+  { value: "none", label: "No link" },
+  { value: "brand", label: "Brand page" },
+  { value: "category", label: "Category page" },
+  { value: "product", label: "Product page" },
+  { value: "custom", label: "Custom URL" },
+] as const;
+
+type LinkKind = (typeof LINK_KINDS)[number]["value"];
+
+/** Pull a stored href apart into the dropdown chain that produced it. */
+function parseHref(href: string): { kind: LinkKind; target: string } {
+  const match = /^\/(brand|category|products)\/(.+)$/.exec(href);
+  if (match) {
+    return {
+      kind: match[1] === "products" ? "product" : (match[1] as LinkKind),
+      target: match[2],
+    };
+  }
+  return href ? { kind: "custom", target: href } : { kind: "none", target: "" };
+}
+
+/** Rebuild the href from the chain (a custom URL passes through untouched). */
+function buildHref(kind: LinkKind, target: string): string {
+  switch (kind) {
+    case "brand":
+      return target ? `/brand/${target}` : "";
+    case "category":
+      return target ? `/category/${target}` : "";
+    case "product":
+      return target ? `/products/${target}` : "";
+    case "custom":
+      return target.trim();
+    default:
+      return "";
+  }
+}
+
+/**
+ * Builds a storefront link as a chain of dropdowns (page kind → target) and
+ * previews the resulting URL. Anything that doesn't match a known storefront
+ * route is kept as a custom URL so existing sections don't lose their link.
+ */
+export function MoreLinkField({
+  value,
+  onChange,
+  options,
+  label = "More link (optional)",
+  hint,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: SectionFormOptions;
+  label?: string;
+  hint?: string;
+}) {
+  const { kind, target } = parseHref(value ?? "");
+  const targets: { value: string; label: string }[] =
+    kind === "brand"
+      ? options.brands.map((b) => ({ value: b.slug, label: b.name }))
+      : kind === "category"
+        ? options.categories.map((c) => ({ value: c.slug, label: c.name }))
+        : kind === "product"
+          ? options.products.map((p) => ({ value: p.slug, label: p.name }))
+          : [];
+  // A saved target that no longer exists (renamed slug, deleted page) is kept
+  // selectable so the admin can see what the section still points at.
+  const unknownTarget = target && !targets.some((t) => t.value === target);
+  const selectedTarget = kind === "custom" ? "" : target;
+
+  function changeKind(next: LinkKind) {
+    if (next === "custom") {
+      onChange(kind === "custom" ? value : "");
+      return;
+    }
+    const first =
+      next === "brand"
+        ? options.brands[0]?.slug
+        : next === "category"
+          ? options.categories[0]?.slug
+          : next === "product"
+            ? options.products[0]?.slug
+            : "";
+    onChange(buildHref(next, first ?? ""));
+  }
+
+  return (
+    <div>
+      <span className={labelCls}>{label}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          aria-label="Link type"
+          value={kind}
+          onChange={(e) => changeKind(e.target.value as LinkKind)}
+          className={`${inputCls} w-auto`}
+        >
+          {LINK_KINDS.map((k) => (
+            <option key={k.value} value={k.value}>
+              {k.label}
+            </option>
+          ))}
+        </select>
+
+        {kind !== "none" && kind !== "custom" && (
+          <select
+            aria-label="Link target"
+            value={selectedTarget}
+            onChange={(e) => onChange(buildHref(kind, e.target.value))}
+            className={`${inputCls} w-auto`}
+          >
+            <option value="">Choose…</option>
+            {unknownTarget && (
+              <option value={target}>{target} (not found)</option>
+            )}
+            {targets.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {kind === "custom" && (
+          <input
+            value={target}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="/help or https://…"
+            className={`${inputCls} min-w-[220px] flex-1`}
+          />
+        )}
+      </div>
+
+      <div className="mt-1.5 flex items-center gap-2 text-xs">
+        <span className="text-zinc-400">Link:</span>
+        {value ? (
+          <a
+            href={value}
+            target="_blank"
+            rel="noreferrer"
+            className="truncate rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-zinc-600 hover:text-point-600"
+          >
+            {value}
+          </a>
+        ) : (
+          <span className="text-zinc-400">—</span>
+        )}
+      </div>
+      {hint && <span className="mt-1 block text-xs text-zinc-400">{hint}</span>}
+    </div>
   );
 }
 

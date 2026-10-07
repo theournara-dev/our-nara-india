@@ -8,6 +8,7 @@ import {
   BannersField,
   HeroSlidesField,
   InstagramItemsField,
+  MoreLinkField,
   NumberField,
   ProductSourceField,
   SelectField,
@@ -16,9 +17,6 @@ import {
   TripleBannerBoxesField,
   type SectionFormOptions,
 } from "./fields";
-import { ThemeProductCard } from "@/components/theme/product-card";
-import type { ProductCardView } from "@/data/catalog";
-import type { ProductSource } from "@/lib/page-builder/types";
 
 /**
  * Per-type admin forms. Each receives the section's current `config` and an
@@ -37,117 +35,6 @@ function NoSettings() {
     <p className="text-sm text-zinc-400">
       This section has no configurable settings.
     </p>
-  );
-}
-
-/**
- * Resolve the products a "Products" section will render, mirroring the server
- * loader: filter by the chosen source, order newest-first (as the storefront
- * sources do) and cap at `columns × rows` for grids.
- */
-function previewProducts(
-  options: SectionFormOptions,
-  source: ProductSource | undefined,
-  columns: number,
-  rows: number,
-  layout: string,
-): ProductCardView[] {
-  const all = options.products ?? [];
-  let list = all;
-  let take = all.length;
-
-  switch (source?.kind) {
-    case "brand":
-      list = all.filter((p) => p.brandSlug === source.slug);
-      take = source.take;
-      break;
-    case "category":
-      list = all.filter((p) => p.categorySlug === source.slug);
-      take = source.take;
-      break;
-    case "pre-order":
-      list = all.filter((p) => p.isPreOrder);
-      take = source.take;
-      break;
-    case "available-now":
-      list = all.filter((p) => !p.isPreOrder);
-      take = source.take;
-      break;
-    case "slugs": {
-      const order = new Map(source.slugs.map((s, i) => [s, i] as const));
-      list = all
-        .filter((p) => order.has(p.slug))
-        .sort((a, b) => (order.get(a.slug) ?? 0) - (order.get(b.slug) ?? 0));
-      take = list.length;
-      break;
-    }
-    default:
-      // "featured" (and an unset source): newest first.
-      break;
-  }
-
-  if (source?.kind !== "slugs") {
-    list = [...list].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  }
-
-  const limit = layout === "grid" ? columns * rows : take;
-  return list.slice(0, Math.min(limit, take)).map((p) => ({
-    id: p.slug,
-    slug: p.slug,
-    name: p.name,
-    summary: p.summary,
-    shortTags: p.shortTags,
-    priceCents: p.priceCents,
-    currency: p.currency,
-    isPreOrder: p.isPreOrder,
-    preOrderNotice: p.preOrderNotice,
-    images: [p.image, p.hoverImage].filter(Boolean) as string[],
-    hoverImage: p.hoverImage ?? p.image,
-    brand: { slug: p.brandSlug, name: p.brandName },
-  }));
-}
-
-/** Storefront-style item preview for the Products section editor. */
-function ItemPreview({
-  options,
-  source,
-  columns,
-  rows,
-  layout,
-}: {
-  options: SectionFormOptions;
-  source: ProductSource | undefined;
-  columns: number;
-  rows: number;
-  layout: string;
-}) {
-  const items = previewProducts(options, source, columns, rows, layout);
-  const capacity = layout === "grid" ? columns * rows : null;
-
-  return (
-    <div className="border-t border-zinc-100 pt-4">
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-        Item preview
-      </h3>
-      <p className="mb-3 text-xs text-zinc-400">
-        {capacity
-          ? `How each item renders on the storefront — up to ${columns} × ${rows} = ${capacity} products.`
-          : "How each item renders in the storefront carousel."}
-      </p>
-      {items.length === 0 ? (
-        <p className="text-xs text-zinc-400">
-          No products match this source yet.
-        </p>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          {items.map((product) => (
-            <div key={product.slug} className="w-[168px] shrink-0">
-              <ThemeProductCard preview product={product} />
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -246,11 +133,11 @@ export function ProductShowcaseForm({ config, onChange, options }: FormProps) {
             onChange={(rows) => onChange({ ...config, rows })}
             hint="A grid shows at most columns × rows products. The rest stay behind the “more” link."
           />
-          <TextField
-            label="More link (optional)"
+          <MoreLinkField
             value={config.moreHref ?? ""}
             onChange={(moreHref) => onChange({ ...config, moreHref })}
-            placeholder="/category/pre-order"
+            options={options}
+            hint="Pick where the “more” button goes — the URL is built for you."
           />
           <TextField
             label="More label (optional)"
@@ -260,14 +147,6 @@ export function ProductShowcaseForm({ config, onChange, options }: FormProps) {
           />
         </>
       )}
-
-      <ItemPreview
-        options={options}
-        source={config.source}
-        columns={config.columns ?? 5}
-        rows={config.rows ?? 2}
-        layout={layout}
-      />
     </div>
   );
 }
