@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ImageField } from "@/components/admin/image-field";
 import {
   StorePickerCards,
   STORE_PICKER_PANEL_CLASS,
 } from "@/components/layout/store-picker-cards";
+import {
+  UploadQueueProvider,
+  useUploadGate,
+} from "@/components/upload/upload-queue";
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
@@ -52,6 +56,20 @@ export function SiteSettingsForm({
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
 }) {
+  return (
+    <UploadQueueProvider>
+      <SiteSettingsInner initial={initial} initialSwitcher={initialSwitcher} />
+    </UploadQueueProvider>
+  );
+}
+
+function SiteSettingsInner({
+  initial,
+  initialSwitcher,
+}: {
+  initial: Record<SiteVersion, SiteContent>;
+  initialSwitcher: SwitcherContent;
+}) {
   const [tab, setTab] = useState<SiteVersion>("local");
   const [content, setContent] = useState(initial);
   const [switcher, setSwitcher] = useState(initialSwitcher);
@@ -84,7 +102,11 @@ export function SiteSettingsForm({
   }
 
   // The contact and banner panels share one row-level save action, so both send
-  // the full current state of the store (never a stale half).
+  // the full current state of the store (never a stale half). Each save goes
+  // through the gate: any image picked in the panel uploads first, then the
+  // handler re-runs against the state holding its URL.
+  const gate = useUploadGate();
+
   const saveStore = (label: string) =>
     run(label, () =>
       saveSiteContent({
@@ -95,6 +117,14 @@ export function SiteSettingsForm({
         topBanner: current.topBanner,
       }),
     );
+
+  useEffect(() => {
+    gate.registerHandler("contact", () => saveStore("contact"));
+    gate.registerHandler("banner", () => saveStore("banner"));
+    gate.registerHandler("switcher", () =>
+      run("switcher", () => saveStorePicker(switcher)),
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -170,7 +200,7 @@ export function SiteSettingsForm({
         <div className="mt-4">
           <button
             type="button"
-            onClick={() => saveStore("contact")}
+            onClick={() => void gate.save("contact")}
             disabled={saving !== null}
             className={saveBtnCls}
           >
@@ -183,7 +213,7 @@ export function SiteSettingsForm({
       <TopBannerEditor
         blocks={current.topBanner}
         onChange={(topBanner) => patch({ topBanner })}
-        onSave={() => saveStore("banner")}
+        onSave={() => void gate.save("banner")}
         saving={saving === "banner"}
         disabled={saving !== null}
       />
@@ -192,7 +222,7 @@ export function SiteSettingsForm({
       <StorePickerEditor
         content={switcher}
         onChange={setSwitcher}
-        onSave={() => run("switcher", () => saveStorePicker(switcher))}
+        onSave={() => void gate.save("switcher")}
         saving={saving === "switcher"}
         disabled={saving !== null}
       />

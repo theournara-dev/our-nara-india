@@ -1,17 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { isValidImageUrl } from "@/lib/blob";
 import { notify } from "@/lib/toast";
+import { postFile, useUploadQueue } from "@/components/upload/upload-queue";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
 
+const ENDPOINT = "/api/admin/upload";
+
 /**
  * Paste-an-image-URL field with an upload button, used by the block editor.
- * Shares the `/api/admin/upload` endpoint with the product image manager.
+ * Shares the `/api/admin/upload` endpoint with the product image manager, and
+ * like it holds a picked file until the form saves.
  */
 export function ImageUrlInput({
   value,
@@ -22,36 +26,61 @@ export function ImageUrlInput({
   onChange: (v: string) => void;
   label?: string;
 }) {
+  const queue = useUploadQueue();
+  const fieldId = useId();
   const [uploading, setUploading] = useState(false);
+  const [pending, setPending] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const fileRef = useRef<HTMLInputElement>(null);
+  const onChangeRef = useRef(onChange);
+  const pendingRef = useRef(pending);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    pendingRef.current = pending;
+  });
+
+  useEffect(
+    () => () => {
+      const item = pendingRef.current;
+      if (item) queue?.unregister(item.id);
+    },
+    [queue],
+  );
 
   async function onFile(file: File | undefined) {
     if (!file) return;
-    setUploading(true);
-    const toastId = notify.loading("Uploading image…");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload failed");
-      onChange(data.url);
-      notify.success(toastId, "Image uploaded");
-    } catch (err) {
-      notify.error(
-        toastId,
-        "Upload failed",
-        err instanceof Error ? err.message : "Try a different file.",
-      );
-    } finally {
-      setUploading(false);
+    if (!queue) {
+      // Outside a queued form: upload straight away, as before.
+      setUploading(true);
+      const toastId = notify.loading("Uploading image…");
+      try {
+        onChangeRef.current(await postFile(ENDPOINT, file));
+        notify.success(toastId, "Image uploaded");
+      } catch (err) {
+        notify.error(
+          toastId,
+          "Upload failed",
+          err instanceof Error ? err.message : "Try a different file.",
+        );
+      } finally {
+        setUploading(false);
+      }
+      return;
     }
+
+    if (pendingRef.current) queue.unregister(pendingRef.current.id);
+    const id = `${fieldId}-image`;
+    setPending({ id, name: file.name });
+    queue.register({
+      id,
+      file,
+      endpoint: ENDPOINT,
+      apply: (url) => {
+        setPending(null);
+        onChangeRef.current(url);
+      },
+    });
   }
 
   return (
@@ -83,6 +112,11 @@ export function ImageUrlInput({
           e.target.value = "";
         }}
       />
+      {pending && !value && (
+        <span className="mt-1 block text-xs text-zinc-500">
+          {pending.name} · uploads on save
+        </span>
+      )}
       {value && isValidImageUrl(value) && (
         <Image
           src={value}

@@ -39,6 +39,7 @@ import {
   toggleSection,
 } from "@/app/admin/pages/actions";
 import type { SectionFormOptions } from "./fields";
+import { UploadQueueProvider } from "@/components/upload/upload-queue";
 import { AddSectionDialog } from "./add-section-dialog";
 import { SectionEditDialog } from "./section-edit-dialog";
 
@@ -235,17 +236,21 @@ export function PageBuilder({
       </DndContext>
 
       {editing && (
-        <SectionEditDialog
-          section={editing}
-          options={options}
-          onClose={() => setEditing(null)}
-          onSaved={(updated) => {
-            setSections((items) =>
-              items.map((s) => (s.id === updated.id ? updated : s)),
-            );
-            setEditing(null);
-          }}
-        />
+        // The queue is per-dialog: picked-but-unsaved files are dropped when it
+        // closes without saving.
+        <UploadQueueProvider>
+          <SectionEditDialog
+            section={editing}
+            options={options}
+            onClose={() => setEditing(null)}
+            onSaved={(updated) => {
+              setSections((items) =>
+                items.map((s) => (s.id === updated.id ? updated : s)),
+              );
+              setEditing(null);
+            }}
+          />
+        </UploadQueueProvider>
       )}
       {adding && (
         <AddSectionDialog onClose={() => setAdding(false)} onAdd={handleAdd} />

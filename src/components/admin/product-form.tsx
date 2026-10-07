@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
@@ -27,6 +27,10 @@ import {
 } from "@/components/admin/product-reviews-manager";
 import { ProductBlocks } from "@/components/product/blocks/block-renderer";
 import { ImageListField } from "@/components/admin/image-field";
+import {
+  UploadQueueProvider,
+  useUploadGate,
+} from "@/components/upload/upload-queue";
 
 type BrandOption = { id: string; name: string };
 type CategoryOption = { id: string; name: string };
@@ -131,7 +135,19 @@ function parseInfoRowDrafts(value: unknown): InfoRowDraft[] {
     }));
 }
 
-export function ProductForm({
+/**
+ * Create/edit form for a product. Wrapped in an upload queue so images picked
+ * here are only stored once the form is saved.
+ */
+export function ProductForm(props: Props) {
+  return (
+    <UploadQueueProvider>
+      <ProductFormInner {...props} />
+    </UploadQueueProvider>
+  );
+}
+
+function ProductFormInner({
   product,
   brands: initialBrands,
   categories: initialCategories,
@@ -223,6 +239,7 @@ export function ProductForm({
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const gate = useUploadGate();
 
   function onNameChange(value: string) {
     setName(value);
@@ -300,6 +317,12 @@ export function ProductForm({
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Picked-but-unsaved images upload first; the save then runs again with
+    // their URLs in place (see useUploadGate).
+    void gate.save("product");
+  }
+
+  function submitProduct() {
     const input: ProductInput = {
       name: name.trim(),
       slug: slug.trim() || slugify(name),
@@ -386,6 +409,12 @@ export function ProductForm({
       }
     });
   }
+
+  // Re-registered every render so the gate's second pass (after the pending
+  // images upload) closes over the state that now holds their URLs.
+  useEffect(() => {
+    gate.registerHandler("product", submitProduct);
+  });
 
   const activeBlocks = blocks
     .filter((b) => b.isActive)

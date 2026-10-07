@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
+import { useUploadGate } from "@/components/upload/upload-queue";
 import {
   SECTION_TYPE_META_BY_TYPE,
   type PageSectionRow,
@@ -40,6 +41,12 @@ export function SectionEditDialog({
     toDatetimeLocal(section.expiresAt),
   );
   const [pending, startTransition] = useTransition();
+  const gate = useUploadGate();
+
+  /** Upload any picked files first, then save (see useUploadGate). */
+  function requestSave() {
+    void gate.save("section");
+  }
 
   function save() {
     startTransition(async () => {
@@ -64,6 +71,12 @@ export function SectionEditDialog({
     });
   }
 
+  // Re-registered every render so the gate's second pass (after uploads) closes
+  // over the config that now holds the uploaded URLs.
+  useEffect(() => {
+    gate.registerHandler("section", save);
+  });
+
   return (
     <Sheet
       title={meta?.label ?? section.type}
@@ -73,7 +86,7 @@ export function SectionEditDialog({
       footer={
         <div className="flex items-center gap-3">
           <button
-            onClick={save}
+            onClick={requestSave}
             disabled={pending}
             className="h-10 flex-1 rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
           >
@@ -103,11 +116,7 @@ export function SectionEditDialog({
             Settings
           </h3>
           {AdminForm ? (
-            <AdminForm
-              config={config}
-              onChange={setConfig}
-              options={options}
-            />
+            <AdminForm config={config} onChange={setConfig} options={options} />
           ) : (
             <p className="text-sm text-zinc-400">
               No settings for this section.

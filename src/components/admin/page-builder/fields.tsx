@@ -1,10 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
+import {
+  useUploadQueue,
+  checkPickedFile,
+} from "@/components/upload/upload-queue";
 import { notify } from "@/lib/toast";
 import type {
   HeroSlide,
@@ -1062,43 +1066,84 @@ export function VideoField({
   onChange: (v: { videoUrl?: string; videoFile?: string }) => void;
   hint?: string;
 }) {
+  const queue = useUploadQueue();
+  const fieldId = useId();
   const [mode, setMode] = useState<"link" | "upload">(
     value.videoFile ? "upload" : "link",
   );
   const [urlInput, setUrlInput] = useState(value.videoUrl ?? "");
   const [uploading, setUploading] = useState(false);
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const onChangeRef = useRef(onChange);
+  const pendingIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  // A picked-but-unsaved video is dropped when the editor closes.
+  useEffect(
+    () => () => {
+      if (pendingIdRef.current) queue?.unregister(pendingIdRef.current);
+    },
+    [queue],
+  );
 
   async function onFile(file: File | undefined) {
     if (!file) return;
-    setUploading(true);
-    const toastId = notify.loading("Uploading video…");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/upload-video", {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "Upload failed");
-      }
-      onChange({ videoFile: data.url, videoUrl: undefined });
-      notify.success(toastId, "Video uploaded");
-    } catch (err) {
-      notify.error(
-        toastId,
-        "Upload failed",
-        err instanceof Error ? err.message : "Try again.",
-      );
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
+    const problem = checkPickedFile(file, "video");
+    if (problem) {
+      notify.error("Unsupported file", problem);
+      return;
     }
+    if (!queue) {
+      // Outside a queued form: upload straight away, as before.
+      setUploading(true);
+      const toastId = notify.loading("Uploading video…");
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/admin/upload-video", {
+          method: "POST",
+          body: formData,
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          url?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.url)
+          throw new Error(data.error ?? "Upload failed");
+        onChangeRef.current({ videoFile: data.url, videoUrl: undefined });
+        notify.success(toastId, "Video uploaded");
+      } catch (err) {
+        notify.error(
+          toastId,
+          "Upload failed",
+          err instanceof Error ? err.message : "Try again.",
+        );
+      } finally {
+        setUploading(false);
+        if (fileRef.current) fileRef.current.value = "";
+      }
+      return;
+    }
+
+    // Hold the file until the form saves (see upload-queue.tsx).
+    if (pendingIdRef.current) queue.unregister(pendingIdRef.current);
+    const id = `${fieldId}-video`;
+    pendingIdRef.current = id;
+    setPendingName(file.name);
+    queue.register({
+      id,
+      file,
+      endpoint: "/api/admin/upload-video",
+      apply: (url) => {
+        pendingIdRef.current = null;
+        setPendingName(null);
+        onChangeRef.current({ videoFile: url, videoUrl: undefined });
+      },
+    });
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   const tabCls = (active: boolean) =>
@@ -1170,7 +1215,15 @@ export function VideoField({
           >
             {uploading ? "Uploading…" : "Upload video"}
           </button>
-          {value.videoFile && (
+          {pendingName && (
+            <span
+              className="truncate text-xs text-zinc-500"
+              title={`Uploads when you save: ${pendingName}`}
+            >
+              {pendingName} · uploads on save
+            </span>
+          )}
+          {!pendingName && value.videoFile && (
             <span className="truncate text-xs text-zinc-400">Uploaded ✓</span>
           )}
         </div>

@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
 import { ImageField } from "@/components/admin/image-field";
+import {
+  UploadQueueProvider,
+  useUploadGate,
+} from "@/components/upload/upload-queue";
 import {
   createPopup,
   updatePopup,
@@ -35,13 +39,21 @@ type PopupModel = {
   expiresAt: Date | null;
 };
 
-export function PopupForm({
-  popup,
-  backHref,
-}: {
+type PopupFormProps = {
   popup: PopupModel | null;
   backHref: string;
-}) {
+};
+
+/** Create/edit form for a popup; its image uploads when the form is saved. */
+export function PopupForm(props: PopupFormProps) {
+  return (
+    <UploadQueueProvider>
+      <PopupFormInner {...props} />
+    </UploadQueueProvider>
+  );
+}
+
+function PopupFormInner({ popup, backHref }: PopupFormProps) {
   const isEdit = Boolean(popup);
   const [pending, startTransition] = useTransition();
 
@@ -55,9 +67,15 @@ export function PopupForm({
   const [isActive, setIsActive] = useState(popup?.isActive ?? true);
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(popup?.startsAt));
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocal(popup?.expiresAt));
+  const gate = useUploadGate();
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Picked-but-unsaved images upload first, then the save re-runs.
+    void gate.save("popup");
+  }
+
+  function submitPopup() {
     const input: PopupInput = {
       title: title.trim() || undefined,
       body: body.trim() || undefined,
@@ -91,6 +109,12 @@ export function PopupForm({
       }
     });
   }
+
+  // Re-registered every render so the gate's second pass (after uploads) closes
+  // over the state that now holds the uploaded URLs.
+  useEffect(() => {
+    gate.registerHandler("popup", submitPopup);
+  });
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">

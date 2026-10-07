@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
 import { ImageField } from "@/components/admin/image-field";
+import {
+  UploadQueueProvider,
+  useUploadGate,
+} from "@/components/upload/upload-queue";
 import {
   createBanner,
   updateBanner,
@@ -30,13 +34,21 @@ type BannerModel = {
   expiresAt: Date | null;
 };
 
-export function BannerForm({
-  banner,
-  backHref,
-}: {
+type BannerFormProps = {
   banner: BannerModel | null;
   backHref: string;
-}) {
+};
+
+/** Create/edit form for a banner; images upload when the form is saved. */
+export function BannerForm(props: BannerFormProps) {
+  return (
+    <UploadQueueProvider>
+      <BannerFormInner {...props} />
+    </UploadQueueProvider>
+  );
+}
+
+function BannerFormInner({ banner, backHref }: BannerFormProps) {
   const isEdit = Boolean(banner);
   const [pending, startTransition] = useTransition();
 
@@ -52,9 +64,16 @@ export function BannerForm({
   const [expiresAt, setExpiresAt] = useState(
     toDatetimeLocal(banner?.expiresAt),
   );
+  const gate = useUploadGate();
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Picked-but-unsaved images upload first, then the save re-runs (see
+    // useUploadGate).
+    void gate.save("banner");
+  }
+
+  function submitBanner() {
     const input: BannerInput = {
       title: title.trim(),
       placement: placement as BannerInput["placement"],
@@ -88,6 +107,12 @@ export function BannerForm({
       }
     });
   }
+
+  // Re-registered every render so the gate's second pass (after uploads) closes
+  // over the state that now holds the uploaded URLs.
+  useEffect(() => {
+    gate.registerHandler("banner", submitBanner);
+  });
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
