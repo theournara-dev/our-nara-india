@@ -6,6 +6,10 @@ import { getBrands } from "@/data/brands";
 
 export const metadata: Metadata = { title: "Shop by Brand" };
 
+// Brands are managed in the admin, so this list must reflect the database on
+// every request instead of being cached from the first render.
+export const dynamic = "force-dynamic";
+
 export default async function BrandsPage() {
   const brands = await getBrands();
   return (

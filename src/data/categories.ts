@@ -1,6 +1,10 @@
-import { categories } from "@/data/catalog";
+import { db } from "@/lib/db";
 
-/** Static category data layer — DB-free, same shape as before. */
+/**
+ * Category data layer. Categories are managed in the admin (product form →
+ * "+ New"), so the storefront reads them from the database like the rest of the
+ * catalog rather than a baked-in list.
+ */
 
 export interface CategorySummary {
   slug: string;
@@ -8,23 +12,29 @@ export interface CategorySummary {
   sortOrder: number;
 }
 
-const withOrder: CategorySummary[] = categories.map((c, i) => ({
-  slug: c.slug,
-  name: c.name,
-  sortOrder: i,
-}));
-
 export async function getRootCategories(): Promise<CategorySummary[]> {
-  return withOrder;
+  const rows = await db.category.findMany({
+    where: { parentId: null },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { slug: true, name: true, sortOrder: true },
+  });
+  return rows;
 }
 
 export async function getAllCategories(): Promise<CategorySummary[]> {
-  return withOrder;
+  const rows = await db.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { slug: true, name: true, sortOrder: true },
+  });
+  return rows;
 }
 
 export async function getCategoryBySlug(
   slug: string,
 ): Promise<(CategorySummary & { parentId: string | null }) | null> {
-  const found = withOrder.find((c) => c.slug === slug);
-  return found ? { ...found, parentId: null } : null;
+  const category = await db.category.findUnique({
+    where: { slug },
+    select: { slug: true, name: true, sortOrder: true, parentId: true },
+  });
+  return category;
 }

@@ -131,6 +131,9 @@ function revalidateCatalog() {
   revalidatePath("/");
   revalidatePath("/search");
   revalidatePath("/api/popups");
+  // The brands page is built from the same catalog, so a brand created inline
+  // in the product form has to appear there immediately.
+  revalidatePath("/brands");
 }
 
 // ── Actions ─────────────────────────────────────────────────────────────────

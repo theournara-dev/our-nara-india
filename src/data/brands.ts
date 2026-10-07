@@ -1,6 +1,9 @@
-import { brands } from "@/data/catalog";
+import { db } from "@/lib/db";
 
-/** Static brand data layer — DB-free, same shape as before. */
+/**
+ * Brand data layer. Brands are managed in the admin (product form → "+ New"),
+ * so the storefront reads them from the database like the rest of the catalog.
+ */
 
 export interface BrandSummary {
   slug: string;
@@ -11,12 +14,34 @@ export interface BrandSummary {
 }
 
 export async function getBrands(): Promise<BrandSummary[]> {
-  return brands.map((b) => ({ ...b, logoUrl: null, coverUrl: null }));
+  const rows = await db.brand.findMany({
+    where: { isActive: true },
+    orderBy: { name: "asc" },
+    select: {
+      slug: true,
+      name: true,
+      logoUrl: true,
+      coverUrl: true,
+      description: true,
+    },
+  });
+  return rows;
 }
 
 export async function getBrandBySlug(
   slug: string,
 ): Promise<BrandSummary | null> {
-  const brand = brands.find((b) => b.slug === slug);
-  return brand ? { ...brand, logoUrl: null, coverUrl: null } : null;
+  const brand = await db.brand.findUnique({
+    where: { slug },
+    select: {
+      slug: true,
+      name: true,
+      logoUrl: true,
+      coverUrl: true,
+      description: true,
+      isActive: true,
+    },
+  });
+  if (!brand || !brand.isActive) return null;
+  return brand;
 }

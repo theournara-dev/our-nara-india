@@ -229,8 +229,7 @@ export function ProductForm({
     if (!slugTouched) setSlug(slugify(value));
   }
 
-  async function onCreateBrand(e: React.FormEvent) {
-    e.preventDefault();
+  async function onCreateBrand() {
     const name = newBrandName.trim();
     if (!name) return;
     setCreatingBrand(true);
@@ -251,8 +250,7 @@ export function ProductForm({
     }
   }
 
-  async function onCreateCategory(e: React.FormEvent) {
-    e.preventDefault();
+  async function onCreateCategory() {
     const name = newCategoryName.trim();
     if (!name) return;
     setCreatingCategory(true);
@@ -527,22 +525,32 @@ export function ProductForm({
                   </button>
                 </div>
                 {showNewBrand && (
-                  <form onSubmit={onCreateBrand} className="mt-2 flex gap-2">
+                  // Not a <form>: this sits inside the product form, and nested
+                  // forms are invalid HTML — the browser drops the inner one, so
+                  // "Create" used to submit the product form instead.
+                  <div className="mt-2 flex gap-2">
                     <input
                       value={newBrandName}
                       onChange={(e) => setNewBrandName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void onCreateBrand();
+                        }
+                      }}
                       placeholder="Brand name"
                       autoFocus
                       className={inputCls}
                     />
                     <button
-                      type="submit"
-                      disabled={creatingBrand}
+                      type="button"
+                      onClick={() => void onCreateBrand()}
+                      disabled={creatingBrand || !newBrandName.trim()}
                       className="h-9 shrink-0 rounded bg-point-500 px-3 text-xs font-semibold text-white disabled:opacity-60"
                     >
                       {creatingBrand ? "…" : "Create"}
                     </button>
-                  </form>
+                  </div>
                 )}
               </div>
               <div>
@@ -581,22 +589,30 @@ export function ProductForm({
                   </button>
                 </div>
                 {showNewCategory && (
-                  <form onSubmit={onCreateCategory} className="mt-2 flex gap-2">
+                  // See the brand block above: no nested <form> (invalid HTML).
+                  <div className="mt-2 flex gap-2">
                     <input
                       value={newCategoryName}
                       onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void onCreateCategory();
+                        }
+                      }}
                       placeholder="Category name"
                       autoFocus
                       className={inputCls}
                     />
                     <button
-                      type="submit"
-                      disabled={creatingCategory}
+                      type="button"
+                      onClick={() => void onCreateCategory()}
+                      disabled={creatingCategory || !newCategoryName.trim()}
                       className="h-9 shrink-0 rounded bg-point-500 px-3 text-xs font-semibold text-white disabled:opacity-60"
                     >
                       {creatingCategory ? "…" : "Create"}
                     </button>
-                  </form>
+                  </div>
                 )}
               </div>
               <label className="block">
