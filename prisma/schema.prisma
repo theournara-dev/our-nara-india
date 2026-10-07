@@ -375,8 +375,9 @@ model Order {
   items       OrderItem[]
   payments    Payment[]
   shipments   Shipment[]
-  redemptions CouponRedemption[]
+  couponRedemptions CouponRedemption[]
   mileage     MileageLedger[]
+  invoice     Invoice?
 
   @@index([userId])
   @@index([status])
@@ -559,6 +560,15 @@ enum CouponType {
   SHIPPING
 }
 
+/// What a coupon applies to. ALL covers the whole cart; the others narrow it to
+/// a brand, a category, or a set of products.
+enum CouponScope {
+  ALL
+  BRAND
+  CATEGORY
+  PRODUCT
+}
+
 model Coupon {
   id            String     @id @default(cuid())
   code          String     @unique
@@ -571,9 +581,23 @@ model Coupon {
   expiresAt     DateTime?  @map("expires_at")
   isActive      Boolean    @default(true) @map("is_active")
   createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  // ── Display + eligibility ────────────────────────────────────────────────
+  title       String? // shown on the coupon cards/chips
+  description String?
+  scope       CouponScope @default(ALL)
+  brandId     String?     @map("brand_id")
+  categoryId  String?     @map("category_id")
+  productIds  String[]    @default([]) @map("product_ids")
+  // Which storefront the coupon belongs to: "all" | "local" | "global".
+  siteVersion       String  @default("all") @map("site_version")
+  // First-purchase coupons only apply when the shopper has no completed order.
+  firstPurchaseOnly Boolean @default(false) @map("first_purchase_only")
 
   redemptions CouponRedemption[]
 
+  @@index([siteVersion])
   @@map("coupons")
 }
 
@@ -712,6 +736,71 @@ model Popup {
 }
 
 // ---------------------------------------------------------------------------
+// Invoices
+// ---------------------------------------------------------------------------
+// One invoice per order, issued automatically once the order is confirmed.
+// The line items and the "from" block are rendered live from the order and the
+// store's site config, so a change to the order (status, address, refunds) is
+// reflected the next time the invoice is opened; `fromSnapshot` keeps the
+// legal entity that was current when the invoice was issued.
+
+model Invoice {
+  id       String @id @default(cuid())
+  orderId  String @unique @map("order_id")
+  number   String @unique
+  issuedAt DateTime @default(now()) @map("issued_at")
+  fromSnapshot Json? @map("from_snapshot")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([issuedAt])
+  @@map("invoices")
+}
+
+// ---------------------------------------------------------------------------
+// Ambassador programme
+// ---------------------------------------------------------------------------
+
+/// One application submitted from the storefront ambassador page, reviewed by
+/// staff in the admin dashboard.
+enum AmbassadorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AmbassadorApplication {
+  id          String            @id @default(cuid())
+  siteVersion String            @default("local") @map("site_version")
+  status      AmbassadorStatus  @default(PENDING)
+  // Applicant details. Socials and audience are free text: the form asks for
+  // them, nothing validates them.
+  name        String
+  email       String
+  phone       String?
+  country     String?
+  city        String?
+  instagram   String?
+  tiktok      String?
+  youtube     String?
+  blog        String?
+  followers   String?
+  audience    String?
+  motivation  String?
+  experience  String?
+  // Staff notes kept with the decision.
+  note        String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@index([siteVersion])
+  @@index([status])
+  @@map("ambassador_applications")
+}
+
+// ---------------------------------------------------------------------------
 // Page builder: dynamically structured pages
 // ---------------------------------------------------------------------------
 // A Page is an ordered list of typed Sections. Each section's `type` maps to a
@@ -733,10 +822,27 @@ model SiteConfig {
   id      String @id @default(cuid())
   version String @unique // "local" | "global"
 
-  // ── Contact details (footer, policies, order emails) ────────────────────
+  // ── Contact details (footer, policies, order emails) ───────────────
   email   String?
   phone   String?
   address String?
+
+  // ── Shipping ───────────────────────────────────────────────────────
+  // What this store charges for delivery, and the order value above which
+  // delivery is free (null = never free). The storefront shows a progress
+  // bar towards the milestone while it is set.
+  shippingCents         Int  @default(0) @map("shipping_cents")
+  freeShippingOverCents Int? @map("free_shipping_over_cents")
+
+  // ── Invoice "from" block ───────────────────────────────────────────
+  // Printed on this store's invoices; the legal entity differs per store, so
+  // each version keeps its own.
+  invoiceLegalName String? @map("invoice_legal_name")
+  invoiceAddress   String? @map("invoice_address")
+  invoiceEmail     String? @map("invoice_email")
+  invoicePhone     String? @map("invoice_phone")
+  invoiceTaxId     String? @map("invoice_tax_id")
+  invoiceNote      String? @map("invoice_note")
 
   // ── Storefront content ─────────────────────────────────────────────────
   // Rotating strips pinned above the header: an ordered list of blocks, each a
