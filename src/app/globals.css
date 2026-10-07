@@ -84,38 +84,73 @@ body {
 
 /*
  * Shorts Picks — replica of the original theme's `shortsRoll` section.
- * Portrait video cards where only the active slide embeds a player; inactive
- * slides are dimmed and the active one expands (9/14 -> 9/16).
+ * Portrait video cards whose media box is widened past the card (116%, clipped
+ * by the rounded corner overflow), only the active slide embeds a player, and
+ * every non-active slide is dimmed. The title (icon + "Shorts Picks") and the
+ * nav row (progressbar + arrows) are part of the section, as in the original.
  */
+.shorts-section {
+    width: 100%;
+    clear: both;
+    margin: 100px auto 10px;
+}
+.shorts-section .shorts-inner {
+    position: relative;
+    width: 94%;
+    margin: 0 auto;
+    padding: 0 8px;
+    box-sizing: border-box;
+}
+.shorts-section .shorts-inner > .title {
+    margin: 0 auto 8px;
+}
+.shorts-section .shorts-inner > .title h2 {
+    font-size: 1.5rem;
+    color: #222;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 2rem;
+    text-align: center;
+}
+.shorts-section .shorts-inner > .title h2 img {
+    display: inline-block;
+    width: 28px;
+    margin: 0 4px 0 0;
+    vertical-align: middle;
+}
 .shorts-section .swiper-wrapper {
     /* Center the shorter (9/14) slides against the taller active (9/16) one,
        so the active slide stands out both from the top and the bottom. */
     align-items: center;
+    padding: 0 0 10px;
 }
 .shorts-section .swiper-slide {
     position: relative;
-    margin-top: 24px;
+    margin: 24px 0 0;
     box-sizing: border-box;
     transition: transform 0.4s ease, opacity 0.4s ease;
     opacity: 0.5;
 }
-/* Keep the edge (prev/next) cards fully visible, like the hero carousel;
-   only slides further out stay dimmed so they never look "missing". */
-.shorts-section .swiper-slide.swiper-slide-active,
-.shorts-section .swiper-slide.swiper-slide-prev,
-.shorts-section .swiper-slide.swiper-slide-next {
+/* Only the active card is fully opaque; every other card stays dimmed. */
+.shorts-section .swiper-slide.swiper-slide-active {
     opacity: 1;
 }
 .shorts-section .shorts-slide {
     position: relative;
     box-sizing: border-box;
     border: 1px solid #ccc;
+    border-radius: 16px;
+    overflow: hidden;
     background: #fff;
 }
 .shorts-section .video-wrap {
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
+    /* The original widens the media box past the card and clips it, so the
+       poster/player fills the card edge to edge (and its sides are cropped). */
+    width: 116%;
+    right: 8%;
     aspect-ratio: 9 / 14;
     background-size: cover;
     background-position: center;
@@ -141,7 +176,8 @@ body {
     width: 100%;
     display: flex;
     gap: 16px;
-    align-items: center;
+    /* The product thumbnail sits at the top, level with the first text line. */
+    align-items: flex-start;
     box-sizing: border-box;
     background: #fff;
     border-top: 1px solid #ccc;
@@ -160,6 +196,7 @@ body {
 .shorts-section .info-bar .thumb .img_zoom {
     display: block;
     overflow: hidden;
+    border-radius: 16px;
 }
 .shorts-section .info-bar .thumb .img_zoom img {
     transition: transform 0.3s ease-in;
@@ -169,19 +206,23 @@ body {
 }
 .shorts-section .info-text {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    width: 100%;
 }
 .shorts-section .info-text .brand {
+    display: block;
     font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
     color: #000;
+    margin: 2px 0;
 }
 .shorts-section .info-text .name {
+    display: block;
     font-size: 15px;
     font-weight: 400;
-    line-height: 1.5;
+    line-height: 24px;
     color: #000;
+    margin: 0 0 8px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -190,17 +231,62 @@ body {
     color: inherit;
 }
 .shorts-section .info-text .tags {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
     font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
     color: #333;
+    margin: 0 0 8px;
 }
 .shorts-section .info-text .price {
+    display: block;
     font-size: 15px;
     font-weight: bold;
+    line-height: 1.4;
     color: #333;
+}
+/* Progressbar matches the original's 3px track. The
+   `.swiper-pagination-progressbar` part outranks Swiper's own 4px default. */
+.shorts-section .swiper-pagination-shorts,
+.shorts-section .swiper-pagination-shorts.swiper-pagination-progressbar {
+    height: 3px;
+}
+/* Original `.btns`: full-width track + arrows, no gap, 10px side padding. */
+.shorts-section .shorts-nav {
+    margin-top: 0;
+    gap: 0;
+    padding: 0 10px;
+}
+
+/* Tablet sizes from the original theme's media query. */
+@media (max-width: 1199px) {
+    .shorts-section {
+        overflow: hidden;
+    }
+    .shorts-section .shorts-inner {
+        width: 92%;
+    }
+    .shorts-section .info-bar .thumb {
+        width: 60px;
+    }
+    /* Cards bleed past the narrower inner container and are clipped by the
+       section instead of the swiper. */
+    .shorts-section .shorts-swiper {
+        overflow: visible;
+    }
 }
 
 /* Mobile sizes from the original theme's media query. */
 @media (max-width: 767px) {
+    .shorts-section {
+        margin: 60px auto 20px;
+    }
+    .shorts-section .shorts-inner {
+        width: 96%;
+    }
     .shorts-section .info-bar {
         gap: 8px;
         padding: 8px;
@@ -216,6 +302,10 @@ body {
     .shorts-section .info-text .price {
         font-size: 13px;
     }
+    .shorts-section .video-wrap iframe {
+        height: 126%;
+        top: -13%;
+    }
 }
 
 /*
@@ -225,8 +315,13 @@ body {
 .triple-banner {
     position: relative;
     width: 100%;
-    margin: 60px auto 20px;
+    margin: 100px auto 0;
     overflow: hidden;
+}
+@media (max-width: 767px) {
+    .triple-banner {
+        margin: 60px auto 20px;
+    }
 }
 .triple-banner .triple-inner {
     position: relative;
@@ -376,9 +471,14 @@ body {
     position: relative;
     width: 100%;
     max-width: 1560px;
-    margin: 60px auto 20px;
+    margin: 100px 0 0;
     padding: 0 8px;
     box-sizing: border-box;
+}
+@media (max-width: 767px) {
+    .long-banner {
+        margin: 60px auto;
+    }
 }
 .long-banner .long-slide {
     position: relative;
@@ -461,8 +561,13 @@ body {
  */
 .main-review {
     position: relative;
-    margin: 60px auto 20px;
+    margin: 100px auto 0;
     background: #f5f0e9;
+}
+@media (max-width: 767px) {
+    .main-review {
+        margin: 60px auto 20px;
+    }
 }
 .main-review .inner {
     position: relative;

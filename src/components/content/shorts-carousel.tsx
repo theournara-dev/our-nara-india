@@ -29,7 +29,9 @@ const AUTO_ADVANCE_DEBOUNCE_MS = 1500;
 let lastAutoAdvance = 0;
 
 function getShortsSwiper() {
-  const root = document.querySelector<HTMLElement>(".shorts-section");
+  const root = document.querySelector<HTMLElement>(
+    ".shorts-section .shorts-swiper",
+  );
   return root && (root as HTMLElement & { swiper?: Swiper }).swiper;
 }
 
@@ -71,13 +73,16 @@ interface ShortsCarouselProps {
 }
 
 /**
- * "Shorts Picks" reels carousel. Reproduces the original section: a Swiper of
- * portrait video cards where only the active slide embeds its platform player
- * (YouTube Shorts / TikTok / Instagram Reels) and the rest show a poster.
+ * "Shorts Picks" reels carousel. Reproduces the original `shortsRoll` section:
+ * a titled Swiper of rounded portrait video cards whose media box is widened
+ * past the card (clipped by the card's rounded overflow). Only the active slide
+ * embeds its platform player (YouTube Shorts / TikTok / Instagram Reels) and is
+ * fully opaque — every other slide stays dimmed with a poster.
  *
  * The embed is injected into the active slide's `.video-wrap` directly (the
  * same approach as the original site) so it works correctly with Swiper's
- * `loop` clone nodes. A product info bar overlays the bottom of each card.
+ * `loop` clone nodes. A product info bar overlays the bottom of each card and
+ * the nav row (progressbar + arrows) sits below the cards, inside the section.
  */
 export function ShortsCarousel({ picks }: ShortsCarouselProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -168,7 +173,7 @@ export function ShortsCarousel({ picks }: ShortsCarouselProps) {
   if (slides.length === 0) return null;
 
   return (
-    <div>
+    <div className="shorts-section">
       {/* Warm the browser cache for uploaded video files ahead of their slide
           becoming active (platform embeds can't be preloaded this way). */}
       {picks
@@ -176,29 +181,45 @@ export function ShortsCarousel({ picks }: ShortsCarouselProps) {
         .map((p) => (
           <link key={p.id} rel="preload" as="video" href={p.videoFile} />
         ))}
-      <div
-        ref={rootRef}
-        className={`shorts-section swiper transition-opacity duration-300 ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <ul className="swiper-wrapper">
-          {slides.map(({ key, item }) => (
-            <li key={key} className="swiper-slide">
-              <ShortsSlide pick={item} />
-            </li>
-          ))}
-        </ul>
-      </div>
+      <div className="shorts-inner">
+        <div className="title">
+          <h2>
+            <Image
+              src="/upload/goodymall1/en/main/shorts.png"
+              alt=""
+              width={41}
+              height={51}
+              unoptimized
+            />{" "}
+            Shorts Picks
+          </h2>
+        </div>
 
-      <SliderNav
-        paginationRef={paginationRef}
-        paginationClassName="swiper-pagination-shorts"
-        onPrev={() => swiperRef.current?.slidePrev()}
-        onNext={() => swiperRef.current?.slideNext()}
-        canPrev={canPrev}
-        canNext={canNext}
-      />
+        <div
+          ref={rootRef}
+          className={`shorts-swiper swiper transition-opacity duration-300 ${
+            ready ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <ul className="swiper-wrapper">
+            {slides.map(({ key, item }) => (
+              <li key={key} className="swiper-slide">
+                <ShortsSlide pick={item} />
+              </li>
+            ))}
+          </ul>
+
+          <SliderNav
+            paginationRef={paginationRef}
+            paginationClassName="swiper-pagination-shorts"
+            onPrev={() => swiperRef.current?.slidePrev()}
+            onNext={() => swiperRef.current?.slideNext()}
+            canPrev={canPrev}
+            canNext={canNext}
+            className="shorts-nav"
+          />
+        </div>
+      </div>
     </div>
   );
 }
