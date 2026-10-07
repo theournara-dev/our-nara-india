@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { ProductGrid } from "@/components/product/product-grid";
@@ -15,8 +15,10 @@ import { getReviewSummary, getVisibleProductReviews } from "@/data/reviews";
 import { getPublishedProductQA } from "@/data/qa";
 import { priceForVersion } from "@/lib/money";
 import {
+  SITE_VERSION_COOKIE,
   getSiteUrl,
   getVersionConfig,
+  parseSiteVersion,
   resolveRequestSiteVersion,
 } from "@/lib/site-version";
 
@@ -97,10 +99,17 @@ export default async function ProductPage({
     ]);
 
   const relatedOthers = related.filter((p) => p.id !== product.id);
+  // The active version, resolved exactly like checkout: the switcher's cookie
+  // (written client-side) wins, then the request host
+  // (our-nara.co.kr → global). The JSON-LD price must match what this store's
+  // checkout would actually charge.
   const requestHeaders = await headers();
+  const cookieStore = await cookies();
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const siteVersion = resolveRequestSiteVersion(host);
+  const siteVersion =
+    parseSiteVersion(cookieStore.get(SITE_VERSION_COOKIE)?.value) ??
+    resolveRequestSiteVersion(host);
   const siteConfig = getVersionConfig(siteVersion);
   const priceCents = priceForVersion(
     product.priceCents,

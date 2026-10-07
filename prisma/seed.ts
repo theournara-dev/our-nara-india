@@ -294,7 +294,6 @@ async function main() {
         summary: product.summary,
         shortTags: product.shortTags,
         priceCents: product.priceCents,
-        globalPriceCents: Math.max(1, Math.round(product.priceCents / 83)),
         currency: "INR",
         isPreOrder: product.isPreOrder,
         preOrderNotice: product.preOrderNotice,
@@ -304,7 +303,10 @@ async function main() {
       update: {
         name: product.name,
         priceCents: product.priceCents,
-        globalPriceCents: Math.max(1, Math.round(product.priceCents / 83)),
+        // The old /83 USD backfill must not be charged as INR now that the
+        // global store prices from this column. Reset to unset so the global
+        // store falls back to the local price until an admin sets a real one.
+        globalPriceCents: null,
         isPreOrder: product.isPreOrder,
       },
     });

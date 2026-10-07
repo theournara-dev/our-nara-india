@@ -48,6 +48,11 @@ export interface ProductDetail extends ProductCardView {
     stock: number;
     /** Variant price override (falls back to the product price when unset). */
     priceCents?: number;
+    /**
+     * International-store variant price override, in INR like the local one.
+     * Falls back to the product's global price (then the local chain) when unset.
+     */
+    globalPriceCents?: number;
     /** Option images: the first one leads the gallery for this option. */
     images: string[];
     /** Swatch colour (hex) for the option chip. */
@@ -170,6 +175,7 @@ function toDetail(p: ProductRow): ProductDetail {
       sku: v.sku,
       stock: v.stock,
       priceCents: v.priceCents ?? undefined,
+      globalPriceCents: v.globalPriceCents ?? undefined,
       images: v.images,
       color: v.color ?? undefined,
     })),

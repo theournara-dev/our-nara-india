@@ -245,9 +245,18 @@ export default async function AdminProductsPage({
                       {p.category.name}
                     </td>
                     <td className="px-2 py-1.5 text-sm text-zinc-900">
-                      {formatMoney(p.priceCents, p.currency, {
-                        convert: false,
-                      })}
+                      <div>
+                        {formatMoney(p.priceCents, p.currency, {
+                          convert: false,
+                        })}
+                      </div>
+                      {/* Second line so admins can spot products without a
+                          dedicated international price at a glance. */}
+                      <div className="text-[11px] text-zinc-400">
+                        {p.globalPriceCents != null
+                          ? `Intl ${formatMoney(p.globalPriceCents, p.currency, { convert: false })}`
+                          : "Intl —"}
+                      </div>
                     </td>
                     <td className="px-2 py-1.5 text-sm text-zinc-600">
                       {stock}

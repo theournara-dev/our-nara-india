@@ -34,7 +34,7 @@ export interface StaticProduct {
   description?: string;
   priceCents: number;
   compareAtCents?: number;
-  /** Legacy global USD price in minor units. No longer charged — both stores price in INR. */
+  /** International-store price in minor units (INR). Unset falls back to the local price. */
   globalPriceCents?: number;
   globalCompareAtCents?: number;
   currency: string;
@@ -55,7 +55,10 @@ export interface ProductCardView {
   shortTags: string[];
   priceCents: number;
   compareAtCents?: number;
-  /** Legacy global USD price in minor units. No longer charged — both stores price in INR. */
+  /**
+   * International-store price in minor units (INR, like `priceCents`). The
+   * global store charges this amount; unset falls back to the local price.
+   */
   globalPriceCents?: number;
   globalCompareAtCents?: number;
   currency: string;

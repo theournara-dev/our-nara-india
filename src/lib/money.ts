@@ -74,18 +74,16 @@ export function formatMoney(
 /**
  * Pick the price for a product for a given store version.
  *
- * Both stores now price in INR (Razorpay only settles INR), so the stored
- * (local) price is authoritative for every version. The `globalCents` argument
- * is legacy USD data that must NOT be charged any more — it is accepted only so
- * existing call sites keep compiling, and is intentionally ignored. `version`
- * is likewise reserved for future per-version pricing.
+ * The two stores charge their own amounts, both in INR (Razorpay only settles
+ * INR): the local (India) store charges `localCents`, the global
+ * (International) store charges `globalCents` — a real INR amount, not a
+ * converted legacy value. The global amount is optional: when unset
+ * (null/undefined) the global store falls back to the local price.
  */
 export function priceForVersion(
   localCents: number,
   globalCents: number | null | undefined,
   version: SiteVersion = getActiveVersion(),
 ): number {
-  void globalCents;
-  void version;
-  return localCents;
+  return version === "global" && globalCents != null ? globalCents : localCents;
 }

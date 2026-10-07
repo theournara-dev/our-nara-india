@@ -56,6 +56,8 @@ export default async function SearchPage({
             shortTags: p.shortTags,
             priceCents: p.priceCents,
             compareAtCents: p.compareAtCents ?? undefined,
+            globalPriceCents: p.globalPriceCents ?? undefined,
+            globalCompareAtCents: p.globalCompareAtCents ?? undefined,
             currency: p.currency,
             isPreOrder: p.isPreOrder,
             preOrderNotice: p.preOrderNotice ?? undefined,

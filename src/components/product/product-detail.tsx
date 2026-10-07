@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
@@ -43,7 +43,7 @@ export function ProductDetail({
   questions,
   canInteract,
 }: ProductDetailProps) {
-  const { config } = useSiteVersion();
+  const { version, config } = useSiteVersion();
   const { openQuickPurchase } = useCartSheet();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
@@ -78,11 +78,23 @@ export function ProductDetail({
   }
   const images = galleryImages;
   // A variant price overrides the product price (and re-bases the discount).
-  const displayPrice = selectedVariant?.priceCents ?? product.priceCents;
+  // The override only engages when the variant has its own local price —
+  // createOrder resolves the same way, so the displayed price and the amount
+  // charged cannot drift apart. The global amount chains variant → product and
+  // falls back to the local chain when unset (see priceForVersion).
+  const variantOverride =
+    selectedVariant?.priceCents != null ? selectedVariant : undefined;
+  const localPrice = variantOverride?.priceCents ?? product.priceCents;
+  const globalPrice = variantOverride
+    ? (variantOverride.globalPriceCents ?? product.globalPriceCents)
+    : product.globalPriceCents;
+  const displayPrice = priceForVersion(localPrice, globalPrice, version);
+  const compareAt =
+    version === "global"
+      ? (product.globalCompareAtCents ?? product.compareAtCents)
+      : product.compareAtCents;
   const compareAtCents =
-    product.compareAtCents != null && product.compareAtCents > displayPrice
-      ? product.compareAtCents
-      : undefined;
+    compareAt != null && compareAt > displayPrice ? compareAt : undefined;
   const needsOption = product.variants.length > 0 && !option;
   // Option chips grouped by their label ("Shade", "Size"), kept in admin order.
   const optionGroups = product.variants.reduce<
@@ -105,8 +117,9 @@ export function ProductDetail({
 
   function handleBuyNow() {
     // The chosen option's label travels with the line so the cart can show it.
+    // The line stores BOTH stores' prices, so switching store re-prices it.
     addProductToCart(
-      { ...product, priceCents: displayPrice },
+      { ...product, priceCents: localPrice, globalPriceCents: globalPrice },
       qty,
       option || undefined,
       selectedVariant

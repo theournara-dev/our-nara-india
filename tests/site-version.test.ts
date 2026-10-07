@@ -21,10 +21,13 @@ test("the global domain resolves to the INR global store", () => {
   assert.equal(getVersionConfig(version).currency, "INR");
 });
 
-test("priceForVersion ignores legacy global USD prices", () => {
-  assert.equal(priceForVersion(180000, 2169, "global"), 180000);
-  assert.equal(priceForVersion(180000, 2169, "local"), 180000);
+test("priceForVersion charges each store its own amount", () => {
+  assert.equal(priceForVersion(180000, 200000, "global"), 200000);
+  assert.equal(priceForVersion(180000, 200000, "local"), 180000);
+  // An unset international price falls back to the local amount.
   assert.equal(priceForVersion(180000, null, "global"), 180000);
+  assert.equal(priceForVersion(180000, undefined, "global"), 180000);
+  assert.equal(priceForVersion(180000, undefined, "local"), 180000);
 });
 
 test("versionForOrder prefers the explicit siteVersion", () => {

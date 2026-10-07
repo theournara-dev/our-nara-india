@@ -27,6 +27,8 @@ const variantInput = z.object({
   optionValue: safeText(120).optional(),
   sku: safeText(80).optional(),
   priceCents: z.coerce.number().int().nonnegative().optional(),
+  /** International-store price; unset = fall back to the variant/product local price. */
+  globalPriceCents: z.coerce.number().int().nonnegative().optional(),
   stock: z.coerce.number().int().nonnegative().default(0),
   // Option images (the first one leads the gallery while selected) + swatch colour.
   images: z.array(safeText(500)).default([]),
@@ -51,6 +53,9 @@ const productInput = z.object({
   description: safeMultiline(50000).optional(),
   priceCents: z.coerce.number().int().nonnegative("Price must be 0 or more"),
   compareAtCents: z.coerce.number().int().nonnegative().optional(),
+  /** International-store price; unset = fall back to the local price. */
+  globalPriceCents: z.coerce.number().int().nonnegative().optional(),
+  globalCompareAtCents: z.coerce.number().int().nonnegative().optional(),
   /** Product-level stock for variantless products; null = untracked. */
   stock: z.coerce.number().int().nonnegative().nullable().optional(),
   currency: z.string().default("INR"),
@@ -150,6 +155,8 @@ export async function createProduct(input: ProductInput) {
       description: data.description || null,
       priceCents: data.priceCents,
       compareAtCents: data.compareAtCents ?? null,
+      globalPriceCents: data.globalPriceCents ?? null,
+      globalCompareAtCents: data.globalCompareAtCents ?? null,
       stock: data.stock ?? null,
       currency: data.currency,
       isPreOrder: data.isPreOrder,
@@ -165,6 +172,7 @@ export async function createProduct(input: ProductInput) {
           optionValue: resolved[i].optionValue,
           sku: resolved[i].sku,
           priceCents: v.priceCents ?? null,
+          globalPriceCents: v.globalPriceCents ?? null,
           images: v.images,
           color: v.color || null,
           sortOrder: i,
@@ -235,6 +243,8 @@ export async function updateProduct(id: string, input: ProductInput) {
           description: data.description || null,
           priceCents: data.priceCents,
           compareAtCents: data.compareAtCents ?? null,
+          globalPriceCents: data.globalPriceCents ?? null,
+          globalCompareAtCents: data.globalCompareAtCents ?? null,
           stock: data.stock ?? null,
           currency: data.currency,
           isPreOrder: data.isPreOrder,
@@ -257,6 +267,7 @@ export async function updateProduct(id: string, input: ProductInput) {
           optionValue: resolved[i].optionValue,
           sku: resolved[i].sku,
           priceCents: v.priceCents ?? null,
+          globalPriceCents: v.globalPriceCents ?? null,
           images: v.images,
           color: v.color || null,
           sortOrder: i,

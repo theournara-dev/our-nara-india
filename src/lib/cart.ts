@@ -1,5 +1,9 @@
 import { useSyncExternalStore } from "react";
-import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
+import {
+  getActiveVersion,
+  getVersionConfig,
+  type SiteVersion,
+} from "@/lib/site-version";
 import { priceForVersion } from "@/lib/money";
 
 /**
@@ -16,7 +20,14 @@ export type CartItem = {
   slug: string;
   name: string;
   image: string;
+  /** Local (India) store price in minor units. */
   priceCents: number;
+  /**
+   * International-store price in minor units. Stored alongside the local price
+   * so switching store can re-price existing lines; unset falls back to
+   * `priceCents`. Resolve through `itemPriceForVersion`, never read directly.
+   */
+  globalPriceCents?: number;
   currency: string;
   qty: number;
   /** Selected variant id (checkout maps this to the order line's variant). */
@@ -91,14 +102,27 @@ export function getCart(): CartItem[] {
 }
 
 /**
+ * Resolve a cart line's unit price for a store version. Cart lines capture
+ * BOTH stores' amounts at add time (the product data may not be loaded where
+ * the cart is shown), so every consumer prices lines through this instead of
+ * reading `priceCents` directly — switching store re-prices the whole cart.
+ */
+export function itemPriceForVersion(
+  item: Pick<CartItem, "priceCents" | "globalPriceCents">,
+  version: SiteVersion = getActiveVersion(),
+): number {
+  return priceForVersion(item.priceCents, item.globalPriceCents, version);
+}
+
+/**
  * Build a CartItem from a catalog product and add it to the cart. Accepts any
  * object with the fields the cart needs, so product cards and the product
  * detail page share one code path.
  *
- * The stored price/currency are resolved for the ACTIVE site version at add
- * time. Both stores price in INR (Razorpay only settles INR), so the stored
- * `priceCents` is used as-is and the cart total always matches the version the
- * customer is shopping in.
+ * Both stores' prices are stored on the line (local + optional global) so the
+ * cart can re-price itself when the shopper switches store — checkout resolves
+ * the line with the same `priceForVersion` chain and must see the same numbers.
+ * The currency is the active store's; both stores price in INR.
  */
 export function addProductToCart(
   product: {
@@ -107,20 +131,21 @@ export function addProductToCart(
     name: string;
     images: string[];
     priceCents: number;
+    globalPriceCents?: number | null;
     currency: string;
   },
   qty = 1,
   option?: string,
   optionLabel?: string,
 ): CartItem[] {
-  const version = getActiveVersion();
   return addToCart({
     productId: product.id,
     slug: product.slug,
     name: product.name,
     image: product.images[0] ?? "",
-    priceCents: priceForVersion(product.priceCents, undefined, version),
-    currency: getVersionConfig(version).currency,
+    priceCents: product.priceCents,
+    globalPriceCents: product.globalPriceCents ?? undefined,
+    currency: getVersionConfig(getActiveVersion()).currency,
     qty,
     option,
     optionLabel,

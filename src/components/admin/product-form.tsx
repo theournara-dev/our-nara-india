@@ -37,6 +37,7 @@ type VariantDraft = {
   optionValue: string;
   sku: string;
   price: string; // rupees, optional
+  globalPrice: string; // rupees, optional — international store override
   stock: number;
   isActive: boolean;
   /** Option images — the first one leads the gallery while this option is picked. */
@@ -58,6 +59,8 @@ type Props = {
     description: string | null;
     priceCents: number;
     compareAtCents: number | null;
+    globalPriceCents: number | null;
+    globalCompareAtCents: number | null;
     /** Product-level stock for variantless products; null = untracked. */
     stock: number | null;
     currency: string;
@@ -73,6 +76,7 @@ type Props = {
       optionValue: string;
       sku: string;
       priceCents: number | null;
+      globalPriceCents: number | null;
       stock: number;
       isActive: boolean;
       images: string[];
@@ -154,6 +158,12 @@ export function ProductForm({
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(toRupees(product?.priceCents));
   const [compareAt, setCompareAt] = useState(toRupees(product?.compareAtCents));
+  const [globalPrice, setGlobalPrice] = useState(
+    toRupees(product?.globalPriceCents),
+  );
+  const [globalCompareAt, setGlobalCompareAt] = useState(
+    toRupees(product?.globalCompareAtCents),
+  );
   // Empty string = untracked (null). Only used by products without variants.
   const [stock, setStock] = useState(
     product?.stock != null ? String(product.stock) : "",
@@ -175,6 +185,7 @@ export function ProductForm({
       optionValue: v.optionValue,
       sku: v.sku,
       price: toRupees(v.priceCents),
+      globalPrice: toRupees(v.globalPriceCents),
       stock: v.stock,
       isActive: v.isActive,
       images: v.images ?? [],
@@ -276,6 +287,7 @@ export function ProductForm({
         optionValue: "",
         sku: "",
         price: "",
+        globalPrice: "",
         stock: 0,
         isActive: true,
         images: [],
@@ -305,6 +317,12 @@ export function ProductForm({
       compareAtCents: compareAt
         ? Math.round((parseFloat(compareAt) || 0) * 100)
         : undefined,
+      globalPriceCents: globalPrice
+        ? Math.round((parseFloat(globalPrice) || 0) * 100)
+        : undefined,
+      globalCompareAtCents: globalCompareAt
+        ? Math.round((parseFloat(globalCompareAt) || 0) * 100)
+        : undefined,
       stock:
         stock.trim() === ""
           ? null
@@ -323,6 +341,9 @@ export function ProductForm({
         sku: v.sku.trim() || undefined,
         priceCents: v.price
           ? Math.round((parseFloat(v.price) || 0) * 100)
+          : undefined,
+        globalPriceCents: v.globalPrice
+          ? Math.round((parseFloat(v.globalPrice) || 0) * 100)
           : undefined,
         stock: v.stock,
         isActive: v.isActive,
@@ -613,7 +634,9 @@ export function ProductForm({
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className={labelCls}>Price ({CURRENCY_SYMBOL})</span>
+                <span className={labelCls}>
+                  Price ({CURRENCY_SYMBOL}, India)
+                </span>
                 <input
                   type="number"
                   min="0"
@@ -626,7 +649,7 @@ export function ProductForm({
               </label>
               <label className="block">
                 <span className={labelCls}>
-                  Compare-at price ({CURRENCY_SYMBOL}, optional)
+                  Compare-at price ({CURRENCY_SYMBOL}, India, optional)
                 </span>
                 <input
                   type="number"
@@ -634,6 +657,36 @@ export function ProductForm({
                   step="0.01"
                   value={compareAt}
                   onChange={(e) => setCompareAt(e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>
+                  Price ({CURRENCY_SYMBOL}, International)
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={globalPrice}
+                  onChange={(e) => setGlobalPrice(e.target.value)}
+                  className={inputCls}
+                />
+                <span className="mt-1 block text-xs text-zinc-400">
+                  Charged on the international store (KDrop). Leave empty to
+                  charge the India price.
+                </span>
+              </label>
+              <label className="block">
+                <span className={labelCls}>
+                  Compare-at price ({CURRENCY_SYMBOL}, International, optional)
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={globalCompareAt}
+                  onChange={(e) => setGlobalCompareAt(e.target.value)}
                   className={inputCls}
                 />
               </label>
@@ -757,6 +810,21 @@ export function ProductForm({
                           value={v.price}
                           onChange={(e) =>
                             updateVariant(i, { price: e.target.value })
+                          }
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelCls}>
+                          Intl price ({CURRENCY_SYMBOL}, optional)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={v.globalPrice}
+                          onChange={(e) =>
+                            updateVariant(i, { globalPrice: e.target.value })
                           }
                           className={inputCls}
                         />
