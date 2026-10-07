@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { FeatureToggle } from "@/components/admin/feature-toggle";
@@ -15,6 +16,8 @@ export interface AdminReviewRow {
   authorName: string;
   createdAt: string;
   isVisible: boolean;
+  /** Customer photos attached to the review. */
+  images: string[];
 }
 
 /**
@@ -92,6 +95,28 @@ export function ProductReviewsManager({
                     <p className="mt-0.5 line-clamp-3 text-sm text-zinc-600">
                       {r.body}
                     </p>
+                  )}
+                  {r.images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {r.images.map((src) => (
+                        <a
+                          key={src}
+                          href={src}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Open photo"
+                        >
+                          <Image
+                            src={src}
+                            alt={`Photo by ${r.authorName}`}
+                            width={56}
+                            height={56}
+                            unoptimized
+                            className="h-14 w-14 rounded border border-zinc-200 object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">

@@ -25,6 +25,15 @@ export function isAllowedImageSize(size: number): boolean {
  * MIME type and size before uploading.
  */
 export async function uploadImage(file: File): Promise<string> {
+  return putImage("products", file);
+}
+
+/**
+ * Shared upload path for the three image pickers (products, ID documents,
+ * review photos): one place for the type/size gate and the blob options, so a
+ * new prefix cannot silently skip validation.
+ */
+async function putImage(prefix: string, file: File): Promise<string> {
   if (!isAllowedImageType(file.type)) {
     throw new Error("Unsupported file type. Use PNG, JPEG, GIF, WebP or AVIF.");
   }
@@ -32,7 +41,7 @@ export async function uploadImage(file: File): Promise<string> {
     throw new Error("Image is too large. Maximum size is 5MB.");
   }
   const { url } = await put(
-    `products/${crypto.randomUUID()}-${file.name}`,
+    `${prefix}/${crypto.randomUUID()}-${file.name}`,
     file,
     {
       access: "public",
@@ -48,14 +57,8 @@ export async function uploadImage(file: File): Promise<string> {
 /** Public hostname suffix of a Vercel Blob store. */
 const PUBLIC_BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
 
-/**
- * Validate an order's ID-document reference server-side. Only our own uploads
- * are accepted — an https URL on a public Vercel Blob host under the `ids/`
- * prefix, or a local public asset under `/upload/` — so a forged or arbitrary
- * URL can never be stored on an order.
- */
-export function isValidIdDocumentUrl(value: string): boolean {
-  if (value.startsWith("/upload/")) return true;
+/** True when `value` is one of our own uploads living under `prefix`. */
+function isOurBlobUrl(value: string, prefix: string): boolean {
   let url: URL;
   try {
     url = new URL(value);
@@ -66,27 +69,34 @@ export function isValidIdDocumentUrl(value: string): boolean {
   if (url.username || url.password) return false;
   if (!url.hostname.toLowerCase().endsWith(PUBLIC_BLOB_HOST_SUFFIX))
     return false;
-  return url.pathname.startsWith("/ids/");
+  return url.pathname.startsWith(`/${prefix}/`);
 }
 
 /**
- * Upload a customer ID photo for a global order and return its public URL.
- * Strict MIME + size limits, but unlike the admin uploader this is the only
- * gate: the caller rate-limits the request instead of requiring a session.
+ * Validate an order's ID-document reference server-side. Only our own uploads
+ * are accepted — an https URL on a public Vercel Blob host under the `ids/`
+ * prefix, or a local public asset under `/upload/` — so a forged or arbitrary
+ * URL can never be stored on an order.
  */
+export function isValidIdDocumentUrl(value: string): boolean {
+  return value.startsWith("/upload/") || isOurBlobUrl(value, "ids");
+}
+
+/** Store a customer ID photo for a global order; the caller rate-limits it. */
 export async function uploadIdDocument(file: File): Promise<string> {
-  if (!isAllowedImageType(file.type)) {
-    throw new Error("Unsupported file type. Use PNG, JPEG, GIF, WebP or AVIF.");
-  }
-  if (!isAllowedImageSize(file.size)) {
-    throw new Error("Image is too large. Maximum size is 5MB.");
-  }
-  const { url } = await put(`ids/${crypto.randomUUID()}-${file.name}`, file, {
-    access: "public",
-    addRandomSuffix: true,
-    token: process.env.BLOB_READ_WRITE_TOKEN,
-  });
-  return url;
+  return putImage("ids", file);
+}
+
+// ── Review photos ───────────────────────────────────────────────────────────
+
+/** Customer review photos must come from our own `reviews/` uploads. */
+export function isValidReviewImageUrl(value: string): boolean {
+  return isOurBlobUrl(value, "reviews");
+}
+
+/** Store one review photo (signed-in customers only; callers rate-limit). */
+export async function uploadReviewImage(file: File): Promise<string> {
+  return putImage("reviews", file);
 }
 
 // ── Video uploads (shorts) ──────────────────────────────────────────────────

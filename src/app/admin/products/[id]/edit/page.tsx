@@ -61,6 +61,7 @@ export default async function EditProductPage({
     authorName: r.user?.name?.trim() || r.user?.email || "Customer",
     createdAt: r.createdAt.toISOString(),
     isVisible: r.isVisible,
+    images: r.images,
   }));
 
   return (

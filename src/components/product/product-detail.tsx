@@ -436,6 +436,28 @@ export function ProductDetail({
                       <p className="mt-1 whitespace-pre-line text-sm text-[#555]">
                         {r.body}
                       </p>
+                      {r.images.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {r.images.map((src) => (
+                            <a
+                              key={src}
+                              href={src}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Open photo"
+                            >
+                              <Image
+                                src={src}
+                                alt={`Review photo by ${r.authorName}`}
+                                width={80}
+                                height={80}
+                                unoptimized
+                                className="h-20 w-20 rounded-lg border border-[#e9e9e9] object-cover"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
                       <p className="mt-2 text-xs text-[#888]">
                         — {r.authorName}
                         {r.isVerified ? " · Verified purchase" : ""}

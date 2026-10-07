@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { isValidReviewImageUrl } from "@/lib/blob";
 import { db } from "@/lib/db";
+import { MAX_REVIEW_IMAGES } from "@/lib/reviews";
 import { parseInput, safeMultiline, safeText } from "@/lib/validation";
 
 /**
@@ -20,6 +22,15 @@ const reviewInput = z.object({
     min: 5,
     message: "Please write a short review.",
   }),
+  // Photo URLs are re-validated: only our own `reviews/` uploads are accepted,
+  // so a review can't embed arbitrary remote images.
+  images: z
+    .array(z.string().max(500))
+    .max(MAX_REVIEW_IMAGES, `Up to ${MAX_REVIEW_IMAGES} photos per review`)
+    .default([])
+    .refine((urls) => urls.every(isValidReviewImageUrl), {
+      message: "One of the photos could not be verified — please re-upload it.",
+    }),
 });
 
 export type ReviewInput = z.infer<typeof reviewInput>;
@@ -35,7 +46,7 @@ export async function submitReview(input: ReviewInput) {
       rating: data.rating,
       title: data.title || null,
       body: data.body,
-      images: [],
+      images: data.images,
       isVerified: false,
       status: "APPROVED",
       isVisible: true,
