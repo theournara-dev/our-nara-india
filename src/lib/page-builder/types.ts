@@ -120,6 +120,9 @@ export const sectionConfigSchemas = {
     source: productSourceSchema,
     layout: z.enum(["grid", "carousel"]).default("grid"),
     columns: z.number().int().min(1).max(6).default(5),
+    // Grid layout only: how many rows may show before the "more" link takes
+    // over. The loader caps the rendered items at `columns * rows`.
+    rows: z.number().int().min(1).max(10).default(2),
     moreHref: z.string().optional(),
     moreLabel: z.string().optional(),
   }),
@@ -176,6 +179,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
       source: { kind: "featured", take: 8 },
       layout: "grid",
       columns: 5,
+      rows: 2,
     }),
   },
   {

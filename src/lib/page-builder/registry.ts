@@ -77,15 +77,23 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
         source: ProductSource;
         layout?: "grid" | "carousel";
         columns?: number;
+        rows?: number;
         moreHref?: string;
         moreLabel?: string;
       };
+      const layout = c.layout ?? "grid";
+      const columns = c.columns ?? 5;
+      const rows = c.rows ?? 2;
+      const products = await loadProducts(c.source);
       return {
         sub: c.sub,
         title: c.title,
-        products: await loadProducts(c.source),
-        layout: c.layout ?? "grid",
-        columns: c.columns ?? 5,
+        // A grid never renders more than `columns × rows` items; the rest stay
+        // reachable through the "more" link.
+        products:
+          layout === "grid" ? products.slice(0, columns * rows) : products,
+        layout,
+        columns,
         moreHref: c.moreHref,
         moreLabel: c.moreLabel,
       };

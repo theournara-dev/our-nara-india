@@ -26,9 +26,17 @@ export interface SectionFormOptions {
     slug: string;
     name: string;
     image: string;
+    hoverImage?: string;
     brandSlug: string;
     brandName: string;
+    categorySlug: string;
     isPreOrder: boolean;
+    preOrderNotice?: string;
+    shortTags: string[];
+    priceCents: number;
+    currency: string;
+    /** ISO timestamp — the storefront sources order by newest first. */
+    createdAt: string;
     summary?: string;
   }[];
   banners: { id: string; title: string; image: string; placement: string }[];
@@ -101,12 +109,14 @@ export function NumberField({
   onChange,
   min = 1,
   max = 50,
+  hint,
 }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   min?: number;
   max?: number;
+  hint?: string;
 }) {
   return (
     <label className="block">
@@ -119,6 +129,7 @@ export function NumberField({
         onChange={(e) => onChange(Number(e.target.value))}
         className={inputCls}
       />
+      {hint && <span className="mt-1 block text-xs text-zinc-400">{hint}</span>}
     </label>
   );
 }
