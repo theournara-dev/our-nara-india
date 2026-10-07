@@ -42,7 +42,7 @@ export default async function BrandPage({
   if (!brand) notFound();
 
   return (
-    <Container className="py-8">
+    <Container wide className="py-8">
       {/* Breadcrumb, matching the original .path */}
       <nav className="mb-6 text-xs text-[#888]">
         <ol className="flex flex-wrap items-center gap-1.5">

@@ -1,4 +1,4 @@
-import { ProductCard } from "@/components/product/product-card";
+import { ThemeProductCard } from "@/components/theme/product-card";
 import type { ProductCard as ProductCardType } from "@/data/products";
 
 interface ProductGridProps {
@@ -8,7 +8,10 @@ interface ProductGridProps {
   columns?: 3 | 4 | 5;
 }
 
-/** Responsive grid of product cards. */
+/**
+ * Responsive grid of product cards. Uses the same item rendering as the home
+ * page sections so listings match the original storefront.
+ */
 export function ProductGrid({
   products,
   className,
@@ -32,7 +35,7 @@ export function ProductGrid({
   return (
     <div className={`grid gap-x-4 gap-y-8 ${cols} ${className ?? ""}`}>
       {products.map((product, index) => (
-        <ProductCard
+        <ThemeProductCard
           key={product.id}
           product={product}
           priority={index === 0}

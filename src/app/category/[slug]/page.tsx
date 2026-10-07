@@ -48,7 +48,7 @@ export default async function CategoryPage({
     : products;
 
   return (
-    <Container className="py-8">
+    <Container wide className="py-8">
       {/* Breadcrumb — right-aligned, matching the original */}
       <nav className="mb-6 flex justify-end text-xs text-[#888]">
         <ol className="flex flex-wrap items-center gap-1.5">
