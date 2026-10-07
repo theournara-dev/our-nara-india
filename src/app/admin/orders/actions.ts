@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { DEFAULT_PRODUCT_WEIGHT_GRAMS, fetchShipment } from "@/lib/delhivery";
 import { createShipment as apiCreateShipment } from "@/lib/delhivery";
 import { db } from "@/lib/db";
+import { issueInvoiceForOrder } from "@/lib/invoices";
 import { getApprovalHistory, type ApprovalHistoryRow } from "./approval-data";
 import {
   applyShipmentBackout,
@@ -527,4 +528,22 @@ export async function syncShipment(
       message: err instanceof Error ? err.message : "Unknown error",
     };
   }
+}
+
+/**
+ * Issue the invoice for an order that predates automatic issuance. Idempotent
+ * — `issueInvoiceForOrder` returns the existing invoice when there already is
+ * one, so a repeat click can never create a second one.
+ */
+export async function issueOrderInvoice(
+  orderId: string,
+): Promise<ActionResult & { number?: string }> {
+  await requireAdmin();
+  const issued = await issueInvoiceForOrder(orderId);
+  if (!issued) {
+    return { ok: false, message: "Could not issue an invoice for this order." };
+  }
+  revalidate();
+  revalidatePath("/admin/invoices");
+  return { ok: true, number: issued.number };
 }

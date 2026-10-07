@@ -15,6 +15,8 @@ import {
   SHIPMENT_STYLES,
   badgeStyle,
 } from "@/lib/order-status";
+import { InvoiceIssueButton } from "@/components/admin/invoice-issue-button";
+import { InvoicePreviewButton } from "@/components/admin/invoice-preview";
 import { OrderRowActions } from "../row-actions";
 import { ApprovalActions } from "../approval-actions";
 import { getApprovalHistory } from "../approval-data";
@@ -58,6 +60,7 @@ export default async function AdminOrderDetailPage({
       items: { orderBy: { id: "asc" } },
       payments: { orderBy: { createdAt: "asc" } },
       shipments: { orderBy: { createdAt: "desc" } },
+      invoice: true,
     },
   });
   if (!order) notFound();
@@ -321,6 +324,43 @@ export default async function AdminOrderDetailPage({
                 </dd>
               </div>
             </dl>
+          </section>
+
+          {/* Invoice */}
+          <section className={cardClass}>
+            <h2 className={cardHeaderClass}>Invoice</h2>
+            <div className="px-5 py-4 text-sm">
+              {order.invoice ? (
+                <div className="space-y-3">
+                  <dl className="space-y-1.5">
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-zinc-500">Number</dt>
+                      <dd className="font-medium text-zinc-900">
+                        {order.invoice.number}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt className="text-zinc-500">Issued</dt>
+                      <dd className="text-zinc-900">
+                        {formatDate(order.invoice.issuedAt)}
+                      </dd>
+                    </div>
+                  </dl>
+                  <InvoicePreviewButton
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-zinc-500">
+                    No invoice yet — this order was placed before invoices were
+                    issued automatically.
+                  </p>
+                  <InvoiceIssueButton orderId={order.id} />
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Customer */}

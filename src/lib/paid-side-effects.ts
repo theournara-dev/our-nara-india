@@ -1,8 +1,10 @@
 import "server-only";
 
 import { SITE } from "@/lib/constants";
+import { couponCodeFromBilling } from "@/lib/coupons";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { issueInvoiceForOrder } from "@/lib/invoices";
 import {
   notifyAdminsNewOrder,
   notifyOrderStatusChange,
@@ -76,6 +78,39 @@ async function decrementStock(order: SideEffectOrder): Promise<string | null> {
 }
 
 /**
+ * Record the coupon this order was placed with, so usage limits can be counted
+ * on later checkouts. Only signed-in orders can be recorded —
+ * `CouponRedemption.userId` is required and a guest checkout has no user to
+ * attach; guests' first-purchase eligibility is enforced by email instead.
+ */
+async function recordCouponRedemption(order: {
+  id: string;
+  userId: string | null;
+  billing: unknown;
+}): Promise<void> {
+  const code = couponCodeFromBilling(order.billing);
+  if (!code || !order.userId) return;
+
+  const coupon = await db.coupon.findFirst({
+    where: { code: { equals: code, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (!coupon) return;
+
+  // The caller claims the order atomically, so a redemption row can only be
+  // missing once; the lookup keeps a manual re-run from double-counting.
+  const existing = await db.couponRedemption.findFirst({
+    where: { orderId: order.id, couponId: coupon.id },
+    select: { id: true },
+  });
+  if (existing) return;
+
+  await db.couponRedemption.create({
+    data: { couponId: coupon.id, userId: order.userId, orderId: order.id },
+  });
+}
+
+/**
  * Run every paid-order side effect exactly once per order: stock decrement,
  * customer confirmation email, admin alert.
  *
@@ -104,7 +139,22 @@ export async function runPaidSideEffects(
   });
   if (!order) return { ran: true };
 
+  // Issue the invoice right after the claim (the order is confirmed at this
+  // point). Best-effort by contract: a billing-document failure must never
+  // break the paid path, and the admin can re-issue from the order view.
+  try {
+    await issueInvoiceForOrder(order.id);
+  } catch (error) {
+    console.error("[paid-side-effects] invoice issue failed:", error);
+  }
+
   const shortage = await decrementStock(order);
+
+  try {
+    await recordCouponRedemption(order);
+  } catch (error) {
+    console.error("[paid-side-effects] coupon redemption failed:", error);
+  }
 
   if (paymentRowId) {
     try {
