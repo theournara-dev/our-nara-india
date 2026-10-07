@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { SITE } from "@/lib/constants";
+import { getSiteConfig } from "@/lib/site-config";
 import {
   getVersionConfig,
   parseSiteVersion,
@@ -56,6 +57,8 @@ export async function Footer() {
     resolveRequestSiteVersion(host);
   const config = getVersionConfig(version);
   const showIndia = config.showIndianAddress;
+  // Contact details are admin-editable per store (/admin/site).
+  const { email, phone, address } = await getSiteConfig(version);
 
   return (
     <footer className="border-t border-zinc-100 bg-[#f9f9f9]">
@@ -66,9 +69,9 @@ export async function Footer() {
             <h3 className="text-[15px] font-medium tracking-tight text-black">
               CS CENTER
             </h3>
-            {showIndia && (
+            {phone && (
               <p className="mt-2 text-[26px] font-semibold leading-9 tracking-tight text-black">
-                {SITE.supportPhone}
+                {phone}
               </p>
             )}
             <p className="text-[13px] font-medium text-[#777]">
@@ -116,32 +119,18 @@ export async function Footer() {
                   A Brand of : Seoulveda Trading LLP &amp; The First Team{" "}
                 </span>
               )}
-              {showIndia && (
-                <span className="text-[#777]">
-                  Phone : {SITE.supportPhone}
-                </span>
-              )}
+              {phone && <span className="text-[#777]">Phone : {phone}</span>}
               <br />
-              {showIndia ? (
+              {address && (
                 <span className="text-[#777]">
-                  Address(India) : One World, S.V. Road, Near N L School, Malad
-                  West, Mumbai, Maharashtra 400064
-                </span>
-              ) : (
-                <span className="text-[#777]">
-                  Address(South Korea) : Room 1816, Building B, Incheon Techno
-                  Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon,
-                  Republic of Korea
+                  Address({showIndia ? "India" : "South Korea"}) : {address}
                 </span>
               )}
               <br />
               <span className="text-[#777]">
                 Personal information manager :{" "}
-                <a
-                  href={`mailto:${SITE.supportEmail}`}
-                  className="hover:opacity-50"
-                >
-                  {config.personalInformationManager} ({SITE.supportEmail})
+                <a href={`mailto:${email}`} className="hover:opacity-50">
+                  {config.personalInformationManager} ({email})
                 </a>
               </span>
               <br />

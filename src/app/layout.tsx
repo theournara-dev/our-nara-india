@@ -9,10 +9,8 @@ import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
 import { SiteVersionProvider } from "@/components/site-version-provider";
 import { SITE } from "@/lib/constants";
-import {
-  getSiteUrl,
-  resolveRequestSiteVersion,
-} from "@/lib/site-version";
+import { getSiteConfig } from "@/lib/site-config";
+import { getSiteUrl, resolveRequestSiteVersion } from "@/lib/site-version";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -66,6 +64,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const initialVersion = resolveRequestSiteVersion(host);
+  // Contact details, the top banner and the store picker come from the admin
+  // site settings; defaults are baked in so nothing renders empty before an
+  // admin saves them.
+  const siteContent = await getSiteConfig(initialVersion);
 
   return (
     <html
@@ -82,7 +84,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col overflow-x-clip">
         <SiteVersionProvider initialVersion={initialVersion}>
           <CartProvider>
-            <Header />
+            <Header siteContent={siteContent} />
             <main className="flex-1">{children}</main>
             <Footer />
           </CartProvider>

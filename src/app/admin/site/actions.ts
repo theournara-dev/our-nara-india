@@ -1,0 +1,100 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { requireAdmin } from "@/lib/auth";
+import { db } from "@/lib/db";
+import {
+  DEFAULT_SWITCHER_CONTENT,
+  normalizeSwitcher,
+  normalizeTopBanner,
+} from "@/lib/site-content";
+import { parseSiteVersion } from "@/lib/site-version";
+import {
+  parseInput,
+  safeEmail,
+  safeMultiline,
+  safeText,
+} from "@/lib/validation";
+
+/**
+ * Admin writes for the per-version site configuration (contact details, the top
+ * banner and the store picker). Everything the storefront shows from
+ * /admin/site goes through here — see `src/lib/site-config.ts` for the read
+ * side.
+ */
+
+const contentInput = z.object({
+  version: z.string(),
+  email: safeEmail(),
+  phone: safeText(40).optional(),
+  address: safeMultiline(300).optional(),
+  topBanner: z.array(z.unknown()).max(10, "A banner holds at most 10 blocks"),
+});
+
+function toVersion(raw: string) {
+  const parsed = parseSiteVersion(raw);
+  if (!parsed) throw new Error("Unknown site version");
+  return parsed;
+}
+
+/** Save the contact details + top banner for one store. */
+export async function saveSiteContent(input: z.infer<typeof contentInput>) {
+  await requireAdmin();
+  const data = parseInput(contentInput, input, "site.content");
+  const version = toVersion(data.version);
+  // Re-validate through the shared normalizer so a hand-rolled payload can't
+  // store a block shape the storefront can't render. `allowEmpty` keeps an
+  // in-progress block (added but not yet filled in) instead of silently
+  // dropping it on the next reload.
+  const topBanner = normalizeTopBanner(data.topBanner, [], {
+    allowEmpty: true,
+  });
+  const fields = {
+    email: data.email,
+    phone: data.phone?.trim() || null,
+    address: data.address?.trim() || null,
+    topBanner,
+  };
+
+  await db.siteConfig.upsert({
+    where: { version },
+    create: { version, ...fields },
+    update: fields,
+  });
+
+  revalidateSite();
+}
+
+const switcherInput = z.object({
+  title: safeText(120, { min: 1, message: "Title is required" }),
+  subtitle: safeText(200).optional(),
+  blocks: z.array(z.unknown()).min(1, "At least one store card is required"),
+});
+
+/**
+ * Save the store-picker popup. The popup describes both stores and appears on
+ * both sites, so it is written to every version's row instead of being
+ * duplicated per tab.
+ */
+export async function saveStorePicker(input: z.infer<typeof switcherInput>) {
+  await requireAdmin();
+  const data = parseInput(switcherInput, input, "site.switcher");
+  const switcher = normalizeSwitcher(data, DEFAULT_SWITCHER_CONTENT);
+
+  for (const version of ["local", "global"] as const) {
+    await db.siteConfig.upsert({
+      where: { version },
+      create: { version, switcher },
+      update: { switcher },
+    });
+  }
+
+  revalidateSite();
+}
+
+function revalidateSite() {
+  // The top banner and store picker are part of the root layout, and the
+  // footer (contact details) renders on every storefront page.
+  revalidatePath("/", "layout");
+}

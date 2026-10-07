@@ -3,6 +3,7 @@ import { trackingUrl } from "@/lib/delhivery-client";
 import { getFromForVersion, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatusValue } from "@/lib/order-status";
+import { loadSiteConfig } from "@/lib/site-config";
 import {
   getSiteUrl,
   versionForOrder,
@@ -119,6 +120,7 @@ function wrapHtml(title: string, bodyHtml: string): string {
 function buildStatusMessage(
   order: OrderForNotification,
   status: OrderNotificationStatus,
+  supportEmail: string,
   waybill?: string | null,
 ): { subject: string; text: string; html: string } {
   const orderNumber = order.orderNumber;
@@ -189,13 +191,13 @@ function buildStatusMessage(
     case "CANCELLED": {
       return {
         subject: `Order ${orderNumber} cancelled — ${SITE.name}`,
-        text: `Your order has been cancelled.\n\nOrder number: ${orderNumber}\n\n${itemsText}\n\nIf you have any questions, reply to this email or contact us at ${SITE.supportEmail}.`,
+        text: `Your order has been cancelled.\n\nOrder number: ${orderNumber}\n\n${itemsText}\n\nIf you have any questions, reply to this email or contact us at ${supportEmail}.`,
         html: wrapHtml(
           "Order cancelled",
           `<p>Your order has been cancelled.</p>
            <p><strong>Order number:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
-           <p>If you have any questions, reply to this email or contact us at ${escapeHtml(SITE.supportEmail)}.</p>`,
+           <p>If you have any questions, reply to this email or contact us at ${escapeHtml(supportEmail)}.</p>`,
         ),
       };
     }
@@ -215,14 +217,14 @@ function buildStatusMessage(
     case "FAILED": {
       return {
         subject: `Payment failed — no order placed (${orderNumber}) — ${SITE.name}`,
-        text: `We couldn't process your payment, so no order was placed and nothing has been charged.\n\nReference: ${orderNumber}\n\n${itemsText}\n\nTotal: ${total}\n\nYou can retry the payment from your cart, or contact us at ${SITE.supportEmail} if you need help.`,
+        text: `We couldn't process your payment, so no order was placed and nothing has been charged.\n\nReference: ${orderNumber}\n\n${itemsText}\n\nTotal: ${total}\n\nYou can retry the payment from your cart, or contact us at ${supportEmail} if you need help.`,
         html: wrapHtml(
           "Payment failed",
           `<p>We couldn't process your payment, so <strong>no order was placed</strong> and nothing has been charged.</p>
            <p><strong>Reference:</strong> ${escapeHtml(orderNumber)}</p>
            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">${itemsHtml}</table>
            <p><strong>Total:</strong> ${escapeHtml(total)}</p>
-           <p>You can retry the payment from your cart, or contact us at ${escapeHtml(SITE.supportEmail)} if you need help.</p>`,
+           <p>You can retry the payment from your cart, or contact us at ${escapeHtml(supportEmail)} if you need help.</p>`,
         ),
       };
     }
@@ -249,9 +251,11 @@ export async function notifyOrderStatusChange(
       return { ok: false };
     }
     const version: SiteVersion = versionForOrder(order);
+    const site = await loadSiteConfig(version);
     const { subject, text, html } = buildStatusMessage(
       order,
       newStatus as OrderNotificationStatus,
+      site.email,
       options?.waybill,
     );
     return await sendEmail({
@@ -279,8 +283,10 @@ function extractCustomerName(shipping: unknown): string {
 }
 
 /**
- * Notify the support inbox about a new order. Never throws — failures are
- * logged and reported as `{ ok: false }`.
+ * Notify the store's own inbox about a new order. The recipient is the
+ * support address configured for the order's store in /admin/site (local and
+ * global keep separate inboxes). Never throws — failures are logged and
+ * reported as `{ ok: false }`.
  */
 export async function notifyAdminsNewOrder(
   order: OrderForNotification,
@@ -294,6 +300,7 @@ export async function notifyAdminsNewOrder(
     const itemsHtml = itemRowsHtml(order.items);
     const version = versionForOrder(order);
     const adminLink = `${getSiteUrl(version)}/admin/orders/${order.id}`;
+    const site = await loadSiteConfig(version);
 
     const subject = `New paid order ${order.orderNumber} — ${SITE.name}`;
     const text = [
@@ -322,7 +329,7 @@ export async function notifyAdminsNewOrder(
     );
 
     return await sendEmail({
-      to: SITE.supportEmail,
+      to: site.email,
       from: getFromForVersion(version),
       subject,
       text,

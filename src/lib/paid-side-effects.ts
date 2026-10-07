@@ -7,11 +7,15 @@ import {
   notifyAdminsNewOrder,
   notifyOrderStatusChange,
 } from "@/lib/order-notifications";
+import { loadSiteConfig } from "@/lib/site-config";
+import { versionForOrder } from "@/lib/site-version";
 
 type SideEffectOrder = {
   id: string;
   orderNumber: string;
   isPreOrder: boolean;
+  siteVersion?: string | null;
+  currency?: string | null;
   items: {
     variantId: string | null;
     productId: string;
@@ -20,9 +24,15 @@ type SideEffectOrder = {
   }[];
 };
 
-async function notifySupport(subject: string, message: string) {
+/** Alert the store's own inbox (the address configured for that store). */
+async function notifySupport(
+  order: SideEffectOrder,
+  subject: string,
+  message: string,
+) {
   try {
-    await sendEmail({ to: SITE.supportEmail, subject, text: message });
+    const site = await loadSiteConfig(versionForOrder(order));
+    await sendEmail({ to: site.email, subject, text: message });
   } catch (error) {
     console.error("[paid-side-effects] support notification failed:", error);
   }
@@ -60,7 +70,9 @@ async function decrementStock(order: SideEffectOrder): Promise<string | null> {
     }
   }
 
-  return shortages.length > 0 ? `Stock shortage on ${shortages.join("; ")}.` : null;
+  return shortages.length > 0
+    ? `Stock shortage on ${shortages.join("; ")}.`
+    : null;
 }
 
 /**
@@ -110,6 +122,7 @@ export async function runPaidSideEffects(
       `[paid-side-effects] oversell guard skipped decrement for order ${order.orderNumber}: ${shortage}`,
     );
     await notifySupport(
+      order,
       `[${SITE.name}] Oversell guard triggered — order ${order.orderNumber}`,
       `The paid order ${order.orderNumber} could not decrement stock (${shortage}).\n\nReview the order and product stock manually.`,
     );

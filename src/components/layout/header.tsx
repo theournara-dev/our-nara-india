@@ -11,6 +11,7 @@ import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { notify } from "@/lib/toast";
+import type { SiteContent } from "@/lib/site-content";
 
 /**
  * Header (Tailwind-native). Faithful port of the original Cafe24 header,
@@ -91,7 +92,7 @@ const loggedInLinks = [
   { label: "Logout", href: "/api/auth/sign-out", className: "log" },
 ];
 
-export function Header() {
+export function Header({ siteContent }: { siteContent: SiteContent }) {
   const router = useRouter();
   const { config } = useSiteVersion();
   const [allCateOpen, setAllCateOpen] = useState(false);
@@ -118,7 +119,7 @@ export function Header() {
 
   return (
     <div>
-      <TopBanner />
+      <TopBanner blocks={siteContent.topBanner} />
 
       <div
         data-site-header
@@ -329,7 +330,7 @@ export function Header() {
               <ul className="inline-flex">
                 {/* Store switcher (leftmost) */}
                 <li className="relative flex items-center px-1">
-                  <VersionSwitcher />
+                  <VersionSwitcher content={siteContent.switcher} />
                 </li>
                 <li className="group relative min-w-6 px-1 max-md:hidden">
                   <div>
@@ -551,7 +552,10 @@ export function Header() {
                   </div>
                 </div>
                 {/* Store switcher (mobile) */}
-                <VersionSwitcher className="mt-4" />
+                <VersionSwitcher
+                  content={siteContent.switcher}
+                  className="mt-4"
+                />
                 {/* Account quick links */}
                 <div className="mt-6 flex w-4/5 flex-wrap gap-x-4 gap-y-2 text-[13px]">
                   <span>

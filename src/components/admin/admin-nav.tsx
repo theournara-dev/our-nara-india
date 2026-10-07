@@ -21,6 +21,7 @@ const nav: NavItem[] = [
   { label: "Coupons", href: "/admin/coupons", disabled: true },
   { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },
+  { label: "Site settings", href: "/admin/site" },
 ];
 
 export function AdminNav() {
