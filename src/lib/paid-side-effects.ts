@@ -79,17 +79,19 @@ async function decrementStock(order: SideEffectOrder): Promise<string | null> {
 
 /**
  * Record the coupon this order was placed with, so usage limits can be counted
- * on later checkouts. Only signed-in orders can be recorded —
- * `CouponRedemption.userId` is required and a guest checkout has no user to
- * attach; guests' first-purchase eligibility is enforced by email instead.
+ * on later checkouts. Guest orders are recorded too, identified by the order
+ * email — otherwise a "max 5 uses" coupon could be spent any number of times
+ * by checking out as a guest.
  */
 async function recordCouponRedemption(order: {
   id: string;
   userId: string | null;
+  email: string;
   billing: unknown;
 }): Promise<void> {
   const code = couponCodeFromBilling(order.billing);
-  if (!code || !order.userId) return;
+  if (!code) return;
+  if (!order.userId && !order.email.trim()) return;
 
   const coupon = await db.coupon.findFirst({
     where: { code: { equals: code, mode: "insensitive" } },
@@ -106,7 +108,12 @@ async function recordCouponRedemption(order: {
   if (existing) return;
 
   await db.couponRedemption.create({
-    data: { couponId: coupon.id, userId: order.userId, orderId: order.id },
+    data: {
+      couponId: coupon.id,
+      userId: order.userId,
+      email: order.email.trim().toLowerCase(),
+      orderId: order.id,
+    },
   });
 }
 

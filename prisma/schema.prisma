@@ -594,6 +594,11 @@ model Coupon {
   siteVersion       String  @default("all") @map("site_version")
   // First-purchase coupons only apply when the shopper has no completed order.
   firstPurchaseOnly Boolean @default(false) @map("first_purchase_only")
+  // Whether the coupon may be used on pre-order items. Off by default: a
+  // pre-order is a promise to ship later, and most offers are meant for stock
+  // that ships now. Also controls whether the code is advertised on a
+  // pre-order product's page.
+  preOrderAllowed Boolean @default(false) @map("pre_order_allowed")
 
   redemptions CouponRedemption[]
 
@@ -604,16 +609,20 @@ model Coupon {
 model CouponRedemption {
   id         String   @id @default(cuid())
   couponId   String   @map("coupon_id")
-  userId     String   @map("user_id")
+  // Null for guest checkouts: the order email identifies the shopper instead,
+  // so per-customer limits still count a guest's earlier uses.
+  userId     String?  @map("user_id")
+  email      String?  @map("email")
   orderId    String   @map("order_id")
   redeemedAt DateTime @default(now()) @map("redeemed_at")
 
   coupon Coupon @relation(fields: [couponId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+  user   User?  @relation(fields: [userId], references: [id])
   order  Order  @relation(fields: [orderId], references: [id])
 
   @@index([couponId])
   @@index([userId])
+  @@index([email])
   @@map("coupon_redemptions")
 }
 

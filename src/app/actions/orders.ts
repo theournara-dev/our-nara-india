@@ -304,6 +304,7 @@ async function createOrderImpl(
       qty: item.quantity,
       brandId: product.brandId,
       categoryId: product.categoryId,
+      isPreOrder: product.isPreOrder,
     });
 
     orderItems.push({

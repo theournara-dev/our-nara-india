@@ -37,6 +37,8 @@ export type CouponRecord = {
   productIds: string[];
   siteVersion: CouponSiteVersion;
   firstPurchaseOnly: boolean;
+  /** Whether the coupon may be used on pre-order items (see the schema note). */
+  preOrderAllowed: boolean;
 };
 
 /** One cart line, priced for the active store, with the fields scope checks need. */
@@ -47,6 +49,8 @@ export type CouponCartLine = {
   qty: number;
   brandId?: string | null;
   categoryId?: string | null;
+  /** Pre-order items can be excluded from a coupon (the default). */
+  isPreOrder?: boolean;
 };
 
 export type CouponEvaluation = {
@@ -145,6 +149,11 @@ export function isCouponForVersion(
   version: "local" | "global",
 ): boolean {
   return coupon.siteVersion === "all" || coupon.siteVersion === version;
+}
+
+/** Whether any line in the cart is a pre-order item. */
+export function cartHasPreOrder(lines: CouponCartLine[]): boolean {
+  return lines.some((line) => line.isPreOrder === true);
 }
 
 /** The cart lines a scoped coupon applies to. ALL coupons cover every line. */
@@ -249,6 +258,15 @@ export function checkCouponEligibility(
     return {
       ok: false,
       reason: "This coupon is valid on your first order only.",
+    };
+  }
+  // Pre-orders are excluded unless the coupon opts in: they ship later, and
+  // most offers are meant for stock that ships now.
+  if (!coupon.preOrderAllowed && cartHasPreOrder(lines)) {
+    return {
+      ok: false,
+      reason:
+        "This coupon cannot be used on pre-order items. Remove them from your cart or place the order without the coupon.",
     };
   }
   if (

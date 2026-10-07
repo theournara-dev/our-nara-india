@@ -15,8 +15,7 @@ import { parseInput, safeMultiline, safeText } from "@/lib/validation";
  */
 
 export type CouponActionResult =
-  | { ok: true; id: string }
-  | { ok: false; message: string };
+  { ok: true; id: string } | { ok: false; message: string };
 
 const couponInput = z.object({
   id: z.string().optional(),
@@ -35,6 +34,7 @@ const couponInput = z.object({
   isActive: z.boolean(),
   siteVersion: z.enum(["all", "local", "global"]),
   firstPurchaseOnly: z.boolean(),
+  preOrderAllowed: z.boolean(),
   scope: z.enum(["ALL", "BRAND", "CATEGORY", "PRODUCT"]),
   brandId: z.string().optional(),
   categoryId: z.string().optional(),
@@ -82,7 +82,10 @@ export async function saveCoupon(
     return { ok: false, message: "Choose the brand this coupon applies to." };
   }
   if (data.scope === "CATEGORY" && !data.categoryId) {
-    return { ok: false, message: "Choose the category this coupon applies to." };
+    return {
+      ok: false,
+      message: "Choose the category this coupon applies to.",
+    };
   }
   if (data.scope === "PRODUCT" && (data.productIds?.length ?? 0) === 0) {
     return { ok: false, message: "Choose at least one product." };
@@ -121,6 +124,7 @@ export async function saveCoupon(
     isActive: data.isActive,
     siteVersion: data.siteVersion,
     firstPurchaseOnly: data.firstPurchaseOnly,
+    preOrderAllowed: data.preOrderAllowed,
     scope: data.scope,
     brandId: data.scope === "BRAND" ? (data.brandId ?? null) : null,
     categoryId: data.scope === "CATEGORY" ? (data.categoryId ?? null) : null,

@@ -51,6 +51,7 @@ type FormState = {
   isActive: boolean;
   siteVersion: CouponSiteVersion;
   firstPurchaseOnly: boolean;
+  preOrderAllowed: boolean;
   scope: CouponScopeValue;
   brandId: string;
   categoryId: string;
@@ -73,6 +74,7 @@ const EMPTY_FORM: FormState = {
   isActive: true,
   siteVersion: "all",
   firstPurchaseOnly: false,
+  preOrderAllowed: false,
   scope: "ALL",
   brandId: "",
   categoryId: "",
@@ -114,6 +116,7 @@ function formFromRow(row: AdminCouponRow): FormState {
     isActive: row.isActive,
     siteVersion: row.siteVersion,
     firstPurchaseOnly: row.firstPurchaseOnly,
+    preOrderAllowed: row.preOrderAllowed,
     scope: row.scope,
     brandId: row.brandId ?? "",
     categoryId: row.categoryId ?? "",
@@ -175,6 +178,7 @@ export function CouponsManager({
         isActive: form.isActive,
         siteVersion: form.siteVersion,
         firstPurchaseOnly: form.firstPurchaseOnly,
+        preOrderAllowed: form.preOrderAllowed,
         scope: form.scope,
         brandId: form.brandId || undefined,
         categoryId: form.categoryId || undefined,
@@ -441,12 +445,22 @@ export function CouponsManager({
               <input
                 type="checkbox"
                 checked={form.firstPurchaseOnly}
-                onChange={(e) =>
-                  patch({ firstPurchaseOnly: e.target.checked })
-                }
+                onChange={(e) => patch({ firstPurchaseOnly: e.target.checked })}
                 className="h-4 w-4 rounded border-zinc-300"
               />
               First purchase only
+            </label>
+            <label
+              className="flex items-center gap-2 text-sm text-zinc-700"
+              title="Off: the coupon is refused when the cart holds a pre-order item, and is not shown on pre-order product pages."
+            >
+              <input
+                type="checkbox"
+                checked={form.preOrderAllowed}
+                onChange={(e) => patch({ preOrderAllowed: e.target.checked })}
+                className="h-4 w-4 rounded border-zinc-300"
+              />
+              Applies to pre-order items
             </label>
             <label className="flex items-center gap-2 text-sm text-zinc-700">
               <input
@@ -511,7 +525,13 @@ export function CouponsManager({
                   {describeCouponValue(row, money)}
                 </td>
                 <td className="px-4 py-3 text-xs text-zinc-500">
-                  {couponConditions(row, money).join(" · ") || "—"}
+                  {[
+                    ...couponConditions(row, money),
+                    // Admin-only detail: shoppers see the refusal at checkout.
+                    row.preOrderAllowed
+                      ? "Includes pre-orders"
+                      : "Excludes pre-orders",
+                  ].join(" · ") || "—"}
                 </td>
                 <td className="px-4 py-3 text-xs text-zinc-500">
                   {row.siteVersion === "all"

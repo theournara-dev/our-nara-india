@@ -96,6 +96,7 @@ async function loadCartContext(
       globalPriceCents: true,
       brandId: true,
       categoryId: true,
+      isPreOrder: true,
     },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
@@ -114,6 +115,7 @@ async function loadCartContext(
       qty: item.quantity,
       brandId: product.brandId,
       categoryId: product.categoryId,
+      isPreOrder: product.isPreOrder,
     });
   }
 
@@ -138,14 +140,21 @@ async function loadCartContext(
 
 /**
  * How many times a coupon was redeemed overall, and by this shopper. Only used
- * to apply usage limits; a shopper without an account counts zero.
+ * to apply usage limits; a shopper is matched by account and by email, so a
+ * guest's earlier orders count against the same person signing in later.
  */
 async function loadRedemptionCounts(
   couponIds: string[],
   userId: string | null,
+  email: string | null,
 ): Promise<Map<string, { total: number; byUser: number }>> {
   const counts = new Map<string, { total: number; byUser: number }>();
   if (couponIds.length === 0) return counts;
+
+  const shopperFilters = [
+    ...(userId ? [{ userId }] : []),
+    ...(email?.trim() ? [{ email: email.trim().toLowerCase() }] : []),
+  ];
 
   const [totals, byUser] = await Promise.all([
     db.couponRedemption.groupBy({
@@ -153,10 +162,10 @@ async function loadRedemptionCounts(
       where: { couponId: { in: couponIds } },
       _count: { _all: true },
     }),
-    userId
+    shopperFilters.length > 0
       ? db.couponRedemption.groupBy({
           by: ["couponId"],
-          where: { couponId: { in: couponIds }, userId },
+          where: { couponId: { in: couponIds }, OR: shopperFilters },
           _count: { _all: true },
         })
       : Promise.resolve([] as { couponId: string; _count: { _all: number } }[]),
@@ -206,6 +215,7 @@ export async function listEligibleCoupons(
   const counts = await loadRedemptionCounts(
     all.map((c) => c.id),
     ctx.userId,
+    ctx.email,
   );
   const firstTimeBuyer = await loadFirstTimeBuyer(ctx.email);
 
@@ -286,12 +296,15 @@ export async function listCouponsForProduct(input: {
 
   const product = await db.product.findUnique({
     where: { id: data.productId },
-    select: { brandId: true, categoryId: true },
+    select: { brandId: true, categoryId: true, isPreOrder: true },
   });
   if (!product) return [];
 
   const all = await loadStorefrontCoupons(version);
   return all.filter((coupon) => {
+    // A pre-order product only advertises codes that actually accept
+    // pre-orders — a hint the checkout would refuse is worse than none.
+    if (product.isPreOrder && !coupon.preOrderAllowed) return false;
     switch (coupon.scope) {
       case "ALL":
         return true;

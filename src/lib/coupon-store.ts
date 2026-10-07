@@ -45,6 +45,7 @@ type CouponRow = {
   productIds: string[];
   siteVersion: string;
   firstPurchaseOnly: boolean;
+  preOrderAllowed: boolean;
 };
 
 /** Map a stored row to the serializable shape the shared rules work on. */
@@ -68,6 +69,7 @@ export function couponRowToRecord(row: CouponRow): CouponRecord {
     productIds: row.productIds,
     siteVersion: row.siteVersion as CouponRecord["siteVersion"],
     firstPurchaseOnly: row.firstPurchaseOnly,
+    preOrderAllowed: row.preOrderAllowed,
   };
 }
 
@@ -137,12 +139,20 @@ export async function resolveCouponForCart(input: {
   }
 
   const subtotalCents = cartSubtotalCents(input.lines);
+  // A shopper is counted by account and by email: guests have no user id, and
+  // the same person checking out either way must share one usage count.
+  const shopperFilters = [
+    ...(input.userId ? [{ userId: input.userId }] : []),
+    ...(input.email.trim()
+      ? [{ email: input.email.trim().toLowerCase() }]
+      : []),
+  ];
   const [redemptionCount, userRedemptionCount, completedOrders] =
     await Promise.all([
       db.couponRedemption.count({ where: { couponId: coupon.id } }),
-      input.userId
+      shopperFilters.length > 0
         ? db.couponRedemption.count({
-            where: { couponId: coupon.id, userId: input.userId },
+            where: { couponId: coupon.id, OR: shopperFilters },
           })
         : Promise.resolve(0),
       coupon.firstPurchaseOnly
