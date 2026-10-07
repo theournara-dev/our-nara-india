@@ -182,9 +182,9 @@ model Product {
   shortTags      String[] @map("short_tags")
   description    String?
   priceCents     Int      @map("price_cents")
-  // Global-site price in USD cents (our-nara.co.kr). Local price is
-  // `priceCents` (INR). Nullable until admins set it; storefront falls back
-  // to the converted local price (see src/lib/money.ts priceForVersion).
+  // International-store price in INR paise (our-nara.co.kr), charged on the
+  // global store only. Nullable until admins set it; the global store then
+  // falls back to the local price (see src/lib/money.ts priceForVersion).
   globalPriceCents Int?   @map("global_price_cents")
   compareAtCents Int?     @map("compare_at_cents")
   globalCompareAtCents Int? @map("global_compare_at_cents")
@@ -241,7 +241,8 @@ model ProductVariant {
   optionValue String  @map("option_value") // e.g. "01 Rose"
   sku         String  @unique
   priceCents  Int?    @map("price_cents")
-  // Global-site variant price in USD cents (mirrors Product.globalPriceCents).
+  // International-store variant price in INR paise (mirrors Product.globalPriceCents),
+  // charged on the global store when the variant has its own local price too.
   globalPriceCents Int? @map("global_price_cents")
   // Option images: the first one leads the gallery when the option is picked.
   images    String[] @default([])
@@ -329,6 +330,15 @@ enum OrderStatus {
   FAILED
 }
 
+/// Staff review of a global order's uploaded ID: global orders arrive as
+/// PENDING and are approved or rejected by hand. Local orders stay NONE.
+enum OrderApprovalStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Order {
   id            String      @id @default(cuid())
   orderNumber   String      @unique @map("order_number")
@@ -345,6 +355,13 @@ model Order {
   discountCents Int         @default(0) @map("discount_cents")
   totalCents    Int         @map("total_cents")
   isPreOrder    Boolean     @default(false) @map("is_pre_order")
+  // Photo ID the customer uploads at checkout on the global site (direct
+  // shipping). Stored as the public blob URL of the uploaded image.
+  idDocumentUrl  String?            @map("id_document_url")
+  approvalStatus OrderApprovalStatus @default(NONE) @map("approval_status")
+  // Free-text reason kept with the decision (shown to staff, not the customer).
+  approvalNote   String?            @map("approval_note")
+  approvedAt     DateTime?          @map("approved_at")
   // Set exactly once when the paid side effects (stock decrement, customer
   // confirmation, admin alert) run — the atomic claim that makes retried
   // captures/order.paid/cron reconciliation idempotent per order.
@@ -364,6 +381,7 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([siteVersion])
+  @@index([approvalStatus])
   @@map("orders")
 }
 
@@ -684,6 +702,37 @@ model Popup {
 // and its `config` JSON holds type-specific settings. `sortOrder` drives the
 // display order; `isActive` + optional schedule control visibility. This lets
 // admins add, reorder, remove, and customize sections without code changes.
+
+// ---------------------------------------------------------------------------
+// Site configuration: per-version storefront content
+// ---------------------------------------------------------------------------
+// One row per site version (local = our-nara.com/India, global =
+// our-nara.co.kr/KDrop). Holds the contact details shown across the storefront
+// (footer, policies), the rotating strips at the very top of the page, and the
+// store-picker popup content. Edited from /admin/site; every storefront surface
+// reads it through `src/lib/site-config.ts` so there is one place to change.
+
+model SiteConfig {
+  id      String @id @default(cuid())
+  version String @unique // "local" | "global"
+
+  // ── Contact details (footer, policies, order emails) ────────────────────
+  email   String?
+  phone   String?
+  address String?
+
+  // ── Storefront content ─────────────────────────────────────────────────
+  // Rotating strips pinned above the header: an ordered list of blocks, each a
+  // line of text or an image, with its own colours link.
+  topBanner Json?
+  // The store-picker popup: heading, note and one block per store.
+  switcher  Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_configs")
+}
 
 model Page {
   id        String   @id @default(cuid())
