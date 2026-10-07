@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
-import { formatMoney, priceForVersion } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
@@ -49,15 +49,38 @@ export function ProductDetail({
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
   const [preorderOpen, setPreorderOpen] = useState(false);
-  const [tab, setTab] = useState<"REVIEW" | "DETAIL" | "INFO" | "Q&A">(
-    "REVIEW",
+  // The original product page opens on DETAIL and keeps REVIEW as the last tab.
+  const [tab, setTab] = useState<"DETAIL" | "INFO" | "Q&A" | "REVIEW">(
+    "DETAIL",
   );
   const [askOpen, setAskOpen] = useState(false);
 
-  const hasDiscount =
-    product.compareAtCents != null &&
-    product.compareAtCents > product.priceCents;
-  const images = product.images.length ? product.images : [];
+  const selectedVariant = product.variants.find((v) => v.id === option);
+  // The selected option's image leads the gallery — the original swaps the
+  // main image when an option with a linked image is picked.
+  const images = selectedVariant?.image
+    ? [
+        selectedVariant.image,
+        ...product.images.filter((i) => i !== selectedVariant.image),
+      ]
+    : product.images;
+  // A variant price overrides the product price (and re-bases the discount).
+  const displayPrice = selectedVariant?.priceCents ?? product.priceCents;
+  const compareAtCents =
+    product.compareAtCents != null && product.compareAtCents > displayPrice
+      ? product.compareAtCents
+      : undefined;
+  const needsOption = product.variants.length > 0 && !option;
+  // Option chips grouped by their label ("Shade", "Size"), kept in admin order.
+  const optionGroups = product.variants.reduce<
+    { label: string; items: ProductDetail["variants"] }[]
+  >((groups, v) => {
+    const label = v.optionLabel ?? "";
+    const group = groups.find((g) => g.label === label);
+    if (group) group.items.push(v);
+    else groups.push({ label, items: [v] });
+    return groups;
+  }, []);
   // Buttons render based on product state. A pre-order shows the pre-order
   // dialog; available products show Buy Now (when enabled). They're mutually
   // exclusive — pre-orders aren't eligible for buy-now express checkout.
@@ -68,7 +91,15 @@ export function ProductDetail({
     !config.preOrderEnabled || (product.buyNowEnabled && !product.isPreOrder);
 
   function handleBuyNow() {
-    addProductToCart(product, qty, option || undefined);
+    // The chosen option's label travels with the line so the cart can show it.
+    addProductToCart(
+      { ...product, priceCents: displayPrice },
+      qty,
+      option || undefined,
+      selectedVariant
+        ? `${selectedVariant.optionLabel ? `${selectedVariant.optionLabel}: ` : ""}${selectedVariant.optionValue}`
+        : undefined,
+    );
     notifyAddedToCart(product.name, qty);
     openQuickPurchase();
   }
@@ -143,20 +174,11 @@ export function ProductDetail({
           {/* Price */}
           <div className="mt-4 flex items-baseline gap-2">
             <span className="text-2xl font-semibold text-point-500">
-              {formatMoney(
-                priceForVersion(product.priceCents, product.globalPriceCents),
-                product.currency,
-              )}
+              {formatMoney(displayPrice, product.currency)}
             </span>
-            {hasDiscount && (
+            {compareAtCents != null && (
               <span className="text-lg text-zinc-400 line-through">
-                {formatMoney(
-                  priceForVersion(
-                    product.compareAtCents!,
-                    product.globalCompareAtCents,
-                  ),
-                  product.currency,
-                )}
+                {formatMoney(compareAtCents, product.currency)}
               </span>
             )}
           </div>
@@ -173,25 +195,69 @@ export function ProductDetail({
             </div>
           )}
 
-          {/* Option select */}
+          {/* Options — chips/swatches per option label, like the original */}
           {product.variants.length > 0 && (
             <div className="mt-5">
               <p className="mb-1.5 text-sm font-semibold text-ink">
                 Option Information
               </p>
-              <select
-                value={option}
-                onChange={(e) => setOption(e.target.value)}
-                className="h-10 w-full cursor-pointer rounded border border-[#e9e9e9] bg-white px-3 text-sm text-[#222] outline-none focus:border-point-500"
-              >
-                <option value="">Select item with details above</option>
-                {product.variants.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.optionLabel ? `${v.optionLabel}: ` : ""}
-                    {v.optionValue}
-                  </option>
+              <div className="space-y-3">
+                {optionGroups.map((group) => (
+                  <div key={group.label || "option"}>
+                    {group.label && (
+                      <p className="mb-1 text-xs font-medium text-[#888]">
+                        {group.label}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2">
+                      {group.items.map((v) => {
+                        const selected = option === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setOption(v.id);
+                              // Show the option's image first in the gallery.
+                              setActiveImage(0);
+                            }}
+                            aria-pressed={selected}
+                            title={v.optionValue}
+                            className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                              selected
+                                ? "border-point-500 bg-point-50 font-medium text-point-600"
+                                : "border-[#e9e9e9] bg-white text-[#222] hover:border-point-200"
+                            }`}
+                          >
+                            {v.color ? (
+                              <span
+                                aria-hidden
+                                className="inline-block h-4 w-4 shrink-0 rounded-full border border-black/10"
+                                style={{ backgroundColor: v.color }}
+                              />
+                            ) : v.image ? (
+                              <Image
+                                src={v.image}
+                                alt=""
+                                width={20}
+                                height={20}
+                                unoptimized
+                                className="h-5 w-5 shrink-0 rounded-full object-cover"
+                              />
+                            ) : null}
+                            <span>{v.optionValue}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
-              </select>
+              </div>
+              {needsOption && (
+                <p className="mt-2 text-xs text-rose-500">
+                  [Required] Please select options.
+                </p>
+              )}
             </div>
           )}
 
@@ -243,7 +309,9 @@ export function ProductDetail({
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white"
+                  disabled={needsOption}
+                  title={needsOption ? "Select an option first" : undefined}
+                  className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink"
                 >
                   BUY NOW
                 </button>
@@ -264,7 +332,7 @@ export function ProductDetail({
       {/* ── Tabs ── */}
       <div className="mt-12">
         <ul className="flex w-full border-b border-[#e9e9e9] text-sm">
-          {(["REVIEW", "DETAIL", "INFO", "Q&A"] as const).map((t) => (
+          {(["DETAIL", "INFO", "Q&A", "REVIEW"] as const).map((t) => (
             <li key={t} className="flex-1">
               <button
                 type="button"
@@ -461,10 +529,7 @@ export function ProductDetail({
         open={preorderOpen}
         productId={product.id}
         productName={product.name}
-        priceLabel={formatMoney(
-          priceForVersion(product.priceCents, product.globalPriceCents),
-          product.currency,
-        )}
+        priceLabel={formatMoney(displayPrice, product.currency)}
         defaultQty={1}
         onClose={() => setPreorderOpen(false)}
       />

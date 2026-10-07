@@ -263,7 +263,9 @@ export function QuickPurchaseSheet({
                           {item.name}
                         </Link>
                         {item.option && (
-                          <p className="text-xs text-zinc-400">{item.option}</p>
+                          <p className="text-xs text-zinc-400">
+                            {item.optionLabel ?? item.option}
+                          </p>
                         )}
                         <p className="text-xs text-zinc-500">
                           {formatMoney(item.priceCents, item.currency)}

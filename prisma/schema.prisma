@@ -230,7 +230,9 @@ model Product {
 }
 
 // A purchasable option of a product, e.g. shade "01 Rose" for a "Choose 1 of 6"
-// lip product. Price may override the product base price when it differs.
+// lip product. Price may override the product base price when it differs. A
+// variant may carry its own image (shown in the gallery when the option is
+// picked, like the original's `link_image`) and a swatch colour.
 model ProductVariant {
   id          String  @id @default(cuid())
   productId   String  @map("product_id")
@@ -240,8 +242,14 @@ model ProductVariant {
   priceCents  Int?    @map("price_cents")
   // Global-site variant price in USD cents (mirrors Product.globalPriceCents).
   globalPriceCents Int? @map("global_price_cents")
-  stock       Int     @default(0)
-  isActive    Boolean @default(true) @map("is_active")
+  // Option image: swaps into the product gallery while this option is selected.
+  image String?
+  // Swatch colour (hex, e.g. "#faddc3") used to render the option chip.
+  color String?
+  // Admin-defined display order of the options.
+  sortOrder Int     @default(0) @map("sort_order")
+  stock     Int     @default(0)
+  isActive  Boolean @default(true) @map("is_active")
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 

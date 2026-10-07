@@ -19,7 +19,10 @@ export type CartItem = {
   priceCents: number;
   currency: string;
   qty: number;
+  /** Selected variant id (checkout maps this to the order line's variant). */
   option?: string;
+  /** Human-readable label for the selected variant ("Shade: 01 Rose"). */
+  optionLabel?: string;
 };
 
 const KEY = "ournara:cart";
@@ -108,6 +111,7 @@ export function addProductToCart(
   },
   qty = 1,
   option?: string,
+  optionLabel?: string,
 ): CartItem[] {
   const version = getActiveVersion();
   return addToCart({
@@ -119,6 +123,7 @@ export function addProductToCart(
     currency: getVersionConfig(version).currency,
     qty,
     option,
+    optionLabel,
   });
 }
 

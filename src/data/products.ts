@@ -46,6 +46,12 @@ export interface ProductDetail extends ProductCardView {
     optionValue: string;
     sku: string;
     stock: number;
+    /** Variant price override (falls back to the product price when unset). */
+    priceCents?: number;
+    /** Option image: shown in the gallery while the option is selected. */
+    image?: string;
+    /** Swatch colour (hex) for the option chip. */
+    color?: string;
   }[];
 }
 
@@ -82,7 +88,11 @@ type ProductRow = {
     optionValue: string;
     sku: string;
     stock: number;
+    priceCents: number | null;
     globalPriceCents: number | null;
+    image: string | null;
+    color: string | null;
+    sortOrder: number;
   }[];
   // Only selected on the detail query (not on card lists).
   blocks?: {
@@ -102,9 +112,13 @@ const listInclude = {
   variants: true,
 } as const;
 
-/** Detail query additionally loads the active DETAIL blocks in order. */
+/** Detail query additionally loads the active variants (in admin order) and the active DETAIL blocks. */
 const detailInclude = {
   ...listInclude,
+  variants: {
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" as const },
+  },
   blocks: {
     where: { isActive: true },
     orderBy: { sortOrder: "asc" as const },
@@ -155,6 +169,9 @@ function toDetail(p: ProductRow): ProductDetail {
       optionValue: v.optionValue,
       sku: v.sku,
       stock: v.stock,
+      priceCents: v.priceCents ?? undefined,
+      image: v.image ?? undefined,
+      color: v.color ?? undefined,
     })),
   };
 }

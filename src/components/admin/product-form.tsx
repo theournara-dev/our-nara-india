@@ -28,6 +28,7 @@ import {
   type AdminReviewRow,
 } from "@/components/admin/product-reviews-manager";
 import { ProductBlocks } from "@/components/product/blocks/block-renderer";
+import { ImageField } from "@/components/admin/image-field";
 
 type BrandOption = { id: string; name: string };
 type CategoryOption = { id: string; name: string };
@@ -40,6 +41,10 @@ type VariantDraft = {
   price: string; // rupees, optional
   stock: number;
   isActive: boolean;
+  /** Option image (swapped into the gallery while the option is selected). */
+  image: string;
+  /** Swatch colour hex (e.g. "#faddc3") for the option chip. */
+  color: string;
 };
 
 type Props = {
@@ -72,6 +77,8 @@ type Props = {
       priceCents: number | null;
       stock: number;
       isActive: boolean;
+      image: string | null;
+      color: string | null;
     }[];
     blocks: {
       id: string;
@@ -172,6 +179,8 @@ export function ProductForm({
       price: toRupees(v.priceCents),
       stock: v.stock,
       isActive: v.isActive,
+      image: v.image ?? "",
+      color: v.color ?? "",
     })),
   );
 
@@ -325,6 +334,8 @@ export function ProductForm({
         price: "",
         stock: 0,
         isActive: true,
+        image: "",
+        color: "",
       },
     ]);
   }
@@ -371,6 +382,8 @@ export function ProductForm({
           : undefined,
         stock: v.stock,
         isActive: v.isActive,
+        image: v.image.trim() || undefined,
+        color: v.color.trim() || undefined,
       })),
       blocks: blocks.map((b) => ({
         id: b.id,
@@ -803,88 +816,128 @@ export function ProductForm({
                 {variants.map((v, i) => (
                   <div
                     key={i}
-                    className="flex flex-wrap items-end gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 p-3"
+                    className="space-y-3 rounded-lg border border-zinc-100 bg-zinc-50/60 p-3"
                   >
-                    <label className="block">
-                      <span className={labelCls}>Label</span>
-                      <input
-                        value={v.optionLabel}
-                        onChange={(e) =>
-                          updateVariant(i, { optionLabel: e.target.value })
-                        }
-                        placeholder="Shade"
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={labelCls}>Value</span>
-                      <input
-                        value={v.optionValue}
-                        onChange={(e) =>
-                          updateVariant(i, { optionValue: e.target.value })
-                        }
-                        required
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={labelCls}>SKU</span>
-                      <input
-                        value={v.sku}
-                        onChange={(e) =>
-                          updateVariant(i, { sku: e.target.value })
-                        }
-                        required
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={labelCls}>
-                        Price ({CURRENCY_SYMBOL}, optional)
-                      </span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={v.price}
-                        onChange={(e) =>
-                          updateVariant(i, { price: e.target.value })
-                        }
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="block">
-                      <span className={labelCls}>Stock</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={v.stock}
-                        onChange={(e) =>
-                          updateVariant(i, {
-                            stock: Number(e.target.value) || 0,
-                          })
-                        }
-                        className={inputCls}
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5 pb-2 text-sm text-zinc-600">
-                      <input
-                        type="checkbox"
-                        checked={v.isActive}
-                        onChange={(e) =>
-                          updateVariant(i, { isActive: e.target.checked })
-                        }
-                        className="h-4 w-4 rounded border-zinc-300"
-                      />
-                      Active
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => removeVariant(i)}
-                      className="h-9 rounded px-2 text-sm text-rose-600 hover:bg-rose-50"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="block">
+                        <span className={labelCls}>Label</span>
+                        <input
+                          value={v.optionLabel}
+                          onChange={(e) =>
+                            updateVariant(i, { optionLabel: e.target.value })
+                          }
+                          placeholder="Shade"
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelCls}>Value</span>
+                        <input
+                          value={v.optionValue}
+                          onChange={(e) =>
+                            updateVariant(i, { optionValue: e.target.value })
+                          }
+                          required
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelCls}>SKU</span>
+                        <input
+                          value={v.sku}
+                          onChange={(e) =>
+                            updateVariant(i, { sku: e.target.value })
+                          }
+                          required
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelCls}>
+                          Price ({CURRENCY_SYMBOL}, optional)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={v.price}
+                          onChange={(e) =>
+                            updateVariant(i, { price: e.target.value })
+                          }
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelCls}>Stock</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={v.stock}
+                          onChange={(e) =>
+                            updateVariant(i, {
+                              stock: Number(e.target.value) || 0,
+                            })
+                          }
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="flex items-center gap-1.5 pb-2 text-sm text-zinc-600">
+                        <input
+                          type="checkbox"
+                          checked={v.isActive}
+                          onChange={(e) =>
+                            updateVariant(i, { isActive: e.target.checked })
+                          }
+                          className="h-4 w-4 rounded border-zinc-300"
+                        />
+                        Active
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => removeVariant(i)}
+                        className="h-9 rounded px-2 text-sm text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap items-end gap-4">
+                      <div className="min-w-[300px] flex-1">
+                        <ImageField
+                          compact
+                          label="Option image (optional)"
+                          value={v.image}
+                          onChange={(image) => updateVariant(i, { image })}
+                          hint="Shown in the gallery while this option is selected."
+                        />
+                      </div>
+                      <label className="block">
+                        <span className={labelCls}>Swatch colour</span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            aria-label="Swatch colour"
+                            value={
+                              /^#[0-9a-fA-F]{6}$/.test(v.color)
+                                ? v.color
+                                : "#ffffff"
+                            }
+                            onChange={(e) =>
+                              updateVariant(i, { color: e.target.value })
+                            }
+                            className="h-9 w-10 cursor-pointer rounded border border-zinc-200 bg-white p-1"
+                          />
+                          <input
+                            value={v.color}
+                            onChange={(e) =>
+                              updateVariant(i, { color: e.target.value })
+                            }
+                            placeholder="#faddc3"
+                            className={inputCls}
+                          />
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 ))}
               </div>

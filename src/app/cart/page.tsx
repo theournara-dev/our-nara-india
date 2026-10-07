@@ -149,7 +149,9 @@ export default function CartPage() {
                           {item.name}
                         </Link>
                         {item.option && (
-                          <p className="text-xs text-zinc-400">{item.option}</p>
+                          <p className="text-xs text-zinc-400">
+                            {item.optionLabel ?? item.option}
+                          </p>
                         )}
                         <p className="text-sm text-zinc-600">
                           {formatMoney(item.priceCents, item.currency)}
@@ -213,21 +215,23 @@ export default function CartPage() {
                   Your details
                 </h2>
                 <UserInfoForm
-            values={userInfo}
-            onChange={(next) => {
-              setValues(next);
-              setInfoErrors((prev) => {
-                if (Object.keys(prev).length === 0) return prev;
-                const fresh = validateUserInfo(next);
-                const kept: UserInfoErrors = {};
-                for (const key of Object.keys(prev) as (keyof UserInfoValues)[]) {
-                  if (fresh[key]) kept[key] = fresh[key];
-                }
-                return kept;
-              });
-            }}
-            errors={infoErrors}
-          />
+                  values={userInfo}
+                  onChange={(next) => {
+                    setValues(next);
+                    setInfoErrors((prev) => {
+                      if (Object.keys(prev).length === 0) return prev;
+                      const fresh = validateUserInfo(next);
+                      const kept: UserInfoErrors = {};
+                      for (const key of Object.keys(
+                        prev,
+                      ) as (keyof UserInfoValues)[]) {
+                        if (fresh[key]) kept[key] = fresh[key];
+                      }
+                      return kept;
+                    });
+                  }}
+                  errors={infoErrors}
+                />
               </section>
             </div>
 

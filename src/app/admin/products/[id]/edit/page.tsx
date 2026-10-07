@@ -31,7 +31,7 @@ export default async function EditProductPage({
       db.product.findUnique({
         where: { id },
         include: {
-          variants: true,
+          variants: { orderBy: { sortOrder: "asc" } },
           blocks: { orderBy: { sortOrder: "asc" } },
         },
       }),

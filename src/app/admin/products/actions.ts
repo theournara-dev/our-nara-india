@@ -26,6 +26,13 @@ const variantInput = z.object({
   sku: safeText(80, { min: 1, message: "Variant SKU is required" }),
   priceCents: z.coerce.number().int().nonnegative().optional(),
   stock: z.coerce.number().int().nonnegative().default(0),
+  // Option image (swapped into the gallery while selected) + swatch colour.
+  image: z.string().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a hex value like #faddc3")
+    .optional()
+    .or(z.literal("")),
   isActive: z.boolean().default(true),
 });
 
@@ -118,11 +125,14 @@ export async function createProduct(input: ProductInput) {
       seoDescription: data.seoDescription || null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
       variants: {
-        create: data.variants.map((v) => ({
+        create: data.variants.map((v, i) => ({
           optionLabel: v.optionLabel || null,
           optionValue: v.optionValue,
           sku: v.sku,
           priceCents: v.priceCents ?? null,
+          image: v.image || null,
+          color: v.color || null,
+          sortOrder: i,
           stock: v.stock,
           isActive: v.isActive,
         })),
@@ -152,61 +162,92 @@ export async function updateProduct(id: string, input: ProductInput) {
   const data = parseInput(productInput, input, "products.update");
   const slug = await uniqueSlug(slugify(data.slug), id);
 
-  await db.$transaction([
-    db.product.update({
-      where: { id },
-      data: {
-        name: data.name,
-        slug,
-        brandId: data.brandId,
-        categoryId: data.categoryId,
-        summary: data.summary || null,
-        shortTags: data.shortTags,
-        description: data.description || null,
-        priceCents: data.priceCents,
-        compareAtCents: data.compareAtCents ?? null,
-        stock: data.stock ?? null,
-        currency: data.currency,
-        isPreOrder: data.isPreOrder,
-        preOrderNotice: data.preOrderNotice || null,
-        images: data.images,
-        isActive: data.isActive,
-        seoTitle: data.seoTitle || null,
-        seoDescription: data.seoDescription || null,
-        infoRows: data.infoRows as Prisma.InputJsonValue,
-      },
-    }),
-    db.productVariant.deleteMany({ where: { productId: id } }),
-    db.productBlock.deleteMany({ where: { productId: id } }),
-    ...data.variants.map((v) =>
-      db.productVariant.create({
+  // Variants are synced to keep the ids of the ones the form sent back (the
+  // form echoes each existing variant's id). Deleting and recreating them
+  // would change every variant id on each save, which silently invalidates the
+  // selections saved in shoppers' carts (checkout resolves the cart's option
+  // id against the product's variants) and the ids recorded on order items.
+  // Ids not seen in the payload belong to variants the admin removed.
+  const current = await db.productVariant.findMany({
+    where: { productId: id },
+    select: { id: true },
+  });
+  const currentIds = new Set(current.map((v) => v.id));
+  const keptIds = new Set(
+    data.variants
+      .map((v) => v.id)
+      .filter((vid): vid is string => !!vid && currentIds.has(vid)),
+  );
+  const removedIds = current.filter((v) => !keptIds.has(v.id)).map((v) => v.id);
+
+  await db.$transaction(
+    [
+      db.product.update({
+        where: { id },
         data: {
-          productId: id,
+          name: data.name,
+          slug,
+          brandId: data.brandId,
+          categoryId: data.categoryId,
+          summary: data.summary || null,
+          shortTags: data.shortTags,
+          description: data.description || null,
+          priceCents: data.priceCents,
+          compareAtCents: data.compareAtCents ?? null,
+          stock: data.stock ?? null,
+          currency: data.currency,
+          isPreOrder: data.isPreOrder,
+          preOrderNotice: data.preOrderNotice || null,
+          images: data.images,
+          isActive: data.isActive,
+          seoTitle: data.seoTitle || null,
+          seoDescription: data.seoDescription || null,
+          infoRows: data.infoRows as Prisma.InputJsonValue,
+        },
+      }),
+      // Blocks carry no external references, so replacing them wholesale is fine.
+      db.productBlock.deleteMany({ where: { productId: id } }),
+      ...(removedIds.length
+        ? [db.productVariant.deleteMany({ where: { id: { in: removedIds } } })]
+        : []),
+      ...data.variants.map((v, i) => {
+        const fields = {
           optionLabel: v.optionLabel || null,
           optionValue: v.optionValue,
           sku: v.sku,
           priceCents: v.priceCents ?? null,
+          image: v.image || null,
+          color: v.color || null,
+          sortOrder: i,
           stock: v.stock,
           isActive: v.isActive,
-        },
+        };
+        return v.id && keptIds.has(v.id)
+          ? db.productVariant.update({ where: { id: v.id }, data: fields })
+          : db.productVariant.create({ data: { ...fields, productId: id } });
       }),
-    ),
-    ...data.blocks.map((b, i) =>
-      db.productBlock.create({
-        data: {
-          productId: id,
-          type: b.type,
-          title: b.title || null,
-          config: normalizeBlockConfig(
-            b.type,
-            b.config,
-          ) as Prisma.InputJsonValue,
-          sortOrder: i,
-          isActive: b.isActive,
-        },
-      }),
-    ),
-  ]);
+      ...data.blocks.map((b, i) =>
+        db.productBlock.create({
+          data: {
+            productId: id,
+            type: b.type,
+            title: b.title || null,
+            config: normalizeBlockConfig(
+              b.type,
+              b.config,
+            ) as Prisma.InputJsonValue,
+            sortOrder: i,
+            isActive: b.isActive,
+          },
+        }),
+      ),
+    ],
+    // This is the heaviest admin write: a product row plus a full replace of
+    // its variants and blocks. Against a remote (Neon) database the default
+    // 5s interactive-transaction budget can be exceeded on a cold pool, which
+    // surfaced to admins as an opaque "Save failed". Give it real headroom.
+    { timeout: 30000 },
+  );
 
   revalidateCatalog();
 }
