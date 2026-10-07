@@ -48,8 +48,8 @@ export interface ProductDetail extends ProductCardView {
     stock: number;
     /** Variant price override (falls back to the product price when unset). */
     priceCents?: number;
-    /** Option image: shown in the gallery while the option is selected. */
-    image?: string;
+    /** Option images: the first one leads the gallery for this option. */
+    images: string[];
     /** Swatch colour (hex) for the option chip. */
     color?: string;
   }[];
@@ -90,7 +90,7 @@ type ProductRow = {
     stock: number;
     priceCents: number | null;
     globalPriceCents: number | null;
-    image: string | null;
+    images: string[];
     color: string | null;
     sortOrder: number;
   }[];
@@ -170,7 +170,7 @@ function toDetail(p: ProductRow): ProductDetail {
       sku: v.sku,
       stock: v.stock,
       priceCents: v.priceCents ?? undefined,
-      image: v.image ?? undefined,
+      images: v.images,
       color: v.color ?? undefined,
     })),
   };

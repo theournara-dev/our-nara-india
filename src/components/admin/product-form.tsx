@@ -28,7 +28,7 @@ import {
   type AdminReviewRow,
 } from "@/components/admin/product-reviews-manager";
 import { ProductBlocks } from "@/components/product/blocks/block-renderer";
-import { ImageField } from "@/components/admin/image-field";
+import { ImageListField } from "@/components/admin/image-field";
 
 type BrandOption = { id: string; name: string };
 type CategoryOption = { id: string; name: string };
@@ -41,8 +41,8 @@ type VariantDraft = {
   price: string; // rupees, optional
   stock: number;
   isActive: boolean;
-  /** Option image (swapped into the gallery while the option is selected). */
-  image: string;
+  /** Option images — the first one leads the gallery while this option is picked. */
+  images: string[];
   /** Swatch colour hex (e.g. "#faddc3") for the option chip. */
   color: string;
 };
@@ -77,7 +77,7 @@ type Props = {
       priceCents: number | null;
       stock: number;
       isActive: boolean;
-      image: string | null;
+      images: string[];
       color: string | null;
     }[];
     blocks: {
@@ -179,7 +179,7 @@ export function ProductForm({
       price: toRupees(v.priceCents),
       stock: v.stock,
       isActive: v.isActive,
-      image: v.image ?? "",
+      images: v.images ?? [],
       color: v.color ?? "",
     })),
   );
@@ -334,7 +334,7 @@ export function ProductForm({
         price: "",
         stock: 0,
         isActive: true,
-        image: "",
+        images: [],
         color: "",
       },
     ]);
@@ -375,14 +375,14 @@ export function ProductForm({
       variants: variants.map((v) => ({
         id: v.id,
         optionLabel: v.optionLabel.trim() || undefined,
-        optionValue: v.optionValue.trim(),
-        sku: v.sku.trim(),
+        optionValue: v.optionValue.trim() || undefined,
+        sku: v.sku.trim() || undefined,
         priceCents: v.price
           ? Math.round((parseFloat(v.price) || 0) * 100)
           : undefined,
         stock: v.stock,
         isActive: v.isActive,
-        image: v.image.trim() || undefined,
+        images: v.images,
         color: v.color.trim() || undefined,
       })),
       blocks: blocks.map((b) => ({
@@ -807,7 +807,9 @@ export function ProductForm({
             </div>
             <p className="mb-3 text-xs text-zinc-400">
               Selectable options (e.g. shade or size). Leave empty for a
-              single-option product.
+              single-option product. Label, value, SKU and price may be left
+              blank — the value then falls back to the product name, the SKU is
+              generated, and the price uses the product price.
             </p>
             {variants.length === 0 ? (
               <p className="text-sm text-zinc-500">No variants.</p>
@@ -820,7 +822,7 @@ export function ProductForm({
                   >
                     <div className="flex flex-wrap items-end gap-2">
                       <label className="block">
-                        <span className={labelCls}>Label</span>
+                        <span className={labelCls}>Label (optional)</span>
                         <input
                           value={v.optionLabel}
                           onChange={(e) =>
@@ -831,24 +833,24 @@ export function ProductForm({
                         />
                       </label>
                       <label className="block">
-                        <span className={labelCls}>Value</span>
+                        <span className={labelCls}>Value (optional)</span>
                         <input
                           value={v.optionValue}
                           onChange={(e) =>
                             updateVariant(i, { optionValue: e.target.value })
                           }
-                          required
+                          placeholder="01 Rose"
                           className={inputCls}
                         />
                       </label>
                       <label className="block">
-                        <span className={labelCls}>SKU</span>
+                        <span className={labelCls}>SKU (optional)</span>
                         <input
                           value={v.sku}
                           onChange={(e) =>
                             updateVariant(i, { sku: e.target.value })
                           }
-                          required
+                          placeholder="Auto"
                           className={inputCls}
                         />
                       </label>
@@ -901,14 +903,13 @@ export function ProductForm({
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-wrap items-start gap-4">
                       <div className="min-w-[300px] flex-1">
-                        <ImageField
-                          compact
-                          label="Option image (optional)"
-                          value={v.image}
-                          onChange={(image) => updateVariant(i, { image })}
-                          hint="Shown in the gallery while this option is selected."
+                        <ImageListField
+                          label="Option images (optional)"
+                          value={v.images}
+                          onChange={(images) => updateVariant(i, { images })}
+                          hint="Added to the product gallery; the first image is shown while this option is selected (★ promotes one)."
                         />
                       </div>
                       <label className="block">

@@ -21,13 +21,15 @@ const blockInput = z.object({
 
 const variantInput = z.object({
   id: z.string().optional(),
+  // Everything except the images is optional: a blank option label/value or SKU
+  // is derived from the product on save (see `resolveVariantFields`).
   optionLabel: safeText(60).optional(),
-  optionValue: safeText(120, { min: 1, message: "Variant option is required" }),
-  sku: safeText(80, { min: 1, message: "Variant SKU is required" }),
+  optionValue: safeText(120).optional(),
+  sku: safeText(80).optional(),
   priceCents: z.coerce.number().int().nonnegative().optional(),
   stock: z.coerce.number().int().nonnegative().default(0),
-  // Option image (swapped into the gallery while selected) + swatch colour.
-  image: z.string().optional(),
+  // Option images (the first one leads the gallery while selected) + swatch colour.
+  images: z.array(safeText(500)).default([]),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Colour must be a hex value like #faddc3")
@@ -72,8 +74,37 @@ const productInput = z.object({
 });
 
 export type ProductInput = z.infer<typeof productInput>;
+type VariantInput = z.infer<typeof variantInput>;
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
+
+/**
+ * Fill in the blanks an admin may leave on a variant: a missing option value
+ * falls back to the product name and a missing SKU to `<product-slug>-<n>`. A
+ * variant that already exists keeps the SKU it has, so clearing the field never
+ * rewrites an identifier other records already point at.
+ */
+function resolveVariantFields(
+  variants: VariantInput[],
+  product: { name: string; slug: string },
+  currentSkuById: Map<string, string> = new Map(),
+) {
+  const used = new Set(currentSkuById.values());
+  return variants.map((v, i) => {
+    const optionValue = v.optionValue?.trim() || product.name;
+    let sku = v.sku?.trim() || (v.id ? currentSkuById.get(v.id) : undefined);
+    if (!sku) {
+      let n = i + 1;
+      sku = `${product.slug}-${n}`;
+      while (used.has(sku)) {
+        n += 1;
+        sku = `${product.slug}-${n}`;
+      }
+    }
+    used.add(sku);
+    return { optionValue, sku };
+  });
+}
 
 /** Return a slug that is unique among products, appending -2, -3, … on clash. */
 async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
@@ -103,6 +134,10 @@ export async function createProduct(input: ProductInput) {
   await requireAdmin();
   const data = parseInput(productInput, input, "products.create");
   const slug = await uniqueSlug(slugify(data.slug));
+  const resolved = resolveVariantFields(data.variants, {
+    name: data.name,
+    slug,
+  });
 
   const product = await db.product.create({
     data: {
@@ -127,10 +162,10 @@ export async function createProduct(input: ProductInput) {
       variants: {
         create: data.variants.map((v, i) => ({
           optionLabel: v.optionLabel || null,
-          optionValue: v.optionValue,
-          sku: v.sku,
+          optionValue: resolved[i].optionValue,
+          sku: resolved[i].sku,
           priceCents: v.priceCents ?? null,
-          image: v.image || null,
+          images: v.images,
           color: v.color || null,
           sortOrder: i,
           stock: v.stock,
@@ -170,15 +205,21 @@ export async function updateProduct(id: string, input: ProductInput) {
   // Ids not seen in the payload belong to variants the admin removed.
   const current = await db.productVariant.findMany({
     where: { productId: id },
-    select: { id: true },
+    select: { id: true, sku: true },
   });
   const currentIds = new Set(current.map((v) => v.id));
+  const currentSkuById = new Map(current.map((v) => [v.id, v.sku]));
   const keptIds = new Set(
     data.variants
       .map((v) => v.id)
       .filter((vid): vid is string => !!vid && currentIds.has(vid)),
   );
   const removedIds = current.filter((v) => !keptIds.has(v.id)).map((v) => v.id);
+  const resolved = resolveVariantFields(
+    data.variants,
+    { name: data.name, slug },
+    currentSkuById,
+  );
 
   await db.$transaction(
     [
@@ -213,10 +254,10 @@ export async function updateProduct(id: string, input: ProductInput) {
       ...data.variants.map((v, i) => {
         const fields = {
           optionLabel: v.optionLabel || null,
-          optionValue: v.optionValue,
-          sku: v.sku,
+          optionValue: resolved[i].optionValue,
+          sku: resolved[i].sku,
           priceCents: v.priceCents ?? null,
-          image: v.image || null,
+          images: v.images,
           color: v.color || null,
           sortOrder: i,
           stock: v.stock,

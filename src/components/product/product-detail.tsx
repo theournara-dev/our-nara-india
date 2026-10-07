@@ -56,14 +56,27 @@ export function ProductDetail({
   const [askOpen, setAskOpen] = useState(false);
 
   const selectedVariant = product.variants.find((v) => v.id === option);
-  // The selected option's image leads the gallery — the original swaps the
-  // main image when an option with a linked image is picked.
-  const images = selectedVariant?.image
-    ? [
-        selectedVariant.image,
-        ...product.images.filter((i) => i !== selectedVariant.image),
-      ]
-    : product.images;
+  // Gallery = the product's own images followed by each option's images, in
+  // admin order — the original appends the linked option images after the
+  // product's own. Duplicates (an option reusing a product image) collapse.
+  const galleryImages: string[] = [];
+  for (const src of [
+    ...product.images,
+    ...product.variants.flatMap((v) => v.images),
+  ]) {
+    if (src && !galleryImages.includes(src)) galleryImages.push(src);
+  }
+  // Where an option's first image sits in the gallery, so picking the option
+  // can move the gallery straight to it.
+  const firstImageIndex = new Map<string, number>();
+  for (const v of product.variants) {
+    const first = v.images[0];
+    if (first) {
+      const index = galleryImages.indexOf(first);
+      if (index >= 0) firstImageIndex.set(v.id, index);
+    }
+  }
+  const images = galleryImages;
   // A variant price overrides the product price (and re-bases the discount).
   const displayPrice = selectedVariant?.priceCents ?? product.priceCents;
   const compareAtCents =
@@ -97,7 +110,7 @@ export function ProductDetail({
       qty,
       option || undefined,
       selectedVariant
-        ? `${selectedVariant.optionLabel ? `${selectedVariant.optionLabel}: ` : ""}${selectedVariant.optionValue}`
+        ? `${selectedVariant.optionLabel ? `${selectedVariant.optionLabel}: ` : ""}${selectedVariant.optionValue || product.name}`
         : undefined,
     );
     notifyAddedToCart(product.name, qty);
@@ -114,15 +127,24 @@ export function ProductDetail({
         {/* ── Gallery (left) ── */}
         <div className="box-border w-full lg:w-[50%] lg:pr-6">
           <div className="relative aspect-square overflow-hidden rounded-xl border border-[#e9e9e9] bg-white">
-            {images[activeImage] ? (
-              <Image
-                src={images[activeImage]}
-                alt={product.name}
-                fill
-                priority
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover"
-              />
+            {images.length > 0 ? (
+              // Every gallery image is mounted and crossfaded, so switching
+              // (including from an option chip) reads like a gallery swipe
+              // rather than a hard swap.
+              images.map((src, i) => (
+                <Image
+                  key={src}
+                  src={src}
+                  alt={i === activeImage ? product.name : ""}
+                  aria-hidden={i !== activeImage}
+                  fill
+                  priority={i === 0}
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className={`object-cover transition-opacity duration-500 ease-in-out ${
+                    i === activeImage ? "opacity-100" : "opacity-0"
+                  }`}
+                />
+              ))
             ) : (
               <div className="flex h-full items-center justify-center bg-[#f6f6f6] text-zinc-400">
                 {product.brand.name}
@@ -218,8 +240,11 @@ export function ProductDetail({
                             type="button"
                             onClick={() => {
                               setOption(v.id);
-                              // Show the option's image first in the gallery.
-                              setActiveImage(0);
+                              // Move the gallery to the option's first image,
+                              // the way picking an option swaps the original's
+                              // linked main image.
+                              const index = firstImageIndex.get(v.id);
+                              if (index != null) setActiveImage(index);
                             }}
                             aria-pressed={selected}
                             title={v.optionValue}
@@ -235,9 +260,9 @@ export function ProductDetail({
                                 className="inline-block h-4 w-4 shrink-0 rounded-full border border-black/10"
                                 style={{ backgroundColor: v.color }}
                               />
-                            ) : v.image ? (
+                            ) : v.images[0] ? (
                               <Image
-                                src={v.image}
+                                src={v.images[0]}
                                 alt=""
                                 width={20}
                                 height={20}
