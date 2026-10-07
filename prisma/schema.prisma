@@ -478,6 +478,23 @@ model OrderAuditLog {
   @@map("order_audit_logs")
 }
 
+// Every photo-ID review decision taken on an order, oldest first. Staff can
+// change a decision at any time, so the order keeps only the current state
+// while this table keeps the trail. Standalone (like OrderAuditLog) so the
+// history survives an order deletion.
+model OrderApprovalLog {
+  id          String              @id @default(cuid())
+  orderId     String              @map("order_id")
+  orderNumber String              @map("order_number")
+  decision    OrderApprovalStatus
+  note        String?
+  actorEmail  String?             @map("actor_email")
+  createdAt   DateTime            @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("order_approval_logs")
+}
+
 // ---------------------------------------------------------------------------
 // Fulfillment (Delhivery)
 // ---------------------------------------------------------------------------

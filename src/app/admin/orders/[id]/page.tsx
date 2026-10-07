@@ -17,6 +17,7 @@ import {
 } from "@/lib/order-status";
 import { OrderRowActions } from "../row-actions";
 import { ApprovalActions } from "../approval-actions";
+import { getApprovalHistory } from "../approval-data";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function AdminOrderDetailPage({
     },
   });
   if (!order) notFound();
+  const approvalHistory = await getApprovalHistory(order.id);
 
   const shipping =
     (order.shipping as
@@ -437,11 +439,40 @@ export default async function AdminOrderDetailPage({
                     Note: {order.approvalNote}
                   </p>
                 )}
-                {order.approvalStatus === "PENDING" && (
-                  <ApprovalActions
-                    orderId={order.id}
-                    orderNumber={order.orderNumber}
-                  />
+                {/* A decision can be changed at any time — the history below
+                    keeps every previous one. */}
+                <ApprovalActions
+                  orderId={order.id}
+                  orderNumber={order.orderNumber}
+                  current={order.approvalStatus}
+                />
+                {approvalHistory.length > 0 && (
+                  <div>
+                    <p className="mb-1 text-xs font-medium text-zinc-500">
+                      Decision history
+                    </p>
+                    <ul className="space-y-1">
+                      {approvalHistory.map((h) => (
+                        <li
+                          key={h.id}
+                          className="rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-600"
+                        >
+                          <span className="font-medium text-zinc-800">
+                            {h.decision === "APPROVED"
+                              ? "Approved"
+                              : "Rejected"}
+                          </span>{" "}
+                          · {formatDate(new Date(h.createdAt))}
+                          {h.actorEmail && <> · {h.actorEmail}</>}
+                          {h.note && (
+                            <span className="mt-0.5 block text-zinc-500">
+                              {h.note}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             </section>

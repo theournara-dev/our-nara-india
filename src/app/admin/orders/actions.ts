@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { DEFAULT_PRODUCT_WEIGHT_GRAMS, fetchShipment } from "@/lib/delhivery";
 import { createShipment as apiCreateShipment } from "@/lib/delhivery";
 import { db } from "@/lib/db";
+import { getApprovalHistory, type ApprovalHistoryRow } from "./approval-data";
 import {
   applyShipmentBackout,
   applyTrackingStatus,
@@ -83,37 +84,49 @@ const approvalInput = z.object({
 export type ApprovalInput = z.infer<typeof approvalInput>;
 
 /**
- * Record the staff review of a global order's uploaded ID: approved or
- * rejected with an optional free-text note, timestamped at the decision.
- * Only orders still awaiting review can be decided — the guard lives in the
- * UPDATE's WHERE so two admins can't both record a decision, and it is
- * re-checked server-side regardless of what the UI shows.
+ * Record the staff review of a global order's uploaded ID. A decision can be
+ * changed at any time (staff may approve, reconsider and reject), so the order
+ * keeps the current state and every decision is appended to the approval
+ * history, which is returned for the caller to render.
  */
 export async function reviewOrderApproval(
   orderId: string,
   input: ApprovalInput,
-): Promise<ActionResult> {
-  await requireAdmin();
+): Promise<ActionResult & { history?: ApprovalHistoryRow[] }> {
+  const session = await requireAdmin();
   try {
     const data = parseInput(approvalInput, input, "orders.approval");
-    const res = await db.order.updateMany({
-      where: { id: orderId, approvalStatus: "PENDING" },
-      data: {
-        approvalStatus: data.decision,
-        approvalNote: data.note || null,
-        approvedAt: new Date(),
-      },
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, orderNumber: true },
     });
-    if (res.count === 0) {
-      return {
-        ok: false,
-        message:
-          "This order is not awaiting ID review — it may already have been decided.",
-      };
-    }
+    if (!order) return { ok: false, message: "Order not found." };
+
+    const now = new Date();
+    await db.$transaction([
+      db.order.update({
+        where: { id: orderId },
+        data: {
+          approvalStatus: data.decision,
+          approvalNote: data.note || null,
+          approvedAt: now,
+        },
+      }),
+      db.orderApprovalLog.create({
+        data: {
+          orderId,
+          orderNumber: order.orderNumber,
+          decision: data.decision,
+          note: data.note || null,
+          actorEmail: session.user.email ?? null,
+          createdAt: now,
+        },
+      }),
+    ]);
+
     revalidatePath("/admin/orders");
     revalidatePath(`/admin/orders/${orderId}`);
-    return { ok: true };
+    return { ok: true, history: await getApprovalHistory(orderId) };
   } catch (err) {
     if (err instanceof z.ZodError) {
       return {
