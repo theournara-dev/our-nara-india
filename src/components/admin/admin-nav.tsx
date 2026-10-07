@@ -14,6 +14,7 @@ const nav: NavItem[] = [
   { label: "Overview", href: "/admin" },
   { label: "Users & Permissions", href: "/admin/users" },
   { label: "Products", href: "/admin/products" },
+  { label: "Brands", href: "/admin/brands" },
   { label: "Pre-orders", href: "/admin/preorders" },
   { label: "Orders", href: "/admin/orders" },
   { label: "Feedback", href: "/admin/feedback" },
