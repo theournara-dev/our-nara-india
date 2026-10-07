@@ -2,11 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ProductDetail, InfoRow } from "@/data/products";
-import { addProductToCart } from "@/lib/cart";
+import { addProductToCart, useCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
+import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
+import { computeShippingCents } from "@/lib/shipping";
+import { listCouponsForProduct } from "@/app/actions/coupons";
+import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { PreorderDialog } from "./preorder-dialog";
@@ -43,8 +47,9 @@ export function ProductDetail({
   questions,
   canInteract,
 }: ProductDetailProps) {
-  const { version, config } = useSiteVersion();
+  const { version, config, shipping } = useSiteVersion();
   const { openQuickPurchase } = useCartSheet();
+  const cart = useCart();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
@@ -96,6 +101,47 @@ export function ProductDetail({
   const compareAtCents =
     compareAt != null && compareAt > displayPrice ? compareAt : undefined;
   const needsOption = product.variants.length > 0 && !option;
+
+  // Coupons whose scope covers this product — a hint, since the real discount
+  // depends on the cart and the shopper's history (resolved at checkout).
+  const [productCoupons, setProductCoupons] = useState<CouponRecord[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const coupons = await listCouponsForProduct({
+          productId: product.id,
+        });
+        if (!cancelled) setProductCoupons(coupons);
+      } catch {
+        // A failed hint must never break the product page.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id]);
+
+  // Delivery for what checkout would charge right now: the cart subtotal, plus
+  // this product's line when it is not in the cart yet (so the estimate matches
+  // the cart page instead of double-counting an item already added).
+  const cartSubtotalCents = cart.reduce(
+    (sum, item) =>
+      sum +
+      priceForVersion(item.priceCents, item.globalPriceCents, version) *
+        item.qty,
+    0,
+  );
+  const thisLineCents = displayPrice * qty;
+  const estimateSubtotalCents = cart.some(
+    (item) => item.productId === product.id,
+  )
+    ? cartSubtotalCents
+    : cartSubtotalCents + thisLineCents;
+  const shippingForThisLine = computeShippingCents(
+    estimateSubtotalCents,
+    shipping,
+  );
   // Option chips grouped by their label ("Shade", "Size"), kept in admin order.
   const optionGroups = product.variants.reduce<
     { label: string; items: ProductDetail["variants"] }[]
@@ -328,7 +374,14 @@ export function ProductDetail({
             </div>
           )}
           <div className="mt-2 text-sm text-[#888]">
-            Shipping Fee <span className="text-point-500">Free</span>
+            Shipping Fee{" "}
+            {shippingForThisLine === 0 ? (
+              <span className="text-point-500">Free</span>
+            ) : (
+              <span className="text-[#222]">
+                {formatMoney(shippingForThisLine, product.currency)}
+              </span>
+            )}
           </div>
 
           {/* Buy buttons — shown based on their feature flags */}
@@ -364,6 +417,28 @@ export function ProductDetail({
                 </button>
               ))}
           </div>
+
+          {/* Free-delivery progress, then any coupon that covers this product. */}
+          <ShippingProgressBar
+            subtotalCents={estimateSubtotalCents}
+            settings={shipping}
+            currency={product.currency}
+            className="mt-4"
+          />
+          {productCoupons.length > 0 && (
+            <ul className="mt-3 space-y-1">
+              {productCoupons.map((coupon) => (
+                <li key={coupon.id} className="text-xs text-point-600">
+                  <span className="font-mono font-semibold">{coupon.code}</span>
+                  {" · "}
+                  {describeCouponValue(coupon, (cents) =>
+                    formatMoney(cents, product.currency),
+                  )}
+                  <span className="text-[#999]"> · apply at checkout</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

@@ -59,6 +59,19 @@ export type SiteContent = {
   email: string;
   phone: string;
   address: string;
+  /** Delivery fee charged by this store, and when delivery becomes free. */
+  shippingCents: number;
+  /** Order value above which delivery is free; null = never free. */
+  freeShippingOverCents: number | null;
+  /** "From" block printed on this store's invoices. */
+  invoice: {
+    legalName: string;
+    address: string;
+    email: string;
+    phone: string;
+    taxId: string;
+    note: string;
+  };
   topBanner: TopBannerBlock[];
   switcher: SwitcherContent;
 };
@@ -116,6 +129,18 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     phone: "+91-88283-38323",
     address:
       "One World, S.V. Road, Near N L School, Malad West, Mumbai, Maharashtra 400064",
+    // Delivery is free until an admin sets a fee in /admin/site.
+    shippingCents: 0,
+    freeShippingOverCents: null,
+    invoice: {
+      legalName: "Seoulveda Trading LLP",
+      address:
+        "One World, S.V. Road, Near N L School, Malad West, Mumbai, Maharashtra 400064, India",
+      email: "theournara@gmail.com",
+      phone: "+91-88283-38323",
+      taxId: "",
+      note: "",
+    },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
   },
@@ -125,6 +150,17 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     phone: "",
     address:
       "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon, Republic of Korea",
+    shippingCents: 0,
+    freeShippingOverCents: null,
+    invoice: {
+      legalName: "The Firstteam Corp",
+      address:
+        "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon, Republic of Korea",
+      email: "tft@thefirstteam.co.kr",
+      phone: "",
+      taxId: "",
+      note: "",
+    },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
   },
@@ -228,6 +264,14 @@ export function siteContentFromRow(
     email: string | null;
     phone: string | null;
     address: string | null;
+    shippingCents: number | null;
+    freeShippingOverCents: number | null;
+    invoiceLegalName: string | null;
+    invoiceAddress: string | null;
+    invoiceEmail: string | null;
+    invoicePhone: string | null;
+    invoiceTaxId: string | null;
+    invoiceNote: string | null;
     topBanner: unknown;
     switcher: unknown;
   } | null,
@@ -239,6 +283,16 @@ export function siteContentFromRow(
     email: row.email?.trim() || base.email,
     phone: row.phone?.trim() ?? base.phone,
     address: row.address?.trim() || base.address,
+    shippingCents: row.shippingCents ?? base.shippingCents,
+    freeShippingOverCents: row.freeShippingOverCents ?? null,
+    invoice: {
+      legalName: row.invoiceLegalName?.trim() || base.invoice.legalName,
+      address: row.invoiceAddress?.trim() || base.invoice.address,
+      email: row.invoiceEmail?.trim() || base.invoice.email,
+      phone: row.invoicePhone?.trim() ?? base.invoice.phone,
+      taxId: row.invoiceTaxId?.trim() ?? base.invoice.taxId,
+      note: row.invoiceNote?.trim() ?? base.invoice.note,
+    },
     // A stored (even empty) banner wins over the defaults: clearing every block
     // in the admin hides the strip instead of bringing the defaults back.
     topBanner:

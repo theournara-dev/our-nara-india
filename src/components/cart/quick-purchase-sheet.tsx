@@ -22,6 +22,9 @@ import {
   type UserInfoValues,
 } from "./user-info-form";
 import { IdDocumentDialog } from "./id-document-dialog";
+import { CouponBox, type AppliedCoupon } from "./coupon-box";
+import { ShippingProgressBar } from "./shipping-progress";
+import { computeShippingCents } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
@@ -39,7 +42,7 @@ export function QuickPurchaseSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { config, version } = useSiteVersion();
+  const { config, version, shipping } = useSiteVersion();
   const { paymentsEnabled } = config;
   const isGlobal = version === "global";
   const items = useCart();
@@ -51,6 +54,9 @@ export function QuickPurchaseSheet({
   // success so the next global order captures a fresh document.
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
   const [idDialogOpen, setIdDialogOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null,
+  );
   // Vertical offset so the drawer slides in below the header instead of
   // underneath it. Measured from the header bar (responsive height), clamped to
   // 0 when the page is scrolled and the header is off-screen.
@@ -107,8 +113,14 @@ export function QuickPurchaseSheet({
     0,
   );
   const currency = items[0]?.currency ?? "INR";
-  const shippingCents = 0; // free shipping
-  const totalCents = subtotalCents + shippingCents;
+  const discountCents = appliedCoupon?.discountCents ?? 0;
+  // Same arithmetic as createOrder: the milestone is measured after the
+  // coupon, and a shipping coupon waives the fee outright.
+  const payableSubtotalCents = Math.max(0, subtotalCents - discountCents);
+  const shippingCents = appliedCoupon?.freeShipping
+    ? 0
+    : computeShippingCents(payableSubtotalCents, shipping);
+  const totalCents = payableSubtotalCents + shippingCents;
 
   async function placeOrder(documentUrlOverride?: string) {
     if (items.length === 0) return;
@@ -161,10 +173,12 @@ export function QuickPurchaseSheet({
         // The server recomputes prices and refuses when they no longer match
         // what the customer saw in the cart.
         expectedSubtotalCents: subtotalCents,
+        couponCode: appliedCoupon?.code,
         idDocumentUrl: idDocument ?? undefined,
       });
       clearCart();
       setIdDocumentUrl(null);
+      setAppliedCoupon(null);
       notify.success(
         id,
         "Payment successful!",
@@ -376,6 +390,14 @@ export function QuickPurchaseSheet({
                   errors={infoErrors}
                 />
               </section>
+
+              {/* Coupons last: the offers a shopper can use belong at the end of
+                  the checkout, right before the order is placed. */}
+              <CouponBox
+                applied={appliedCoupon}
+                onApplied={setAppliedCoupon}
+                currency={currency}
+              />
             </div>
           )}
         </div>
@@ -390,9 +412,34 @@ export function QuickPurchaseSheet({
                   {formatMoney(subtotalCents, currency)}
                 </dd>
               </div>
+              {discountCents > 0 && (
+                <div className="flex items-center justify-between">
+                  <dt className="text-zinc-500">
+                    Discount
+                    {appliedCoupon && (
+                      <span className="ml-1 font-mono text-[11px] text-zinc-400">
+                        {appliedCoupon.code}
+                      </span>
+                    )}
+                  </dt>
+                  <dd className="font-medium text-point-500">
+                    −{formatMoney(discountCents, currency)}
+                  </dd>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <dt className="text-zinc-500">Shipping</dt>
-                <dd className="font-medium text-point-500">Free</dd>
+                <dd
+                  className={
+                    shippingCents === 0
+                      ? "font-medium text-point-500"
+                      : "font-medium text-zinc-900"
+                  }
+                >
+                  {shippingCents === 0
+                    ? "Free"
+                    : formatMoney(shippingCents, currency)}
+                </dd>
               </div>
               <div className="flex items-center justify-between border-t border-zinc-100 pt-2">
                 <dt className="font-semibold text-zinc-900">Total</dt>
@@ -401,6 +448,14 @@ export function QuickPurchaseSheet({
                 </dd>
               </div>
             </dl>
+            {!appliedCoupon?.freeShipping && (
+              <ShippingProgressBar
+                subtotalCents={payableSubtotalCents}
+                settings={shipping}
+                currency={currency}
+                className="mt-3"
+              />
+            )}
             <button
               type="button"
               onClick={() => placeOrder()}

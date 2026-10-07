@@ -66,8 +66,24 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const initialVersion = resolveRequestSiteVersion(host);
   // Contact details, the top banner and the store picker come from the admin
   // site settings; defaults are baked in so nothing renders empty before an
-  // admin saves them.
-  const siteContent = await getSiteConfig(initialVersion);
+  // admin saves them. Both versions are read because the store switcher is
+  // client-side: the cart and product page must re-price delivery on switch
+  // without waiting for a server round trip.
+  const [siteContent, localSite, globalSite] = await Promise.all([
+    getSiteConfig(initialVersion),
+    getSiteConfig("local"),
+    getSiteConfig("global"),
+  ]);
+  const shippingByVersion = {
+    local: {
+      shippingCents: localSite.shippingCents,
+      freeShippingOverCents: localSite.freeShippingOverCents,
+    },
+    global: {
+      shippingCents: globalSite.shippingCents,
+      freeShippingOverCents: globalSite.freeShippingOverCents,
+    },
+  };
 
   return (
     <html
@@ -82,7 +98,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         />
       </head>
       <body className="flex min-h-full flex-col overflow-x-clip">
-        <SiteVersionProvider initialVersion={initialVersion}>
+        <SiteVersionProvider
+          initialVersion={initialVersion}
+          shippingByVersion={shippingByVersion}
+        >
           <CartProvider>
             <Header siteContent={siteContent} />
             <main className="flex-1">{children}</main>

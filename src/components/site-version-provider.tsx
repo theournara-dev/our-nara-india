@@ -18,6 +18,7 @@ import {
   type SiteVersion,
   type SiteVersionConfig,
 } from "@/lib/site-version";
+import { FREE_SHIPPING, type ShippingSettings } from "@/lib/shipping";
 
 interface SiteVersionContextValue {
   /** The currently active version (build-time default, overridable at runtime). */
@@ -26,6 +27,12 @@ interface SiteVersionContextValue {
   setVersion: (version: SiteVersion) => void;
   /** Config for the active version. */
   config: SiteVersionConfig;
+  /**
+   * Delivery pricing for the active store. Comes from the server layout (which
+   * reads both versions) so the cart, the quick-buy sheet and the product page
+   * all show the same fee and the same free-shipping progress.
+   */
+  shipping: ShippingSettings;
 }
 
 const SiteVersionContext = createContext<SiteVersionContextValue | null>(null);
@@ -43,6 +50,7 @@ function readStoredVersion(fallback: SiteVersion): SiteVersion {
 export function SiteVersionProvider({
   children,
   initialVersion = SITE_VERSION,
+  shippingByVersion,
 }: {
   children: React.ReactNode;
   /**
@@ -52,6 +60,12 @@ export function SiteVersionProvider({
    * SITE_VERSION when not provided.
    */
   initialVersion?: SiteVersion;
+  /**
+   * Delivery pricing per store, read once in the server layout. Both versions
+   * are passed so switching store re-prices shipping without a round trip,
+   * exactly like prices already do.
+   */
+  shippingByVersion?: Record<SiteVersion, ShippingSettings>;
 }) {
   const [version, setVersionState] = useState<SiteVersion>(initialVersion);
 
@@ -81,8 +95,13 @@ export function SiteVersionProvider({
   }, []);
 
   const value = useMemo<SiteVersionContextValue>(
-    () => ({ version, setVersion, config: getVersionConfig(version) }),
-    [version, setVersion],
+    () => ({
+      version,
+      setVersion,
+      config: getVersionConfig(version),
+      shipping: shippingByVersion?.[version] ?? FREE_SHIPPING,
+    }),
+    [version, setVersion, shippingByVersion],
   );
 
   return (

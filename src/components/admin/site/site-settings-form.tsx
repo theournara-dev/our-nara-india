@@ -115,12 +115,17 @@ function SiteSettingsInner({
         phone: current.phone,
         address: current.address,
         topBanner: current.topBanner,
+        shippingCents: current.shippingCents,
+        freeShippingOverCents: current.freeShippingOverCents,
+        invoice: current.invoice,
       }),
     );
 
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
     gate.registerHandler("banner", () => saveStore("banner"));
+    gate.registerHandler("shipping", () => saveStore("shipping"));
+    gate.registerHandler("invoice", () => saveStore("invoice"));
     gate.registerHandler("switcher", () =>
       run("switcher", () => saveStorePicker(switcher)),
     );
@@ -209,6 +214,144 @@ function SiteSettingsInner({
         </div>
       </section>
 
+      {/* ── Delivery ────────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-900">Delivery</h2>
+        <p className="mb-4 text-xs text-zinc-400">
+          The fee charged at checkout, and the order value above which delivery
+          becomes free. Customers see a progress bar towards the threshold in
+          the cart, the quick-buy sheet and on product pages. Leave the fee at 0
+          to always ship free.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCls}>Delivery fee (₹)</span>
+            <MoneyInput
+              key={`fee-${tab}`}
+              valueCents={current.shippingCents}
+              onChange={(cents) => patch({ shippingCents: cents ?? 0 })}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Free delivery over (₹)</span>
+            <MoneyInput
+              key={`milestone-${tab}`}
+              valueCents={current.freeShippingOverCents}
+              onChange={(cents) => patch({ freeShippingOverCents: cents })}
+              placeholder="Empty = no free-delivery threshold"
+            />
+          </label>
+        </div>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => void gate.save("shipping")}
+            disabled={saving !== null}
+            className={saveBtnCls}
+          >
+            {saving === "shipping" ? "Saving…" : "Save delivery"}
+          </button>
+        </div>
+      </section>
+
+      {/* ── Invoice ─────────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-900">Invoice</h2>
+        <p className="mb-4 text-xs text-zinc-400">
+          The &ldquo;from&rdquo; block printed on this store&apos;s order
+          invoices. Each store bills as its own legal entity.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCls}>Legal name</span>
+            <input
+              value={current.invoice.legalName}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, legalName: e.target.value },
+                })
+              }
+              className={inputCls}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Tax / registration ID</span>
+            <input
+              value={current.invoice.taxId}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, taxId: e.target.value },
+                })
+              }
+              placeholder="Optional"
+              className={inputCls}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Email</span>
+            <input
+              type="email"
+              value={current.invoice.email}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, email: e.target.value },
+                })
+              }
+              className={inputCls}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Phone</span>
+            <input
+              value={current.invoice.phone}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, phone: e.target.value },
+                })
+              }
+              className={inputCls}
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelCls}>Address</span>
+            <textarea
+              rows={2}
+              value={current.invoice.address}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, address: e.target.value },
+                })
+              }
+              className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelCls}>Footer note</span>
+            <textarea
+              rows={2}
+              value={current.invoice.note}
+              onChange={(e) =>
+                patch({
+                  invoice: { ...current.invoice, note: e.target.value },
+                })
+              }
+              placeholder="Printed at the bottom of every invoice (e.g. payment terms). Optional."
+              className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+            />
+          </label>
+        </div>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => void gate.save("invoice")}
+            disabled={saving !== null}
+            className={saveBtnCls}
+          >
+            {saving === "invoice" ? "Saving…" : "Save invoice details"}
+          </button>
+        </div>
+      </section>
+
       {/* ── Top banner ──────────────────────────────────────────────────── */}
       <TopBannerEditor
         blocks={current.topBanner}
@@ -227,6 +370,46 @@ function SiteSettingsInner({
         disabled={saving !== null}
       />
     </div>
+  );
+}
+
+/**
+ * Rupee text input that keeps the raw text while typing, so a partially typed
+ * amount ("12.") isn't reformatted under the cursor. Emits minor units; an
+ * empty box emits null so an unset milestone can be cleared.
+ */
+function MoneyInput({
+  valueCents,
+  onChange,
+  placeholder,
+}: {
+  valueCents: number | null;
+  onChange: (cents: number | null) => void;
+  placeholder?: string;
+}) {
+  const [text, setText] = useState(() =>
+    valueCents == null ? "" : String(valueCents / 100),
+  );
+
+  return (
+    <input
+      inputMode="decimal"
+      value={text}
+      placeholder={placeholder}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setText(raw);
+        if (raw.trim() === "") {
+          onChange(null);
+          return;
+        }
+        const parsed = Number.parseFloat(raw);
+        onChange(
+          Number.isFinite(parsed) ? Math.max(0, Math.round(parsed * 100)) : 0,
+        );
+      }}
+      className={inputCls}
+    />
   );
 }
 

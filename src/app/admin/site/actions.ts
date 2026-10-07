@@ -30,6 +30,28 @@ const contentInput = z.object({
   phone: safeText(40).optional(),
   address: safeMultiline(300).optional(),
   topBanner: z.array(z.unknown()).max(10, "A banner holds at most 10 blocks"),
+  // ── Delivery pricing (minor units) ────────────────────────────────────────
+  shippingCents: z.coerce.number().int().min(0).max(10_000_000).optional(),
+  freeShippingOverCents: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100_000_000)
+    .nullable()
+    .optional(),
+  // ── Invoice "from" block ────────────────────────────────────────────────
+  invoice: z
+    .object({
+      legalName: safeText(160).optional(),
+      address: safeMultiline(400).optional(),
+      // The email may legitimately be blank (no address printed), so an empty
+      // string passes instead of failing the email check.
+      email: z.union([safeEmail(), z.literal("")]).optional(),
+      phone: safeText(40).optional(),
+      taxId: safeText(60).optional(),
+      note: safeMultiline(300).optional(),
+    })
+    .optional(),
 });
 
 function toVersion(raw: string) {
@@ -38,7 +60,7 @@ function toVersion(raw: string) {
   return parsed;
 }
 
-/** Save the contact details + top banner for one store. */
+/** Save the contact details, top banner, delivery pricing and invoice block. */
 export async function saveSiteContent(input: z.infer<typeof contentInput>) {
   await requireAdmin();
   const data = parseInput(contentInput, input, "site.content");
@@ -55,6 +77,24 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
     phone: data.phone?.trim() || null,
     address: data.address?.trim() || null,
     topBanner,
+    // Only write the fields the client sent: a stale tab that predates a
+    // section must not wipe the values it doesn't know about.
+    ...(data.shippingCents !== undefined
+      ? { shippingCents: data.shippingCents }
+      : {}),
+    ...(data.freeShippingOverCents !== undefined
+      ? { freeShippingOverCents: data.freeShippingOverCents || null }
+      : {}),
+    ...(data.invoice
+      ? {
+          invoiceLegalName: data.invoice.legalName?.trim() || null,
+          invoiceAddress: data.invoice.address?.trim() || null,
+          invoiceEmail: data.invoice.email?.trim() || null,
+          invoicePhone: data.invoice.phone?.trim() || null,
+          invoiceTaxId: data.invoice.taxId?.trim() || null,
+          invoiceNote: data.invoice.note?.trim() || null,
+        }
+      : {}),
   };
 
   await db.siteConfig.upsert({

@@ -24,10 +24,13 @@ import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { friendlyPaymentError } from "@/lib/payment-errors";
 import { notify, notifyErrorWithContact } from "@/lib/toast";
 import { IdDocumentDialog } from "@/components/cart/id-document-dialog";
+import { CouponBox, type AppliedCoupon } from "@/components/cart/coupon-box";
+import { ShippingProgressBar } from "@/components/cart/shipping-progress";
+import { computeShippingCents } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 export default function CartPage() {
-  const { version, config } = useSiteVersion();
+  const { version, config, shipping } = useSiteVersion();
   const { paymentsEnabled } = config;
   const isGlobal = version === "global";
   const items = useCart();
@@ -38,14 +41,23 @@ export default function CartPage() {
   // purchase so the next global order captures a fresh document.
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
   const [idDialogOpen, setIdDialogOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
+    null,
+  );
 
   const subtotalCents = items.reduce(
     (s, i) => s + itemPriceForVersion(i, version) * i.qty,
     0,
   );
   const currency = items[0]?.currency ?? "INR";
-  const shippingCents = 0; // free shipping
-  const totalCents = subtotalCents + shippingCents;
+  const discountCents = appliedCoupon?.discountCents ?? 0;
+  // The fee is measured on what the customer pays for goods (after the coupon),
+  // and a shipping coupon waives it outright. Same arithmetic as createOrder.
+  const payableSubtotalCents = Math.max(0, subtotalCents - discountCents);
+  const shippingCents = appliedCoupon?.freeShipping
+    ? 0
+    : computeShippingCents(payableSubtotalCents, shipping);
+  const totalCents = payableSubtotalCents + shippingCents;
 
   async function placeOrder(documentUrlOverride?: string) {
     if (items.length === 0) return;
@@ -98,10 +110,12 @@ export default function CartPage() {
         // The server recomputes prices and refuses when they no longer match
         // what the customer saw in the cart.
         expectedSubtotalCents: subtotalCents,
+        couponCode: appliedCoupon?.code,
         idDocumentUrl: idDocument ?? undefined,
       });
       clearCart();
       setIdDocumentUrl(null);
+      setAppliedCoupon(null);
       notify.success(
         id,
         "Payment successful!",
@@ -257,6 +271,15 @@ export default function CartPage() {
                   errors={infoErrors}
                 />
               </section>
+
+              {/* Coupons sit under the details so the offers a shopper can use
+                  (including first-purchase codes) are the last thing they see
+                  before placing the order. */}
+              <CouponBox
+                applied={appliedCoupon}
+                onApplied={setAppliedCoupon}
+                currency={currency}
+              />
             </div>
 
             {/* Right: order summary */}
@@ -271,9 +294,34 @@ export default function CartPage() {
                     {formatMoney(subtotalCents, currency)}
                   </dd>
                 </div>
+                {discountCents > 0 && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-zinc-500">
+                      Discount
+                      {appliedCoupon && (
+                        <span className="ml-1 font-mono text-[11px] text-zinc-400">
+                          {appliedCoupon.code}
+                        </span>
+                      )}
+                    </dt>
+                    <dd className="font-medium text-point-500">
+                      −{formatMoney(discountCents, currency)}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <dt className="text-zinc-500">Shipping</dt>
-                  <dd className="font-medium text-point-500">Free</dd>
+                  <dd
+                    className={
+                      shippingCents === 0
+                        ? "font-medium text-point-500"
+                        : "font-medium text-zinc-900"
+                    }
+                  >
+                    {shippingCents === 0
+                      ? "Free"
+                      : formatMoney(shippingCents, currency)}
+                  </dd>
                 </div>
                 <div className="flex items-center justify-between border-t border-zinc-100 pt-2">
                   <dt className="font-semibold text-zinc-900">Total</dt>
@@ -282,6 +330,14 @@ export default function CartPage() {
                   </dd>
                 </div>
               </dl>
+              {!appliedCoupon?.freeShipping && (
+                <ShippingProgressBar
+                  subtotalCents={payableSubtotalCents}
+                  settings={shipping}
+                  currency={currency}
+                  className="mt-3"
+                />
+              )}
               <button
                 type="button"
                 onClick={() => placeOrder()}
