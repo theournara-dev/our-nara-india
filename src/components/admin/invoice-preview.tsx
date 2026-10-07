@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { InvoiceDocument } from "@/components/admin/invoice-document";
 import { fetchInvoiceView } from "@/app/admin/invoices/actions";
+import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { printElement } from "@/lib/print";
 import type { InvoiceView } from "@/lib/invoices";
+import { notify } from "@/lib/toast";
 
 /**
  * Dialog preview of a single invoice. The document is fetched through a
@@ -22,6 +25,10 @@ export function InvoicePreviewButton({
   const [view, setView] = useState<InvoiceView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The rendered document, so Print can hand exactly this node to the printer
+  // and Download can keep using the data it was rendered from.
+  const documentRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
 
   // Close on Escape, matching the other admin dialogs.
   useEffect(() => {
@@ -49,6 +56,31 @@ export function InvoicePreviewButton({
         setError("Could not load the invoice. Try again.");
       }
     });
+  }
+
+  function onPrint() {
+    const node = documentRef.current;
+    if (!node) return;
+    // A blocked popup falls back to printing the page, where the @media print
+    // rules keep only the invoice.
+    if (!printElement(node)) window.print();
+  }
+
+  async function onDownload() {
+    if (!view) return;
+    setDownloading(true);
+    try {
+      await downloadInvoicePdf(view);
+    } catch (err) {
+      console.error("[invoices] PDF download failed:", err);
+      notify.error(
+        "invoice-download",
+        "Could not create the PDF",
+        "Please try again, or use Print and save as PDF.",
+      );
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -84,11 +116,19 @@ export function InvoicePreviewButton({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={onPrint}
                   disabled={!view || pending}
                   className="h-8 rounded border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60"
                 >
                   Print
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onDownload()}
+                  disabled={!view || pending || downloading}
+                  className="h-8 rounded border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60"
+                >
+                  {downloading ? "Preparing…" : "Download PDF"}
                 </button>
                 <button
                   type="button"
@@ -110,7 +150,11 @@ export function InvoicePreviewButton({
                   {error}
                 </p>
               )}
-              {!pending && view && <InvoiceDocument view={view} />}
+              {!pending && view && (
+                <div ref={documentRef} data-print-root>
+                  <InvoiceDocument view={view} />
+                </div>
+              )}
             </div>
           </div>
         </div>

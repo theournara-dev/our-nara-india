@@ -825,3 +825,35 @@ body {
         animation: none;
     }
 }
+
+/*
+ * Printing.
+ *
+ * Only the element marked `data-print-root` reaches the paper. The rest of the
+ * page stays laid out (so the printed block keeps the styles its ancestors
+ * give it) but is not inked, which keeps the admin chrome — sidebar, header,
+ * backdrop — off the invoice.
+ */
+@media print {
+    @page {
+        margin: 14mm;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    [data-print-root],
+    [data-print-root] * {
+        visibility: visible;
+    }
+
+    /* Pin the printed block to the page origin: its ancestors are still laid
+       out, and a fixed dialog would otherwise print where the viewport has it. */
+    [data-print-root] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+}
