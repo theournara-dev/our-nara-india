@@ -1,11 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import Image from "next/image";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/slug";
-import { isValidImageUrl } from "@/lib/blob";
 import { notify } from "@/lib/toast";
 import { formatMoney } from "@/lib/money";
 import {
@@ -184,10 +182,6 @@ export function ProductForm({
     })),
   );
 
-  const [urlInput, setUrlInput] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
   const [blocks, setBlocks] = useState<BlockDraftState[]>(
     (product?.blocks ?? []).map((b) => ({
       key: b.id,
@@ -222,56 +216,6 @@ export function ProductForm({
   function onNameChange(value: string) {
     setName(value);
     if (!slugTouched) setSlug(slugify(value));
-  }
-
-  function addImageUrl() {
-    const value = urlInput.trim();
-    if (!value) return;
-    if (!isValidImageUrl(value)) {
-      notify.error(
-        "Invalid image URL",
-        "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
-      );
-      return;
-    }
-    setImages((prev) => [...prev, value]);
-    setUrlInput("");
-  }
-
-  async function onFileChange(file: File | undefined) {
-    if (!file) return;
-    setUploading(true);
-    const toastId = notify.loading("Uploading image…");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "Upload failed");
-      }
-      setImages((prev) => [...prev, data.url!]);
-      notify.success(toastId, "Image uploaded");
-    } catch (err) {
-      notify.error(
-        toastId,
-        "Upload failed",
-        err instanceof Error ? err.message : "Try again.",
-      );
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  function removeImage(index: number) {
-    setImages((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function onCreateBrand(e: React.FormEvent) {
@@ -733,64 +677,12 @@ export function ProductForm({
           {/* Images */}
           <section className="rounded-2xl border border-zinc-100 bg-white p-5">
             <h2 className="mb-4 text-sm font-semibold text-zinc-900">Images</h2>
-            {images.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-3">
-                {images.map((src, i) => (
-                  <div key={i} className="relative">
-                    <Image
-                      src={src}
-                      alt={`Image ${i + 1}`}
-                      width={72}
-                      height={72}
-                      unoptimized
-                      className="h-18 w-18 rounded border border-zinc-200 object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-xs text-white hover:bg-zinc-700"
-                      aria-label="Remove image"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="url"
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="Paste an image URL…"
-                className="h-9 min-w-0 flex-1 rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500"
-              />
-              <button
-                type="button"
-                onClick={addImageUrl}
-                className="h-9 rounded border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-              >
-                Add URL
-              </button>
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                disabled={uploading}
-                className="h-9 rounded border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:opacity-60"
-              >
-                {uploading ? "Uploading…" : "Upload file"}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/gif,image/webp,image/avif"
-                className="hidden"
-                onChange={(e) => onFileChange(e.target.files?.[0])}
-              />
-            </div>
-            <p className="mt-2 text-xs text-zinc-400">
-              Max 5MB. PNG, JPEG, GIF, WebP or AVIF.
-            </p>
+            <ImageListField
+              label="Gallery images"
+              value={images}
+              onChange={setImages}
+              hint="The first image is the one shown on product cards (★ promotes an image to first place). Max 5MB, PNG, JPEG, GIF, WebP or AVIF."
+            />
           </section>
 
           {/* Variants */}

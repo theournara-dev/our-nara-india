@@ -8,40 +8,16 @@ import { notify } from "@/lib/toast";
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
+const pickBtnCls =
+  "inline-flex h-9 shrink-0 items-center rounded bg-point-500 px-3 text-sm font-medium text-white hover:bg-point-600 disabled:opacity-60";
 
 /**
- * Editor for an ordered list of images (a product's gallery and a variant's
- * option images). Each thumbnail can be removed, an image can be promoted to
- * first place, and new images can be pasted or uploaded.
+ * Upload plumbing shared by the image pickers: the hidden file input, the
+ * busy flag and the POST to the admin upload endpoint.
  */
-export function ImageListField({
-  value,
-  onChange,
-  label,
-  hint,
-}: {
-  value: string[];
-  onChange: (v: string[]) => void;
-  label: string;
-  hint?: string;
-}) {
-  const [urlInput, setUrlInput] = useState("");
+function useImageUpload(onUploaded: (url: string) => void) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  function addUrl() {
-    const v = urlInput.trim();
-    if (!v) return;
-    if (!isValidImageUrl(v)) {
-      notify.error(
-        "Invalid image URL",
-        "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
-      );
-      return;
-    }
-    onChange([...value, v]);
-    setUrlInput("");
-  }
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -61,7 +37,7 @@ export function ImageListField({
       if (!res.ok || !data.url) {
         throw new Error(data.error ?? "Upload failed");
       }
-      onChange([...value, data.url!]);
+      onUploaded(data.url);
       notify.success(toastId, "Image uploaded");
     } catch (err) {
       notify.error(
@@ -73,6 +49,44 @@ export function ImageListField({
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  return { uploading, fileRef, onFile };
+}
+
+/**
+ * Editor for an ordered list of images (a product's gallery and a variant's
+ * option images). Each thumbnail can be removed, an image can be promoted to
+ * first place, and new images can be pasted or uploaded.
+ */
+export function ImageListField({
+  value,
+  onChange,
+  label,
+  hint,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  label: string;
+  hint?: string;
+}) {
+  const [urlInput, setUrlInput] = useState("");
+  const { uploading, fileRef, onFile } = useImageUpload((url) =>
+    onChange([...value, url]),
+  );
+
+  function addUrl() {
+    const v = urlInput.trim();
+    if (!v) return;
+    if (!isValidImageUrl(v)) {
+      notify.error(
+        "Invalid image URL",
+        "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
+      );
+      return;
+    }
+    onChange([...value, v]);
+    setUrlInput("");
   }
 
   function remove(index: number) {
@@ -162,7 +176,7 @@ export function ImageListField({
           type="button"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex h-9 shrink-0 items-center rounded bg-point-500 px-3 text-sm font-medium text-white hover:bg-point-600 disabled:opacity-60"
+          className={pickBtnCls}
         >
           {uploading ? "Uploading…" : "Upload"}
         </button>
@@ -181,17 +195,17 @@ export function ImageField({
   onChange,
   label,
   hint,
-  aspect = "thumb",
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
   hint?: string;
-  aspect?: "thumb" | "wide";
 }) {
   const [urlInput, setUrlInput] = useState(value);
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const { uploading, fileRef, onFile } = useImageUpload((url) => {
+    onChange(url);
+    setUrlInput(url);
+  });
 
   function addUrl() {
     const v = urlInput.trim();
@@ -207,43 +221,7 @@ export function ImageField({
     setUrlInput(v);
   }
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    setUploading(true);
-    const toastId = notify.loading("Uploading image…");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.url) {
-        throw new Error(data.error ?? "Upload failed");
-      }
-      onChange(data.url!);
-      setUrlInput(data.url!);
-      notify.success(toastId, "Image uploaded");
-    } catch (err) {
-      notify.error(
-        toastId,
-        "Upload failed",
-        err instanceof Error ? err.message : "Try again.",
-      );
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  }
-
-  const previewCls =
-    aspect === "wide"
-      ? "h-12 w-32 rounded object-cover"
-      : "h-12 w-12 rounded object-cover";
+  const previewCls = "h-12 w-12 rounded object-cover";
 
   const picker = (
     <div className="flex items-center gap-2">
@@ -272,7 +250,7 @@ export function ImageField({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="inline-flex h-9 shrink-0 items-center rounded bg-point-500 px-3 text-sm font-medium text-white hover:bg-point-600 disabled:opacity-60"
+        className={pickBtnCls}
       >
         {uploading ? "Uploading…" : "Upload"}
       </button>
@@ -295,7 +273,7 @@ export function ImageField({
     <Image
       src={value}
       alt={label}
-      width={aspect === "wide" ? 128 : 48}
+      width={48}
       height={48}
       unoptimized
       className={previewCls}
