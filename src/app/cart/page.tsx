@@ -14,6 +14,7 @@ import {
 } from "@/components/cart/user-info-form";
 import {
   clearCart,
+  itemPriceForVersion,
   removeCartItem,
   updateCartItemQty,
   useCart,
@@ -22,22 +23,31 @@ import { formatMoney } from "@/lib/money";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { friendlyPaymentError } from "@/lib/payment-errors";
 import { notify, notifyErrorWithContact } from "@/lib/toast";
+import { IdDocumentDialog } from "@/components/cart/id-document-dialog";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 export default function CartPage() {
-  const { config } = useSiteVersion();
+  const { version, config } = useSiteVersion();
   const { paymentsEnabled } = config;
+  const isGlobal = version === "global";
   const items = useCart();
   const { values: userInfo, setValues } = useUserInfo();
   const [placing, setPlacing] = useState(false);
   const [infoErrors, setInfoErrors] = useState<UserInfoErrors>({});
+  // URL of the ID uploaded for this checkout; cleared after a successful
+  // purchase so the next global order captures a fresh document.
+  const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
+  const [idDialogOpen, setIdDialogOpen] = useState(false);
 
-  const subtotalCents = items.reduce((s, i) => s + i.priceCents * i.qty, 0);
+  const subtotalCents = items.reduce(
+    (s, i) => s + itemPriceForVersion(i, version) * i.qty,
+    0,
+  );
   const currency = items[0]?.currency ?? "INR";
   const shippingCents = 0; // free shipping
   const totalCents = subtotalCents + shippingCents;
 
-  async function placeOrder() {
+  async function placeOrder(documentUrlOverride?: string) {
     if (items.length === 0) return;
     if (!paymentsEnabled) {
       notify.error(
@@ -58,6 +68,13 @@ export default function CartPage() {
         "Missing details",
         Object.values(errors).join(" "),
       );
+      return;
+    }
+    // The global store needs a photo ID before the order exists (enforced
+    // server-side too). Collect it here, then resume checkout from onUploaded.
+    const idDocument = documentUrlOverride ?? idDocumentUrl;
+    if (isGlobal && !idDocument) {
+      setIdDialogOpen(true);
       return;
     }
     setPlacing(true);
@@ -81,12 +98,16 @@ export default function CartPage() {
         // The server recomputes prices and refuses when they no longer match
         // what the customer saw in the cart.
         expectedSubtotalCents: subtotalCents,
+        idDocumentUrl: idDocument ?? undefined,
       });
       clearCart();
+      setIdDocumentUrl(null);
       notify.success(
         id,
         "Payment successful!",
-        `Order ${orderNumber} is confirmed.`,
+        isGlobal
+          ? `Order ${orderNumber} is placed. We received your photo ID and our team will review it before shipping.`
+          : `Order ${orderNumber} is confirmed.`,
       );
     } catch (err) {
       const friendly = friendlyPaymentError(err);
@@ -154,7 +175,10 @@ export default function CartPage() {
                           </p>
                         )}
                         <p className="text-sm text-zinc-600">
-                          {formatMoney(item.priceCents, item.currency)}
+                          {formatMoney(
+                            itemPriceForVersion(item, version),
+                            item.currency,
+                          )}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -191,7 +215,7 @@ export default function CartPage() {
                       <div className="w-20 text-right">
                         <p className="text-sm font-semibold text-zinc-900">
                           {formatMoney(
-                            item.priceCents * item.qty,
+                            itemPriceForVersion(item, version) * item.qty,
                             item.currency,
                           )}
                         </p>
@@ -260,7 +284,7 @@ export default function CartPage() {
               </dl>
               <button
                 type="button"
-                onClick={placeOrder}
+                onClick={() => placeOrder()}
                 disabled={placing || !paymentsEnabled}
                 className="mt-4 h-12 w-full rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
               >
@@ -279,6 +303,17 @@ export default function CartPage() {
           </div>
         )}
       </Container>
+
+      {idDialogOpen && (
+        <IdDocumentDialog
+          onCancel={() => setIdDialogOpen(false)}
+          onUploaded={(url) => {
+            setIdDocumentUrl(url);
+            setIdDialogOpen(false);
+            void placeOrder(url);
+          }}
+        />
+      )}
     </div>
   );
 }

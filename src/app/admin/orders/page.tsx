@@ -1,12 +1,18 @@
+import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import type { OrderStatus } from "@/generated/prisma/client";
 import { OrderDeleteAction, OrderRowActions } from "./row-actions";
+import { ApprovalActions } from "./approval-actions";
 import {
+  APPROVAL_STATUSES,
+  APPROVAL_STATUS_LABELS,
+  APPROVAL_STATUS_STYLES,
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_STYLES,
+  type ApprovalStatusValue,
   type OrderStatusValue,
 } from "@/lib/order-status";
 
@@ -34,6 +40,7 @@ type SearchParams = Promise<{
   page?: string;
   status?: string;
   version?: string;
+  approval?: string;
 }>;
 
 export default async function AdminOrdersPage({
@@ -55,10 +62,17 @@ export default async function AdminOrdersPage({
     params.version === "local" || params.version === "global"
       ? params.version
       : "";
+  // ID-review filter for global orders (validated against the known enum).
+  const approval = (APPROVAL_STATUSES as readonly string[]).includes(
+    params.approval ?? "",
+  )
+    ? (params.approval as ApprovalStatusValue)
+    : "";
 
   const where = {
     ...(status ? { status: status as OrderStatus } : {}),
     ...(version ? { siteVersion: version } : {}),
+    ...(approval ? { approvalStatus: approval } : {}),
   };
 
   const [orders, total] = await Promise.all([
@@ -90,6 +104,7 @@ export default async function AdminOrdersPage({
     const sp = new URLSearchParams();
     if (status) sp.set("status", status);
     if (version) sp.set("version", version);
+    if (approval) sp.set("approval", approval);
     for (const [k, v] of Object.entries(overrides)) {
       if (v) sp.set(k, v);
       else sp.delete(k);
@@ -163,14 +178,43 @@ export default async function AdminOrdersPage({
         ))}
       </div>
 
+      {/* ID-review filter — find global orders awaiting approval */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="mr-1 text-xs font-medium uppercase tracking-wide text-zinc-400">
+          ID review
+        </span>
+        {(
+          [
+            { value: "", label: "All" },
+            { value: "PENDING", label: APPROVAL_STATUS_LABELS.PENDING },
+            { value: "APPROVED", label: APPROVAL_STATUS_LABELS.APPROVED },
+            { value: "REJECTED", label: APPROVAL_STATUS_LABELS.REJECTED },
+            { value: "NONE", label: APPROVAL_STATUS_LABELS.NONE },
+          ] as const
+        ).map((opt) => (
+          <Link
+            key={opt.value || "all"}
+            href={href({ approval: opt.value || undefined, page: undefined })}
+            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+              approval === opt.value
+                ? "bg-point-500 text-white"
+                : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+            }`}
+          >
+            {opt.label}
+          </Link>
+        ))}
+      </div>
+
       <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-        <table className="w-full min-w-[860px] text-left text-sm">
+        <table className="w-full min-w-[1000px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
               <th className="px-4 py-3 font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Customer</th>
               <th className="px-4 py-3 font-medium">Items</th>
               <th className="px-4 py-3 font-medium">Store</th>
+              <th className="px-4 py-3 font-medium">ID review</th>
               <th className="px-4 py-3 font-medium">Total</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Date</th>
@@ -182,7 +226,7 @@ export default async function AdminOrdersPage({
             {orders.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-4 py-10 text-center text-zinc-500"
                 >
                   No orders found.
@@ -250,6 +294,45 @@ export default async function AdminOrdersPage({
                       >
                         {o.siteVersion === "global" ? "Global" : "Local"}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {o.idDocumentUrl ? (
+                          <a
+                            href={o.idDocumentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Open the uploaded ID"
+                            className="shrink-0"
+                          >
+                            <Image
+                              src={o.idDocumentUrl}
+                              alt="Uploaded ID document"
+                              width={40}
+                              height={40}
+                              unoptimized
+                              className="h-10 w-10 rounded border border-zinc-200 object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <span className="text-xs text-zinc-300">—</span>
+                        )}
+                        <div className="flex flex-col items-start gap-1">
+                          {o.approvalStatus !== "NONE" && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPROVAL_STATUS_STYLES[o.approvalStatus]}`}
+                            >
+                              {APPROVAL_STATUS_LABELS[o.approvalStatus]}
+                            </span>
+                          )}
+                          {o.approvalStatus === "PENDING" && (
+                            <ApprovalActions
+                              orderId={o.id}
+                              orderNumber={o.orderNumber}
+                            />
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-medium text-zinc-900">
                       {formatMoney(o.totalCents, o.currency, {

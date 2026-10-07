@@ -40,6 +40,31 @@ export const ORDER_STATUS_STYLES: Record<OrderStatusValue, string> = {
   FAILED: "bg-rose-100 text-rose-700",
 };
 
+/** Staff review states for a global order's uploaded ID document. */
+export const APPROVAL_STATUSES = [
+  "NONE",
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+] as const;
+
+export type ApprovalStatusValue = (typeof APPROVAL_STATUSES)[number];
+
+export const APPROVAL_STATUS_LABELS: Record<ApprovalStatusValue, string> = {
+  NONE: "Not required",
+  PENDING: "Pending review",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+/** Tailwind badge classes per approval status. */
+export const APPROVAL_STATUS_STYLES: Record<ApprovalStatusValue, string> = {
+  NONE: "bg-zinc-100 text-zinc-500",
+  PENDING: "bg-amber-100 text-amber-700",
+  APPROVED: "bg-emerald-100 text-emerald-700",
+  REJECTED: "bg-rose-100 text-rose-700",
+};
+
 export const SHIPMENT_STATUSES = [
   "CREATED",
   "PICKUP_SCHEDULED",

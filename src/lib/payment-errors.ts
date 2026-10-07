@@ -16,6 +16,11 @@ const PAYMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
     hint: "Add a product before checking out.",
   },
   {
+    match: /photo id|id document/i,
+    title: "Photo ID needed",
+    hint: "Please upload a photo of your ID to place this order.",
+  },
+  {
     match: /name is required|valid name and email|Enter a valid email/i,
     title: "Check your details",
     hint: "Please enter your name and a valid email address.",

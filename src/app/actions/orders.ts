@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { isValidIdDocumentUrl } from "@/lib/blob";
 import { CheckoutError } from "@/lib/checkout-errors";
 import { db } from "@/lib/db";
 import { priceForVersion } from "@/lib/money";
@@ -58,6 +59,12 @@ const createOrderInput = z.object({
    * order instead of creating a duplicate.
    */
   cartToken: z.string().min(8).max(100).optional(),
+  /**
+   * Public URL of the photo ID uploaded for a global order (see
+   * /api/upload/id-document). Never trusted as-is: the URL shape is
+   * re-validated server-side before it reaches the order.
+   */
+  idDocumentUrl: z.string().max(500).optional(),
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderInput>;
@@ -117,6 +124,18 @@ async function createOrderImpl(
     throw new CheckoutError(
       "PAYMENTS_DISABLED",
       "Payment is not available yet on this site. Please check back soon.",
+    );
+  }
+
+  // Global (international) orders require a photo ID uploaded at checkout.
+  // Re-validated here so a forged or missing value can never reach the order;
+  // local orders never collect one.
+  const idDocumentUrl = data.idDocumentUrl?.trim() ?? "";
+  const requiresIdDocument = requestVersion === "global";
+  if (requiresIdDocument && !isValidIdDocumentUrl(idDocumentUrl)) {
+    throw new CheckoutError(
+      "ID_DOCUMENT_REQUIRED",
+      "Please upload a photo ID to place this order.",
     );
   }
 
@@ -341,6 +360,14 @@ async function createOrderImpl(
             data: { status: "PENDING" },
           });
         }
+        // A reused legacy global order may predate the ID requirement — attach
+        // the freshly uploaded document so the review gate isn't bypassed.
+        if (requiresIdDocument) {
+          await tx.order.updateMany({
+            where: { id: existing.id, idDocumentUrl: null },
+            data: { idDocumentUrl, approvalStatus: "PENDING" },
+          });
+        }
         return { orderId: existing.id, orderNumber: existing.orderNumber };
       }
     }
@@ -353,6 +380,10 @@ async function createOrderImpl(
         status: "PENDING",
         currency,
         siteVersion: requestVersion,
+        // Global orders carry the uploaded ID and start in staff review;
+        // local orders stay NONE.
+        idDocumentUrl: requiresIdDocument ? idDocumentUrl : null,
+        approvalStatus: requiresIdDocument ? "PENDING" : "NONE",
         subtotalCents,
         shippingCents,
         discountCents,

@@ -1,9 +1,12 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { trackingUrl } from "@/lib/delhivery-client";
 import {
+  APPROVAL_STATUS_LABELS,
+  APPROVAL_STATUS_STYLES,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_STYLES,
   PAYMENT_STATUS_LABELS,
@@ -13,6 +16,7 @@ import {
   badgeStyle,
 } from "@/lib/order-status";
 import { OrderRowActions } from "../row-actions";
+import { ApprovalActions } from "../approval-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -372,6 +376,76 @@ export default async function AdminOrderDetailPage({
               )}
             </div>
           </section>
+
+          {/* ID verification (global orders upload a photo ID at checkout) */}
+          {(order.siteVersion === "global" || order.idDocumentUrl) && (
+            <section className={cardClass}>
+              <h2 className={cardHeaderClass}>ID verification</h2>
+              <div className="space-y-3 px-5 py-4 text-sm">
+                <div className="flex items-center gap-3">
+                  {order.idDocumentUrl ? (
+                    <a
+                      href={order.idDocumentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open the full ID image"
+                      className="shrink-0"
+                    >
+                      <Image
+                        src={order.idDocumentUrl}
+                        alt="Uploaded ID document"
+                        width={64}
+                        height={64}
+                        unoptimized
+                        className="h-16 w-16 rounded border border-zinc-200 object-cover"
+                      />
+                    </a>
+                  ) : (
+                    <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded border border-dashed border-zinc-200 text-[10px] text-zinc-400">
+                      No ID
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPROVAL_STATUS_STYLES[order.approvalStatus]}`}
+                    >
+                      {APPROVAL_STATUS_LABELS[order.approvalStatus]}
+                    </span>
+                    {order.approvedAt && (
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Decided {formatDate(order.approvedAt)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {order.idDocumentUrl ? (
+                  <a
+                    href={order.idDocumentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-xs text-point-500 hover:underline"
+                  >
+                    Open full image ↗
+                  </a>
+                ) : (
+                  <p className="text-xs text-amber-600">
+                    No ID document on this order yet.
+                  </p>
+                )}
+                {order.approvalNote && (
+                  <p className="rounded bg-zinc-50 px-3 py-2 text-xs text-zinc-600">
+                    Note: {order.approvalNote}
+                  </p>
+                )}
+                {order.approvalStatus === "PENDING" && (
+                  <ApprovalActions
+                    orderId={order.id}
+                    orderNumber={order.orderNumber}
+                  />
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Fulfillment actions */}
           <section className={cardClass}>

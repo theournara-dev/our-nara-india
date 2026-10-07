@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   clearCart,
+  itemPriceForVersion,
   removeCartItem,
   updateCartItemQty,
   useCart,
@@ -20,6 +21,7 @@ import {
   type UserInfoErrors,
   type UserInfoValues,
 } from "./user-info-form";
+import { IdDocumentDialog } from "./id-document-dialog";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
@@ -37,12 +39,18 @@ export function QuickPurchaseSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const { config } = useSiteVersion();
+  const { config, version } = useSiteVersion();
   const { paymentsEnabled } = config;
+  const isGlobal = version === "global";
   const items = useCart();
   const { values: userInfo, setValues: setUserInfo } = useUserInfo();
   const [placing, setPlacing] = useState(false);
   const [infoErrors, setInfoErrors] = useState<UserInfoErrors>({});
+  // URL of the ID uploaded for this checkout. Kept until a purchase succeeds
+  // so a cancelled payment can be retried without re-uploading; cleared on
+  // success so the next global order captures a fresh document.
+  const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
+  const [idDialogOpen, setIdDialogOpen] = useState(false);
   // Vertical offset so the drawer slides in below the header instead of
   // underneath it. Measured from the header bar (responsive height), clamped to
   // 0 when the page is scrolled and the header is off-screen.
@@ -94,12 +102,15 @@ export function QuickPurchaseSheet({
     };
   }, [open, lockTick]);
 
-  const subtotalCents = items.reduce((s, i) => s + i.priceCents * i.qty, 0);
+  const subtotalCents = items.reduce(
+    (s, i) => s + itemPriceForVersion(i, version) * i.qty,
+    0,
+  );
   const currency = items[0]?.currency ?? "INR";
   const shippingCents = 0; // free shipping
   const totalCents = subtotalCents + shippingCents;
 
-  async function placeOrder() {
+  async function placeOrder(documentUrlOverride?: string) {
     if (items.length === 0) return;
     if (!paymentsEnabled) {
       notify.error(
@@ -120,6 +131,13 @@ export function QuickPurchaseSheet({
         "Missing details",
         Object.values(errors).join(" "),
       );
+      return;
+    }
+    // The global store needs a photo ID before the order exists (enforced
+    // server-side too). Collect it here, then resume checkout from onUploaded.
+    const idDocument = documentUrlOverride ?? idDocumentUrl;
+    if (isGlobal && !idDocument) {
+      setIdDialogOpen(true);
       return;
     }
     setPlacing(true);
@@ -143,12 +161,16 @@ export function QuickPurchaseSheet({
         // The server recomputes prices and refuses when they no longer match
         // what the customer saw in the cart.
         expectedSubtotalCents: subtotalCents,
+        idDocumentUrl: idDocument ?? undefined,
       });
       clearCart();
+      setIdDocumentUrl(null);
       notify.success(
         id,
         "Payment successful!",
-        `Order ${orderNumber} is confirmed.`,
+        isGlobal
+          ? `Order ${orderNumber} is placed. We received your photo ID and our team will review it before shipping.`
+          : `Order ${orderNumber} is confirmed.`,
       );
       onClose();
     } catch (err) {
@@ -268,7 +290,10 @@ export function QuickPurchaseSheet({
                           </p>
                         )}
                         <p className="text-xs text-zinc-500">
-                          {formatMoney(item.priceCents, item.currency)}
+                          {formatMoney(
+                            itemPriceForVersion(item, version),
+                            item.currency,
+                          )}
                         </p>
                         {/* Qty stepper + remove */}
                         <div className="mt-2 flex items-center gap-2">
@@ -317,7 +342,10 @@ export function QuickPurchaseSheet({
                         </div>
                       </div>
                       <span className="text-sm font-semibold text-zinc-900">
-                        {formatMoney(item.priceCents * item.qty, item.currency)}
+                        {formatMoney(
+                          itemPriceForVersion(item, version) * item.qty,
+                          item.currency,
+                        )}
                       </span>
                     </li>
                   ))}
@@ -375,7 +403,7 @@ export function QuickPurchaseSheet({
             </dl>
             <button
               type="button"
-              onClick={placeOrder}
+              onClick={() => placeOrder()}
               disabled={placing || !paymentsEnabled}
               className="mt-4 h-12 w-full rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
             >
@@ -393,6 +421,17 @@ export function QuickPurchaseSheet({
           </div>
         )}
       </aside>
+
+      {idDialogOpen && (
+        <IdDocumentDialog
+          onCancel={() => setIdDialogOpen(false)}
+          onUploaded={(url) => {
+            setIdDocumentUrl(url);
+            setIdDialogOpen(false);
+            void placeOrder(url);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -74,6 +74,61 @@ export async function updateOrderStatus(id: string, status: string) {
   revalidatePath("/admin/orders");
 }
 
+/** Staff decisions on a global order's uploaded ID. */
+const approvalInput = z.object({
+  decision: z.enum(["APPROVED", "REJECTED"]),
+  note: safeText(500).optional(),
+});
+
+export type ApprovalInput = z.infer<typeof approvalInput>;
+
+/**
+ * Record the staff review of a global order's uploaded ID: approved or
+ * rejected with an optional free-text note, timestamped at the decision.
+ * Only orders still awaiting review can be decided — the guard lives in the
+ * UPDATE's WHERE so two admins can't both record a decision, and it is
+ * re-checked server-side regardless of what the UI shows.
+ */
+export async function reviewOrderApproval(
+  orderId: string,
+  input: ApprovalInput,
+): Promise<ActionResult> {
+  await requireAdmin();
+  try {
+    const data = parseInput(approvalInput, input, "orders.approval");
+    const res = await db.order.updateMany({
+      where: { id: orderId, approvalStatus: "PENDING" },
+      data: {
+        approvalStatus: data.decision,
+        approvalNote: data.note || null,
+        approvedAt: new Date(),
+      },
+    });
+    if (res.count === 0) {
+      return {
+        ok: false,
+        message:
+          "This order is not awaiting ID review — it may already have been decided.",
+      };
+    }
+    revalidatePath("/admin/orders");
+    revalidatePath(`/admin/orders/${orderId}`);
+    return { ok: true };
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return {
+        ok: false,
+        message: err.issues[0]?.message ?? "Invalid review input.",
+      };
+    }
+    console.error(`[orders] reviewOrderApproval failed for ${orderId}:`, err);
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
 /**
  * Permanently delete an order and all of its related rows (items, payments,
  * shipments, coupon redemptions, mileage entries). Those relations have no
