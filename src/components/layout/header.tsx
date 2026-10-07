@@ -58,6 +58,7 @@ const categoryNav = [
   { label: "REVIEW", href: "/review", children: [] },
   { label: "EVENT", href: "/event", children: [] },
   { label: "STORES", href: "/stores", children: [] },
+  { label: "B2B", href: "/b2b", children: [] },
   { label: "AMBASSADOR", href: "/ambassador", children: [] },
 ];
 
