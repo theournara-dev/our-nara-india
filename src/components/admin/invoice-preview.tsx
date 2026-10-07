@@ -67,10 +67,11 @@ export function InvoicePreviewButton({
   }
 
   async function onDownload() {
-    if (!view) return;
+    const node = documentRef.current;
+    if (!node || !view) return;
     setDownloading(true);
     try {
-      await downloadInvoicePdf(view);
+      await downloadInvoicePdf(node, view.number);
     } catch (err) {
       console.error("[invoices] PDF download failed:", err);
       notify.error(
@@ -94,7 +95,9 @@ export function InvoicePreviewButton({
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:static print:block print:p-0">
+        // Above the site header (z-99): the dialog's action row sits where the
+        // header is, and below it the buttons would be covered and unclickable.
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 print:static print:block print:p-0">
           <div
             className="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm print:hidden"
             onClick={() => setOpen(false)}

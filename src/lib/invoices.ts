@@ -53,6 +53,14 @@ export interface InvoicePaymentRow {
 }
 
 /**
+ * Payments worth printing on an invoice: the ones where money actually moved.
+ * A checkout attempt that was never completed (CREATED), is only held
+ * (AUTHORIZED) or failed is not a payment the customer made, and listing
+ * retries as if they were payments would misstate the invoice.
+ */
+const INVOICE_PAYMENT_STATUSES = ["CAPTURED", "REFUNDED"] as const;
+
+/**
  * Everything the document needs. Dates are pre-serialized to ISO strings so
  * the same shape can cross the server → client boundary into the preview
  * dialogs (and be passed from either preview surface).
@@ -191,7 +199,10 @@ export async function buildInvoiceView(
     where: { id: orderId },
     include: {
       items: { orderBy: { id: "asc" } },
-      payments: { orderBy: { createdAt: "asc" } },
+      payments: {
+        where: { status: { in: [...INVOICE_PAYMENT_STATUSES] } },
+        orderBy: { createdAt: "asc" },
+      },
       invoice: true,
     },
   });
