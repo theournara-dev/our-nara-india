@@ -1,34 +1,32 @@
 import type { Metadata } from "next";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { cookies, headers } from "next/headers";
+import { CouponCard } from "@/components/coupons/coupon-card";
 import { Container } from "@/components/ui/container";
 import { PageHeader } from "@/components/ui/page-header";
-import { formatMoney } from "@/lib/money";
+import { loadStorefrontCoupons } from "@/lib/coupon-store";
+import {
+  SITE_VERSION_COOKIE,
+  parseSiteVersion,
+  resolveRequestSiteVersion,
+} from "@/lib/site-version";
 
 export const metadata: Metadata = { title: "Couponzone" };
 
-const coupons = [
-  {
-    id: "c1",
-    title: "Welcome Gift",
-    detail: "+3,000P for new members",
-    badge: "New",
-  },
-  {
-    id: "c2",
-    title: "Free Shipping",
-    detail: `On orders over ${formatMoney(99900, "INR", { convert: false })}`,
-    badge: "Shipping",
-  },
-  {
-    id: "c3",
-    title: "10% Off",
-    detail: "On your first order",
-    badge: "Percent",
-  },
-];
+/**
+ * The couponzone: every coupon a shopper on this store can use right now.
+ * Coupons scoped to a brand, category or product are listed here too — the
+ * cart and product pages surface the ones that fit what is being bought.
+ */
+export default async function CouponzonePage() {
+  const requestHeaders = await headers();
+  const cookieStore = await cookies();
+  const version =
+    parseSiteVersion(cookieStore.get(SITE_VERSION_COOKIE)?.value) ??
+    resolveRequestSiteVersion(
+      requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+    );
+  const coupons = await loadStorefrontCoupons(version);
 
-export default function CouponzonePage() {
   return (
     <div>
       <PageHeader
@@ -37,27 +35,20 @@ export default function CouponzonePage() {
         subtitle="Download coupons and use them at checkout."
       />
       <Container className="pb-16">
-        <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-3">
-          {coupons.map((coupon) => (
-            <div
-              key={coupon.id}
-              className="flex flex-col rounded-2xl border border-zinc-100 bg-white p-6"
-            >
-              <Badge tone="accent" className="self-start">
-                {coupon.badge}
-              </Badge>
-              <h2 className="mt-3 text-lg font-semibold text-zinc-900">
-                {coupon.title}
-              </h2>
-              <p className="mt-1 flex-1 text-sm text-zinc-500">
-                {coupon.detail}
-              </p>
-              <Button size="sm" variant="outline" className="mt-4 self-start">
-                Apply
-              </Button>
-            </div>
-          ))}
-        </div>
+        {coupons.length === 0 ? (
+          <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center">
+            <p className="text-3xl">🎟️</p>
+            <p className="mt-3 text-zinc-600">
+              There are no coupons available right now. Check back soon!
+            </p>
+          </div>
+        ) : (
+          <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {coupons.map((coupon) => (
+              <CouponCard key={coupon.id} coupon={coupon} />
+            ))}
+          </div>
+        )}
       </Container>
     </div>
   );

@@ -4,7 +4,17 @@
  * users should never see stack traces, Razorpay codes, or raw JSON.
  */
 
-const PAYMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
+const PAYMENT_MESSAGES: {
+  match: RegExp;
+  title: string;
+  hint: string;
+  /**
+   * Show the server's own message as the hint. Only for errors whose text is
+   * written as customer-facing copy (coupon rejections), where the specific
+   * reason is the whole point of the message.
+   */
+  useMessage?: boolean;
+}[] = [
   {
     match: /cancel/i,
     title: "Payment cancelled",
@@ -19,6 +29,13 @@ const PAYMENT_MESSAGES: { match: RegExp; title: string; hint: string }[] = [
     match: /photo id|id document/i,
     title: "Photo ID needed",
     hint: "Please upload a photo of your ID to place this order.",
+  },
+  {
+    match: /coupon/i,
+    title: "Coupon not accepted",
+    // e.g. "This coupon has expired." — the reason comes from the server.
+    hint: "Please check the code or place the order without it.",
+    useMessage: true,
   },
   {
     match: /name is required|valid name and email|Enter a valid email/i,
@@ -84,7 +101,10 @@ export function friendlyPaymentError(err: unknown): FriendlyPaymentError {
 
   for (const m of PAYMENT_MESSAGES) {
     if (m.match.test(message)) {
-      return { title: m.title, hint: m.hint };
+      return {
+        title: m.title,
+        hint: m.useMessage ? message : m.hint,
+      };
     }
   }
   return {

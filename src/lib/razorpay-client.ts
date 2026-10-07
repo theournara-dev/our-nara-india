@@ -88,6 +88,9 @@ function cartToken(input: CreateOrderInput): string {
     input.state ?? "",
     input.postal ?? "",
     input.country ?? "",
+    // The coupon changes the amount charged, so it is part of the intent: a
+    // re-submit after applying one must not reuse the undiscounted order.
+    input.couponCode ?? "",
   ]);
   // Simple non-crypto hash (FNV-1a), zero-padded to a fixed width so the
   // server-side zod min(8) can never reject a short run. Collisions only

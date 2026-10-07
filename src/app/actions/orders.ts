@@ -5,8 +5,16 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { isValidIdDocumentUrl } from "@/lib/blob";
 import { CheckoutError } from "@/lib/checkout-errors";
+import { resolveCouponForCart } from "@/lib/coupon-store";
+import {
+  couponCodeFromBilling,
+  normalizeCouponCode,
+  type CouponCartLine,
+} from "@/lib/coupons";
 import { db } from "@/lib/db";
 import { priceForVersion } from "@/lib/money";
+import { computeShippingCents } from "@/lib/shipping";
+import { loadSiteConfig } from "@/lib/site-config";
 import {
   SITE_VERSION_COOKIE,
   getVersionConfig,
@@ -60,6 +68,12 @@ const createOrderInput = z.object({
    */
   cartToken: z.string().min(8).max(100).optional(),
   /**
+   * Coupon code the customer applied in the cart. Re-validated here against the
+   * cart and the shopper's history; an ineligible code fails the order instead
+   * of silently charging the undiscounted total.
+   */
+  couponCode: z.string().max(40).optional(),
+  /**
    * Public URL of the photo ID uploaded for a global order (see
    * /api/upload/id-document). Never trusted as-is: the URL shape is
    * re-validated server-side before it reaches the order.
@@ -98,6 +112,18 @@ export async function createOrder(
         "Something went wrong while placing your order. You were not charged — please try again.",
     };
   }
+}
+
+/** The billing payload for a new order, or undefined when it holds nothing. */
+function billingJson(
+  cartToken: string | undefined,
+  couponCode: string | null,
+): Record<string, string> | undefined {
+  if (!cartToken && !couponCode) return undefined;
+  return {
+    ...(cartToken ? { cartToken } : {}),
+    ...(couponCode ? { couponCode } : {}),
+  };
 }
 
 async function createOrderImpl(
@@ -160,6 +186,9 @@ async function createOrderImpl(
       currency: true,
       isPreOrder: true,
       stock: true,
+      // Scope matching for coupons (brand / category targeted codes).
+      brandId: true,
+      categoryId: true,
       variants: {
         select: {
           id: true,
@@ -202,6 +231,8 @@ async function createOrderImpl(
     quantity: number;
     currency: string;
   }[] = [];
+  // The same lines, shaped for the coupon rules (unit price + scope ids).
+  const couponLines: CouponCartLine[] = [];
   let subtotalCents = 0;
   let isPreOrder = false;
 
@@ -267,6 +298,14 @@ async function createOrderImpl(
     subtotalCents += unitPriceCents * item.quantity;
     if (product.isPreOrder) isPreOrder = true;
 
+    couponLines.push({
+      productId: product.id,
+      priceCents: unitPriceCents,
+      qty: item.quantity,
+      brandId: product.brandId,
+      categoryId: product.categoryId,
+    });
+
     orderItems.push({
       productId: product.id,
       variantId: item.variantId ?? null,
@@ -279,9 +318,35 @@ async function createOrderImpl(
     });
   }
 
-  const shippingCents = 0; // free shipping
-  const discountCents = 0;
-  const totalCents = subtotalCents + shippingCents - discountCents;
+  // Coupon: re-validate the code against this cart and the shopper's history.
+  // An ineligible code stops the checkout — quietly dropping it would charge a
+  // different total than the customer approved.
+  const couponResult = await resolveCouponForCart({
+    code: data.couponCode,
+    lines: couponLines,
+    version: requestVersion,
+    email: data.email,
+    userId,
+  });
+  if (!couponResult.ok) {
+    throw new CheckoutError("COUPON_INVALID", couponResult.reason);
+  }
+  const application = couponResult.application;
+  const discountCents = application?.evaluation.discountCents ?? 0;
+
+  // Delivery: the store's flat fee, waived at the free-shipping milestone. The
+  // milestone is measured on what the customer pays for goods (after the
+  // coupon), so a discount can drop the order back below it.
+  const site = await loadSiteConfig(requestVersion);
+  const payableSubtotalCents = Math.max(0, subtotalCents - discountCents);
+  const shippingCents =
+    application?.evaluation.freeShipping === true
+      ? 0
+      : computeShippingCents(payableSubtotalCents, {
+          shippingCents: site.shippingCents,
+          freeShippingOverCents: site.freeShippingOverCents,
+        });
+  const totalCents = payableSubtotalCents + shippingCents;
 
   // Price guard: the cart displays add-time prices. When the DB no longer
   // matches, stop BEFORE any payment so nobody is charged a different amount
@@ -300,6 +365,9 @@ async function createOrderImpl(
   const orderNumber = `ON-${Date.now().toString(36)}${Math.random()
     .toString(36)
     .slice(2, 6)}`.toUpperCase();
+  const appliedCouponCode = application
+    ? normalizeCouponCode(application.coupon.code)
+    : null;
 
   // Idempotency: a retry or double-submit with the same cart token reuses the
   // open (PENDING) or retryable (FAILED) order instead of creating a duplicate.
@@ -332,6 +400,7 @@ async function createOrderImpl(
       const sameItems =
         existing &&
         existing.totalCents === totalCents &&
+        couponCodeFromBilling(existing.billing) === appliedCouponCode &&
         existing.items.length === data.items.length &&
         data.items.every((req) =>
           existing.items.some(
@@ -389,8 +458,10 @@ async function createOrderImpl(
         discountCents,
         totalCents,
         isPreOrder,
-        // cartToken lives in billing Json (unused column) for idempotent reuse.
-        billing: data.cartToken ? { cartToken: data.cartToken } : undefined,
+        // cartToken + the applied coupon live in billing Json (an unused
+        // column) for idempotent reuse and so staff can see which code a guest
+        // order used — the schema has no dedicated column for either.
+        billing: billingJson(data.cartToken, appliedCouponCode),
         shipping: {
           name: data.name.trim(),
           phone: data.phone.trim(),
