@@ -281,11 +281,18 @@ export function ImageField({
   onChange,
   label,
   hint,
+  onPreviewChange,
 }: {
   value: string;
   onChange: (v: string) => void;
   label: string;
   hint?: string;
+  /**
+   * Fires with the local blob URL while a picked file is waiting to upload,
+   * and with null once it has uploaded (or been cleared). Lets callers show
+   * the image in their own preview before the form is saved.
+   */
+  onPreviewChange?: (previewUrl: string | null) => void;
 }) {
   const queue = useUploadQueue();
   const fieldId = useId();
@@ -312,6 +319,16 @@ export function ImageField({
     },
     [queue],
   );
+
+  // Tell the caller which image to preview: the picked-but-unsaved blob while
+  // it waits for the form save, otherwise nothing (the URL is in `value`).
+  const onPreviewChangeRef = useRef(onPreviewChange);
+  useEffect(() => {
+    onPreviewChangeRef.current = onPreviewChange;
+  });
+  useEffect(() => {
+    onPreviewChangeRef.current?.(pending ? pending.previewUrl : null);
+  }, [pending]);
 
   function addUrl() {
     const v = urlInput.trim();

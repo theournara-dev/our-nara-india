@@ -23,11 +23,16 @@ import {
   FREQUENCY_HINTS,
   POPUP_SIZES,
   SIZE_LABELS,
+  POPUP_CONTENT_LAYOUTS,
+  CONTENT_LAYOUT_LABELS,
+  CONTENT_LAYOUT_HINTS,
+  POPUP_TEXT_ALIGNS,
+  TEXT_ALIGN_LABELS,
   POPUP_LIMITS,
   DEFAULT_POPUP_WIDTH_PX,
   DEFAULT_POPUP_SCALE,
 } from "@/app/admin/popups/lib";
-import { isPopupFrequency } from "@/lib/popups";
+import { isFullScreenSize, isPopupFrequency } from "@/lib/popups";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
@@ -59,6 +64,9 @@ type PopupModel = {
   size: string;
   widthPx: number | null;
   scale: number;
+  contentLayout: string;
+  imageHeightPx: number | null;
+  textAlign: string;
   delaySeconds: number;
   timeoutSeconds: number;
   overlay: boolean;
@@ -100,6 +108,13 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
     popup?.widthPx ?? DEFAULT_POPUP_WIDTH_PX,
   );
   const [scale, setScale] = useState(popup?.scale ?? DEFAULT_POPUP_SCALE);
+  const [contentLayout, setContentLayout] = useState(
+    popup?.contentLayout ?? "auto",
+  );
+  const [imageHeightPx, setImageHeightPx] = useState(popup?.imageHeightPx ?? 0);
+  const [textAlign, setTextAlign] = useState(popup?.textAlign ?? "left");
+  // Blob URL of a picked-but-unsaved image, so the preview updates on upload.
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [delaySeconds, setDelaySeconds] = useState(popup?.delaySeconds ?? 0);
   const [timeoutSeconds, setTimeoutSeconds] = useState(
     popup?.timeoutSeconds ?? 0,
@@ -135,6 +150,15 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
       size: size as PopupInput["size"],
       widthPx: size === "custom" ? widthPx : undefined,
       scale,
+      contentLayout: contentLayout as PopupInput["contentLayout"],
+      imageHeightPx:
+        imageHeightPx > 0
+          ? Math.min(
+              POPUP_LIMITS.imageHeightMax,
+              Math.max(POPUP_LIMITS.imageHeightMin, imageHeightPx),
+            )
+          : undefined,
+      textAlign: textAlign as PopupInput["textAlign"],
       delaySeconds,
       timeoutSeconds,
       overlay,
@@ -204,8 +228,9 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
             <ImageField
               value={image}
               onChange={setImage}
+              onPreviewChange={setImagePreview}
               label="Image (optional)"
-              hint="Shown above the text at the card's full width."
+              hint="Shown above the text, or as the whole popup with the Image only layout."
             />
           </div>
         </section>
@@ -239,8 +264,8 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">
           <h2 className="mb-1 text-sm font-semibold text-zinc-900">Layout</h2>
           <p className={`${hintCls} mb-4`}>
-            Width presets keep popups consistent; a custom width is capped at{" "}
-            {POPUP_LIMITS.widthMax}px.
+            Width presets keep popups consistent, a custom width is capped at{" "}
+            {POPUP_LIMITS.widthMax}px, and full screen fills the viewport.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -257,7 +282,7 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
                 ))}
               </select>
             </label>
-            {size === "custom" ? (
+            {size === "custom" && (
               <label className="block">
                 <span className={labelCls}>Width (px)</span>
                 <input
@@ -276,7 +301,8 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
                   className={inputCls}
                 />
               </label>
-            ) : (
+            )}
+            {!isFullScreenSize(size) && (
               <label className="block">
                 <span className={labelCls}>Scale (%)</span>
                 <input
@@ -299,27 +325,68 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
                 </span>
               </label>
             )}
-          </div>
-          {size === "custom" && (
-            <label className="mt-4 block sm:max-w-[50%]">
-              <span className={labelCls}>Scale (%)</span>
+            <label className="block">
+              <span className={labelCls}>Content</span>
+              <select
+                value={contentLayout}
+                onChange={(e) => setContentLayout(e.target.value)}
+                className={inputCls}
+              >
+                {POPUP_CONTENT_LAYOUTS.map((l) => (
+                  <option key={l} value={l}>
+                    {CONTENT_LAYOUT_LABELS[l]}
+                  </option>
+                ))}
+              </select>
+              <span className={hintCls}>
+                {
+                  CONTENT_LAYOUT_HINTS[
+                    contentLayout === "image" || contentLayout === "text"
+                      ? contentLayout
+                      : "auto"
+                  ]
+                }
+              </span>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Image height (px, 0 = auto)</span>
               <input
                 inputMode="numeric"
-                value={String(scale)}
+                value={String(imageHeightPx)}
                 onChange={(e) =>
-                  setScale(
+                  setImageHeightPx(
                     numberValue(
                       e.target.value,
-                      DEFAULT_POPUP_SCALE,
-                      POPUP_LIMITS.scaleMin,
-                      POPUP_LIMITS.scaleMax,
+                      0,
+                      0,
+                      POPUP_LIMITS.imageHeightMax,
                     ),
                   )
                 }
-                className={inputCls}
+                disabled={contentLayout === "text"}
+                className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
               />
+              <span className={hintCls}>
+                A set height crops the image to fill it (full screen ignores
+                this).
+              </span>
             </label>
-          )}
+            <label className="block">
+              <span className={labelCls}>Text alignment</span>
+              <select
+                value={textAlign}
+                onChange={(e) => setTextAlign(e.target.value)}
+                disabled={contentLayout === "image"}
+                className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
+              >
+                {POPUP_TEXT_ALIGNS.map((a) => (
+                  <option key={a} value={a}>
+                    {TEXT_ALIGN_LABELS[a]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">
@@ -512,7 +579,7 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
               Page behind the popup
             </span>
           </div>
-          {placement === "center" && overlay && (
+          {placement === "center" && overlay && !isFullScreenSize(size) && (
             <div
               className="absolute inset-0"
               style={{
@@ -521,35 +588,73 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
               aria-hidden
             />
           )}
-          <div
-            className={`absolute inset-x-0 flex justify-center px-4 ${
-              placement === "bottom" ? "bottom-4" : "top-1/2 -translate-y-1/2"
-            }`}
-          >
-            <PopupCard
-              preview
-              data={{
-                title,
-                body,
-                image,
-                ctaLabel,
-                ctaHref,
-                placement,
-                size,
-                widthPx,
-                scale,
-                overlay,
-                overlayOpacity,
-                closeOnOverlay,
-                hideToday,
-              }}
-              onClose={() => {}}
-            />
-          </div>
+          {isFullScreenSize(size) ? (
+            // A full-screen popup is shown inside a viewport frame so the
+            // proportions match the storefront without filling the admin page.
+            <div className="absolute inset-0 p-3 pt-11">
+              <div className="h-full w-full overflow-hidden rounded-lg border border-zinc-300 shadow-sm">
+                <PopupCard
+                  preview
+                  data={{
+                    title,
+                    body,
+                    image: imagePreview ?? image,
+                    ctaLabel,
+                    ctaHref,
+                    placement,
+                    size,
+                    widthPx,
+                    scale,
+                    contentLayout,
+                    imageHeightPx: imageHeightPx > 0 ? imageHeightPx : null,
+                    textAlign,
+                    overlay,
+                    overlayOpacity,
+                    closeOnOverlay,
+                    hideToday,
+                  }}
+                  onClose={() => {}}
+                />
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`absolute inset-x-0 flex justify-center px-4 ${
+                placement === "bottom" ? "bottom-4" : "top-1/2 -translate-y-1/2"
+              }`}
+            >
+              <PopupCard
+                preview
+                data={{
+                  title,
+                  body,
+                  image: imagePreview ?? image,
+                  ctaLabel,
+                  ctaHref,
+                  placement,
+                  size,
+                  widthPx,
+                  scale,
+                  contentLayout,
+                  imageHeightPx: imageHeightPx > 0 ? imageHeightPx : null,
+                  textAlign,
+                  overlay,
+                  overlayOpacity,
+                  closeOnOverlay,
+                  hideToday,
+                }}
+                onClose={() => {}}
+              />
+            </div>
+          )}
         </div>
         <p className="mt-2 text-xs text-zinc-400">
-          The preview is capped to this panel, so a wide popup looks narrower
-          here than on the storefront.
+          {imagePreview
+            ? "Showing the picked image — it uploads when you save. "
+            : ""}
+          A full-screen popup is drawn inside the frame above; otherwise the
+          card is capped to this panel, so a wide popup looks narrower here than
+          on the storefront.
         </p>
       </section>
 
