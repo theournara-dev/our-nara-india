@@ -47,15 +47,15 @@ body {
   }
 }
 
-/* Store switcher nudge: the chevron above the store control keeps bobbing down
-   at it so shoppers notice the local/global choice. */
+/* Store switcher nudge: the hint above the store chip keeps bobbing down at
+   the control so shoppers notice the local/global choice. */
 @keyframes store-nudge {
   0%,
   100% {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
   }
   50% {
-    transform: translate(-50%, 5px);
+    transform: translateY(5px);
   }
 }
 .store-switcher-nudge {
