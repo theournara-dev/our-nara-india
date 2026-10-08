@@ -501,24 +501,29 @@ body {
 }
 
 /*
- * Long Banner — the original theme's `longBanner01` section, made full-bleed:
- * the client wants the banner centred and edge to edge rather than capped at
- * 1560px against the left edge. Hover-reveal arrows stay.
+ * Long Banner — the original's `longBanner01` section: 92% wide (96% on
+ * phones), capped at 1560px and centred, with its own 8px padding and the
+ * slide's 16px radius, so the banner keeps the original's breathing room
+ * instead of touching the viewport edges. Hover-reveal arrows stay.
  */
 .long-banner {
   position: relative;
-  width: 100%;
+  width: 92%;
+  max-width: 1560px;
   margin: 100px auto 0;
+  padding: 0 8px;
   box-sizing: border-box;
 }
 @media (max-width: 767px) {
   .long-banner {
+    width: 96%;
     margin: 60px auto;
   }
 }
 .long-banner .long-slide {
   position: relative;
   margin: 24px 0 0;
+  border-radius: 16px;
   overflow: hidden;
 }
 .long-banner .long-slide .swiper-slide {
