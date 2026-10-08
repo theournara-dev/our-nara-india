@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   PopupSurface,
   type PopupCardData,
@@ -75,8 +76,13 @@ function suppress(id: string, at: number) {
  *
  * `switcher` is the store-picker content, handed to popups whose content kind
  * is "store-picker" so they render the same cards as the store switcher.
+ *
+ * Popups are a storefront feature: inside /admin they are skipped, so the
+ * dashboard is never covered by a live campaign while it is being edited.
  */
 export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
+  const pathname = usePathname();
+  const inAdmin = pathname?.startsWith("/admin") ?? false;
   const [queue, setQueue] = useState<Popup[]>([]);
   const [current, setCurrent] = useState<Popup | null>(null);
   const [ready, setReady] = useState(false);
@@ -92,6 +98,7 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
   }, [current]);
 
   useEffect(() => {
+    if (inAdmin) return;
     let cancelled = false;
     fetch("/api/popups", { cache: "no-store" })
       .then((r) => r.json())
@@ -106,7 +113,7 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [inAdmin]);
 
   const dismiss = useCallback((popup: Popup) => {
     const now = Date.now();
@@ -123,7 +130,7 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
 
   // Show the next due popup whenever nothing is on screen.
   useEffect(() => {
-    if (!ready || current) return;
+    if (inAdmin || !ready || current) return;
     const now = Date.now();
     const seen = new Set([...seenThisSession(), ...shownThisLoad]);
     const next = nextDuePopup(queue, seen, suppressedAt(), now);
@@ -143,7 +150,7 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
     }
     const timer = setTimeout(show, delayMs);
     return () => clearTimeout(timer);
-  }, [ready, queue, current, shownThisLoad]);
+  }, [inAdmin, ready, queue, current, shownThisLoad]);
 
   // Auto-close the visible popup after its timeout (0 = waits for the visitor).
   useEffect(() => {
@@ -157,15 +164,15 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
 
   // Escape closes the visible popup, like any other dialog.
   useEffect(() => {
-    if (!current) return;
+    if (inAdmin || !current) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && currentRef.current) dismiss(currentRef.current);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [current, dismiss]);
+  }, [current, dismiss, inAdmin]);
 
-  if (!current) return null;
+  if (inAdmin || !current) return null;
 
   return (
     <PopupSurface
