@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Globe, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
 import {
   StorePickerCards,
@@ -97,16 +97,48 @@ export function VersionSwitcher({
 
   return (
     <div ref={ref} className={`relative ${className}`}>
-      <div className="flex items-center gap-1.5">
-        {/* K-Drop brand mark, leading the control. */}
-        <Image
-          src={content.brandLogo || KDROP_LOGO_SRC}
-          alt=""
-          width={756}
-          height={143}
-          unoptimized
-          className={logoClassName}
-        />
+      <div data-store-control className="flex items-center gap-1.5">
+        {/* Current store, on the left: names the store and opens the panel of
+            store cards. The bobbing hint (admin-editable) sits above this chip,
+            just in from its left edge. */}
+        <div className="relative">
+          <StoreNudge
+            nudge={content.nudge}
+            className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!open && ref.current) {
+                const phone = window.innerWidth < 768;
+                setPanelLeft(
+                  phone ? 12 - ref.current.getBoundingClientRect().left : null,
+                );
+              }
+              setOpen((v) => !v);
+            }}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
+            title={`Store: ${activeBlock?.title ?? version}`}
+            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+          >
+            {pendingTo && (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin text-point-500"
+                aria-hidden
+              />
+            )}
+            <span className="text-zinc-900 max-[374px]:hidden">
+              {activeBlock?.title ?? version}
+            </span>
+            {/* The currency is the first thing to go on the desktop widths
+                where the nav and the control share the row. */}
+            <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
+              {activeBlock?.currency}
+            </span>
+          </button>
+        </div>
 
         {/* Local / Global switch: two plain blocks, the active one filled and
             sliding across on change. */}
@@ -144,48 +176,16 @@ export function VersionSwitcher({
           })}
         </div>
 
-        {/* Current store; opens the panel of store cards. The bobbing hint
-            (admin-editable) sits above this chip, just in from its left edge. */}
-        <div className="relative">
-          <StoreNudge
-            nudge={content.nudge}
-            className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (!open && ref.current) {
-                const phone = window.innerWidth < 768;
-                setPanelLeft(
-                  phone ? 12 - ref.current.getBoundingClientRect().left : null,
-                );
-              }
-              setOpen((v) => !v);
-            }}
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
-            title={`Store: ${activeBlock?.title ?? version}`}
-            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
-          >
-            {pendingTo ? (
-              <Loader2
-                className="h-3.5 w-3.5 animate-spin text-point-500"
-                aria-hidden
-              />
-            ) : (
-              <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
-            )}
-            <span className="text-zinc-900 max-[374px]:hidden">
-              {activeBlock?.title ?? version}
-            </span>
-            {/* The currency is the first thing to go on the desktop widths
-                where the nav and the control share the row. */}
-            <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
-              {activeBlock?.currency}
-            </span>
-          </button>
-        </div>
+        {/* K-Drop brand mark, closing the control: the store behind the other
+            switch block. */}
+        <Image
+          src={content.brandLogo || KDROP_LOGO_SRC}
+          alt=""
+          width={756}
+          height={143}
+          unoptimized
+          className={logoClassName}
+        />
       </div>
 
       {open && (

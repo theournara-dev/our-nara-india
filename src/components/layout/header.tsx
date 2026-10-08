@@ -280,6 +280,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                     {navItems.map((item, index) => (
                       <li
                         key={item.href}
+                        data-nav-item
                         className={
                           item.label === "AMBASSADOR"
                             ? "relative grid shrink-0 place-items-center"
