@@ -1,51 +1,50 @@
 @import "tailwindcss";
 
 @theme inline {
-    --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
-    --font-display: var(--font-playfair), ui-serif, Georgia, serif;
-    --font-korean:
-        var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-korean: var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
 
-    --color-background: var(--background);
-    --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 
-    /* Brand palette converted from the original theme CSS. */
-    --color-point-50: #f7f3fb;
-    --color-point-100: #eee5f7;
-    --color-point-200: #ddcbf0;
-    --color-point-400: #a67fd6;
-    --color-point-500: #6f2dbd;
-    --color-point-600: #5c23a3;
-    --color-point-700: #4b1c88;
-    --color-point-800: #3d1670;
-    --color-point-900: #2c1052;
-    --color-sale: #e70124;
-    --color-ink: #222222;
-    --color-soft: #999999;
+  /* Brand palette converted from the original theme CSS. */
+  --color-point-50: #f7f3fb;
+  --color-point-100: #eee5f7;
+  --color-point-200: #ddcbf0;
+  --color-point-400: #a67fd6;
+  --color-point-500: #6f2dbd;
+  --color-point-600: #5c23a3;
+  --color-point-700: #4b1c88;
+  --color-point-800: #3d1670;
+  --color-point-900: #2c1052;
+  --color-sale: #e70124;
+  --color-ink: #222222;
+  --color-soft: #999999;
 }
 
 :root {
-    --background: #ffffff;
-    --foreground: #18181b;
+  --background: #ffffff;
+  --foreground: #18181b;
 }
 
 body {
-    background: var(--background);
-    color: var(--foreground);
-    /* Original theme font stack (Pretendard is loaded via CDN in the layout). */
-    font-family:
-        "Pretendard", "Poppins", "Noto Sans KR", Verdana, Dotum, sans-serif;
-    -webkit-font-smoothing: antialiased;
+  background: var(--background);
+  color: var(--foreground);
+  /* Original theme font stack (Pretendard is loaded via CDN in the layout). */
+  font-family:
+    "Pretendard", "Poppins", "Noto Sans KR", Verdana, Dotum, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* +3,000P bubble bounce (matches the original theme's motion keyframes). */
 @keyframes motion {
-    0% {
-        margin-top: 0;
-    }
-    100% {
-        margin-top: 3px;
-    }
+  0% {
+    margin-top: 0;
+  }
+  100% {
+    margin-top: 3px;
+  }
 }
 
 /*
@@ -57,13 +56,13 @@ body {
 .swiper-pagination-main,
 .swiper-pagination-shorts,
 .swiper-pagination-review {
-    background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.25);
 }
 .swiper-pagination-prd .swiper-pagination-progressbar-fill,
 .swiper-pagination-main .swiper-pagination-progressbar-fill,
 .swiper-pagination-shorts .swiper-pagination-progressbar-fill,
 .swiper-pagination-review .swiper-pagination-progressbar-fill {
-    background: #000 !important;
+  background: #000 !important;
 }
 /*
  * Hero carousel — mixed-aspect slides. Swiper's default
@@ -75,11 +74,11 @@ body {
  * updates and would strip it, and the `h-auto` utility is not compiled.)
  */
 .hero-carousel .swiper-slide {
-    height: auto;
+  height: auto;
 }
 .hero-carousel .swiper-slide > a {
-    display: block;
-    height: 100%;
+  display: block;
+  height: 100%;
 }
 
 /*
@@ -90,222 +89,231 @@ body {
  * nav row (progressbar + arrows) are part of the section, as in the original.
  */
 .shorts-section {
-    width: 100%;
-    clear: both;
-    margin: 100px auto 10px;
+  width: 100%;
+  clear: both;
+  margin: 100px auto 10px;
 }
 .shorts-section .shorts-inner {
-    position: relative;
-    width: 94%;
-    margin: 0 auto;
-    padding: 0 8px;
-    box-sizing: border-box;
+  position: relative;
+  width: 94%;
+  margin: 0 auto;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 .shorts-section .shorts-inner > .title {
-    margin: 0 auto 8px;
+  margin: 0 auto 8px;
 }
 .shorts-section .shorts-inner > .title h2 {
-    font-size: 1.5rem;
-    color: #222;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    line-height: 2rem;
-    text-align: center;
+  font-size: 1.5rem;
+  color: #222;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 2rem;
+  text-align: center;
 }
 .shorts-section .shorts-inner > .title h2 img {
-    display: inline-block;
-    width: 28px;
-    margin: 0 4px 0 0;
-    vertical-align: middle;
+  display: inline-block;
+  width: 28px;
+  margin: 0 4px 0 0;
+  vertical-align: middle;
 }
 .shorts-section .swiper-wrapper {
-    /* Center the shorter (9/14) slides against the taller active (9/16) one,
+  /* Center the shorter (9/14) slides against the taller active (9/16) one,
        so the active slide stands out both from the top and the bottom. */
-    align-items: center;
-    padding: 0 0 10px;
+  align-items: center;
+  padding: 0 0 10px;
 }
 .shorts-section .swiper-slide {
-    position: relative;
-    margin: 24px 0 0;
-    box-sizing: border-box;
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    opacity: 0.5;
+  position: relative;
+  margin: 24px 0 0;
+  box-sizing: border-box;
+  transition:
+    transform 0.4s ease,
+    opacity 0.4s ease;
+  opacity: 0.5;
 }
 /* Only the active card is fully opaque; every other card stays dimmed. */
 .shorts-section .swiper-slide.swiper-slide-active {
-    opacity: 1;
+  opacity: 1;
 }
 .shorts-section .shorts-slide {
-    position: relative;
-    box-sizing: border-box;
-    border: 1px solid #ccc;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #fff;
+  position: relative;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
 }
 .shorts-section .video-wrap {
-    position: relative;
-    overflow: hidden;
-    box-sizing: border-box;
-    /* The original widens the media box past the card and clips it, so the
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  /* The original widens the media box past the card and clips it, so the
        poster/player fills the card edge to edge (and its sides are cropped). */
-    width: 116%;
-    right: 8%;
-    aspect-ratio: 9 / 14;
-    background-size: cover;
-    background-position: center;
-    background-color: #000;
-    transition: transform 0.4s ease, opacity 0.4s ease;
-    z-index: 2;
+  width: 116%;
+  right: 8%;
+  aspect-ratio: 9 / 14;
+  background-size: cover;
+  background-position: center;
+  background-color: #000;
+  transition:
+    transform 0.4s ease,
+    opacity 0.4s ease;
+  z-index: 2;
 }
 .shorts-section .swiper-slide-active .video-wrap {
-    aspect-ratio: 9 / 16;
+  aspect-ratio: 9 / 16;
 }
 .shorts-section .video-wrap iframe {
-    position: absolute;
-    width: 100%;
-    height: 124%;
-    top: -12%;
-    left: 0;
-    border: 0;
+  position: absolute;
+  width: 100%;
+  height: 124%;
+  top: -12%;
+  left: 0;
+  border: 0;
 }
 .shorts-section .info-bar {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    display: flex;
-    gap: 16px;
-    /* The product thumbnail sits at the top, level with the first text line. */
-    align-items: flex-start;
-    box-sizing: border-box;
-    background: #fff;
-    border-top: 1px solid #ccc;
-    padding: 16px;
-    z-index: 3;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  gap: 16px;
+  /* The product thumbnail sits at the top, level with the first text line. */
+  align-items: flex-start;
+  box-sizing: border-box;
+  background: #fff;
+  border-top: 1px solid #ccc;
+  padding: 16px;
+  z-index: 3;
 }
 .shorts-section .info-bar .thumb {
-    width: 72px;
-    flex-shrink: 0;
+  width: 72px;
+  flex-shrink: 0;
 }
 .shorts-section .info-bar .thumb img {
-    display: block;
-    width: 100%;
+  display: block;
+  width: 100%;
 }
 /* Product thumbnail hover zoom (matches the original .img_zoom effect). */
 .shorts-section .info-bar .thumb .img_zoom {
-    display: block;
-    overflow: hidden;
-    border-radius: 16px;
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
 }
 .shorts-section .info-bar .thumb .img_zoom img {
-    transition: transform 0.3s ease-in;
+  transition: transform 0.3s ease-in;
 }
 .shorts-section .info-bar .thumb .img_zoom:hover img {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 .shorts-section .info-text {
-    min-width: 0;
-    width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 .shorts-section .info-text .brand {
-    display: block;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: #000;
-    margin: 2px 0;
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #000;
+  margin: 2px 0;
 }
 .shorts-section .info-text .name {
-    display: block;
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 24px;
-    color: #000;
-    margin: 0 0 8px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  display: block;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 24px;
+  color: #000;
+  margin: 0 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .shorts-section .info-text .name a {
-    color: inherit;
+  color: inherit;
 }
 .shorts-section .info-text .tags {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    color: #333;
-    margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #333;
+  margin: 0 0 8px;
 }
 .shorts-section .info-text .price {
-    display: block;
-    font-size: 15px;
-    font-weight: bold;
-    line-height: 1.4;
-    color: #333;
+  display: block;
+  font-size: 15px;
+  font-weight: bold;
+  line-height: 1.4;
+  color: #333;
 }
 /* Progressbar matches the original's 3px track. The
    `.swiper-pagination-progressbar` part outranks Swiper's own 4px default. */
 .shorts-section .swiper-pagination-shorts,
 .shorts-section .swiper-pagination-shorts.swiper-pagination-progressbar {
-    height: 3px;
+  height: 3px;
 }
 /* Original `.btns`: full-width track + arrows, no gap, 10px side padding. */
 .shorts-section .shorts-nav {
-    margin-top: 0;
-    gap: 0;
-    padding: 0 10px;
+  margin-top: 0;
+  gap: 0;
+  padding: 0 10px;
 }
 
 /* Tablet sizes from the original theme's media query. */
 @media (max-width: 1199px) {
-    .shorts-section {
-        overflow: hidden;
-    }
-    .shorts-section .shorts-inner {
-        width: 92%;
-    }
-    .shorts-section .info-bar .thumb {
-        width: 60px;
-    }
-    /* Cards bleed past the narrower inner container and are clipped by the
+  .shorts-section {
+    overflow: hidden;
+  }
+  .shorts-section .shorts-inner {
+    width: 92%;
+  }
+  .shorts-section .info-bar .thumb {
+    width: 60px;
+  }
+  /* Cards bleed past the narrower inner container and are clipped by the
        section instead of the swiper. */
-    .shorts-section .shorts-swiper {
-        overflow: visible;
-    }
+  .shorts-section .shorts-swiper {
+    overflow: visible;
+  }
 }
 
 /* Mobile sizes from the original theme's media query. */
 @media (max-width: 767px) {
-    .shorts-section {
-        margin: 60px auto 20px;
-    }
-    .shorts-section .shorts-inner {
-        width: 96%;
-    }
-    .shorts-section .info-bar {
-        gap: 8px;
-        padding: 8px;
-    }
-    .shorts-section .info-bar .thumb {
-        width: 48px;
-    }
-    .shorts-section .info-text .name {
-        font-size: 13px;
-        margin: 0 0 4px;
-    }
-    .shorts-section .info-text .tags,
-    .shorts-section .info-text .price {
-        font-size: 13px;
-    }
-    .shorts-section .video-wrap iframe {
-        height: 126%;
-        top: -13%;
-    }
+  .shorts-section {
+    margin: 60px auto 20px;
+  }
+  .shorts-section .shorts-inner {
+    width: 96%;
+  }
+  .shorts-section .info-bar {
+    gap: 8px;
+    padding: 8px;
+  }
+  .shorts-section .info-bar .thumb {
+    width: 48px;
+  }
+  .shorts-section .info-text .name {
+    font-size: 13px;
+    margin: 0 0 4px;
+  }
+  .shorts-section .info-text .tags,
+  .shorts-section .info-text .price {
+    font-size: 13px;
+  }
+  /* Original mobile title size (20.64px) — the desktop 24px is too large here. */
+  .shorts-section .shorts-inner > .title h2 {
+    font-size: 20.64px;
+    line-height: 27.52px;
+  }
+  .shorts-section .video-wrap iframe {
+    height: 126%;
+    top: -13%;
+  }
 }
 
 /*
@@ -313,154 +321,154 @@ body {
  * Banner panels (image + overlay heading) each with a curated product list.
  */
 .triple-banner {
-    position: relative;
-    width: 100%;
-    margin: 100px auto 0;
-    overflow: hidden;
+  position: relative;
+  width: 100%;
+  margin: 100px auto 0;
+  overflow: hidden;
 }
 @media (max-width: 767px) {
-    .triple-banner {
-        margin: 60px auto 20px;
-    }
+  .triple-banner {
+    margin: 60px auto 20px;
+  }
 }
 .triple-banner .triple-inner {
-    position: relative;
-    width: 92%;
-    max-width: 1560px;
-    margin: 0 auto;
-    box-sizing: border-box;
+  position: relative;
+  width: 92%;
+  max-width: 1560px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 .triple-banner .swiper-wrapper {
-    padding: 0 0 20px;
+  padding: 0 0 20px;
 }
 .triple-banner .box {
-    position: relative;
-    padding: 0 8px;
-    box-sizing: border-box;
+  position: relative;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 .triple-banner .banner {
-    position: relative;
-    overflow: hidden;
-    border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
 }
 .triple-banner .banner img {
-    width: 100%;
-    transition: transform 0.3s ease-in;
+  width: 100%;
+  transition: transform 0.3s ease-in;
 }
 .triple-banner .banner:hover img {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 .triple-banner .banner-title {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 10%;
-    width: 100%;
-    padding: 0 16px;
-    box-sizing: border-box;
-    text-align: center;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10%;
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+  text-align: center;
 }
 .triple-banner .banner-title h2 {
-    font-size: 1.5rem;
-    line-height: 2rem;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: -0.5px;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 .triple-banner .banner-title .sub {
-    display: block;
-    margin: 4px 0 0;
-    font-size: 1rem;
-    line-height: 1.5rem;
-    font-weight: 500;
-    color: #eaeaea;
+  display: block;
+  margin: 4px 0 0;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 500;
+  color: #eaeaea;
 }
 .triple-banner .prd-list {
-    margin: 16px auto 0;
+  margin: 16px auto 0;
 }
 .triple-banner .product-row {
-    position: relative;
-    display: flex;
-    gap: 16px;
-    margin: 16px 0;
-    overflow: hidden;
+  position: relative;
+  display: flex;
+  gap: 16px;
+  margin: 16px 0;
+  overflow: hidden;
 }
 .triple-banner .product-row:first-child {
-    margin-top: 24px;
+  margin-top: 24px;
 }
 .triple-banner .product-row .thumb {
-    width: 32%;
-    flex-shrink: 0;
-    overflow: hidden;
-    border-radius: 16px;
+  width: 32%;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 16px;
 }
 .triple-banner .product-row .thumb img {
-    display: block;
-    width: 100%;
-    transition: transform 0.3s ease-in;
+  display: block;
+  width: 100%;
+  transition: transform 0.3s ease-in;
 }
 .triple-banner .product-row .thumb:hover img {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 .triple-banner .product-row .desc {
-    width: calc(68% - 64px);
-    box-sizing: border-box;
-    min-width: 0;
+  width: calc(68% - 64px);
+  box-sizing: border-box;
+  min-width: 0;
 }
 .triple-banner .product-row .desc .brand {
-    font-size: 14px;
-    color: #000;
+  font-size: 14px;
+  color: #000;
 }
 .triple-banner .product-row .desc .name {
-    display: block;
-    margin: 0 0 4px;
-    font-size: 15px;
-    font-weight: 400;
-    color: #000;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  display: block;
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .triple-banner .product-row .desc .name a {
-    color: inherit;
+  color: inherit;
 }
 .triple-banner .product-row .desc .tags {
-    display: none;
-    font-size: 14px;
-    color: #888888;
+  display: none;
+  font-size: 14px;
+  color: #888888;
 }
 /* Show more product info (tags) on larger screens, keep cards compact on mobile. */
 @media (min-width: 768px) {
-    .triple-banner .product-row .desc .tags {
-        display: block;
-    }
+  .triple-banner .product-row .desc .tags {
+    display: block;
+  }
 }
 .triple-banner .product-row .desc .overview {
-    display: block;
-    font-size: 13px;
-    color: #702dbd;
+  display: block;
+  font-size: 13px;
+  color: #702dbd;
 }
 .triple-banner .product-row .desc .price {
-    display: block;
-    font-size: 18px;
-    font-weight: 700;
-    color: #000;
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
 }
 .triple-banner .product-row .cart {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    max-width: 40px;
-    padding: 5px;
-    background: #eee;
-    border: 0;
-    border-radius: 8px;
-    box-sizing: border-box;
-    cursor: pointer;
-    line-height: 0;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  max-width: 40px;
+  padding: 5px;
+  background: #eee;
+  border: 0;
+  border-radius: 8px;
+  box-sizing: border-box;
+  cursor: pointer;
+  line-height: 0;
 }
 .triple-banner .product-row .cart img {
-    max-width: 100%;
+  max-width: 100%;
 }
 
 /*
@@ -468,91 +476,93 @@ body {
  * a full-width, rounded banner carousel with hover-reveal arrows.
  */
 .long-banner {
-    position: relative;
-    width: 100%;
-    max-width: 1560px;
-    margin: 100px 0 0;
-    padding: 0 8px;
-    box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  max-width: 1560px;
+  margin: 100px 0 0;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 @media (max-width: 767px) {
-    .long-banner {
-        margin: 60px auto;
-    }
+  .long-banner {
+    margin: 60px auto;
+  }
 }
 .long-banner .long-slide {
-    position: relative;
-    margin: 24px 0 0;
-    border-radius: 16px;
-    overflow: hidden;
+  position: relative;
+  margin: 24px 0 0;
+  border-radius: 16px;
+  overflow: hidden;
 }
 .long-banner .long-slide .swiper-slide {
-    position: relative;
-    overflow: hidden;
-    margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
 }
 .long-banner .long-slide .swiper-slide > a {
-    display: block;
-    font-size: 0;
-    line-height: 0;
+  display: block;
+  font-size: 0;
+  line-height: 0;
 }
 .long-banner .long-slide .swiper-slide img {
-    width: 100%;
+  width: 100%;
 }
 /* Grab hand cursor so the draggable/swipeable carousel reads as scrollable. */
 .long-banner .long-slide,
 .long-banner .long-slide .swiper-slide a {
-    cursor: grab;
+  cursor: grab;
 }
 .long-banner .long-slide:active,
 .long-banner .long-slide .swiper-slide a:active {
-    cursor: grabbing;
+  cursor: grabbing;
 }
 /* Chevron arrows, hidden by default and revealed smoothly on hover over the
    banner. Always shown with a black chevron on a translucent white round
    background so they stay visible on any banner artwork. */
 .long-banner .long-banner-arrow {
-    position: absolute;
-    top: 39%;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.75);
-    color: #222;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.3s ease, background-color 0.3s ease;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+  position: absolute;
+  top: 39%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  color: #222;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.3s ease,
+    background-color 0.3s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
 }
 .long-banner .long-banner-arrow:hover {
-    background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.95);
 }
 .long-banner .long-banner-prev {
-    left: 16px;
+  left: 16px;
 }
 .long-banner .long-banner-next {
-    right: 16px;
+  right: 16px;
 }
 .long-banner:hover .long-banner-arrow {
-    opacity: 0.89;
+  opacity: 0.89;
 }
 .long-banner .long-banner-pagination {
-    bottom: 10px;
-    z-index: 1;
+  bottom: 10px;
+  z-index: 1;
 }
 .long-banner .long-banner-pagination .swiper-pagination-bullet {
-    width: 8px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.7);
-    opacity: 1;
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  opacity: 1;
 }
 .long-banner .long-banner-pagination .swiper-pagination-bullet-active {
-    background: #fff;
+  background: #fff;
 }
 
 /*
@@ -560,156 +570,214 @@ body {
  * Review cards (photo + BEST badge + rating + content) on a beige band.
  */
 .main-review {
-    position: relative;
-    margin: 100px auto 0;
-    background: #f5f0e9;
+  position: relative;
+  margin: 100px auto 0;
+  background: #f5f0e9;
 }
 @media (max-width: 767px) {
-    .main-review {
-        margin: 60px auto 20px;
-    }
+  .main-review {
+    margin: 60px auto 20px;
+  }
 }
 .main-review .inner {
-    position: relative;
-    width: 92%;
-    max-width: 1560px;
-    margin: 0 auto;
-    padding: 60px 0 70px;
-    box-sizing: border-box;
+  position: relative;
+  width: 92%;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 60px 0 70px;
+  box-sizing: border-box;
 }
 .main-review .sub-title {
-    text-align: center;
+  text-align: center;
 }
 .main-review .sub-title .sub {
-    display: block;
-    font-size: 1rem;
-    line-height: 1.5rem;
-    color: #6f2dbd;
-    font-weight: 500;
-    letter-spacing: -0.2px;
+  display: block;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: #6f2dbd;
+  font-weight: 500;
+  letter-spacing: -0.2px;
 }
 .main-review .sub-title h2 {
-    font-size: 1.5rem;
-    line-height: 2rem;
-    font-weight: 700;
-    color: #222;
-    letter-spacing: -0.5px;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: -0.5px;
 }
 .main-review .review-slide {
-    width: 100%;
-    margin: 32px 0 0;
-    padding: 0 8px;
-    box-sizing: border-box;
-    overflow: hidden;
+  width: 100%;
+  margin: 32px 0 0;
+  padding: 0 8px;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .main-review .review-card {
-    position: relative;
-    overflow: hidden;
-    font-size: 12px;
-    box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  font-size: 12px;
+  box-sizing: border-box;
 }
 .main-review .best-badge {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 42px;
-    height: 42px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #fff;
-    background: #6f2dbd;
-    border-radius: 100%;
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: #6f2dbd;
+  border-radius: 100%;
 }
+/* Near-square photo box, as in the original (`padding-bottom: calc(100% - 2px)`),
+   so every card has the same height whatever the photo's aspect ratio. The
+   store logo shows if a review has no photo. */
 .main-review .review-img {
-    border-radius: 16px;
-    overflow: hidden;
+  position: relative;
+  height: 0;
+  padding-bottom: calc(100% - 2px);
+  overflow: hidden;
+  border-radius: 16px;
+  background: #fff url("/upload/goodymall1/en/main/logo_.png") no-repeat center
+    center;
+  background-size: 40%;
 }
 .main-review .review-img img {
-    width: 100%;
-    transition: transform 0.3s ease-in;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s ease-in;
 }
 .main-review .review-img:hover img {
-    transform: scale(1.1);
+  transform: scale(1.1);
 }
 .main-review .txt {
-    padding: 12px 0;
-    box-sizing: border-box;
+  padding: 12px 0;
+  box-sizing: border-box;
 }
 .main-review .txt .info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 0 12px;
-    margin: 0 auto 15px;
-    border-bottom: 1px solid #ddd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 12px;
+  margin: 0 auto 15px;
+  border-bottom: 1px solid #ddd;
 }
 .main-review .txt .info .product {
-    font-size: 14px;
-    font-weight: 500;
-    color: #000;
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
 }
 .main-review .txt .txt-area {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-    margin: 0 0 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
 }
 .main-review .txt .point-rate {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .main-review .txt .point-rate img {
-    max-width: 62px;
+  max-width: 62px;
+  margin: 0 0 2px;
 }
 .main-review .txt .point-rate .count {
-    font-size: 13px;
-    color: #222;
-    font-weight: 600;
+  font-size: 13px;
+  color: #222;
+  font-weight: 600;
 }
 .main-review .txt .writer {
-    font-size: 13px;
-    color: #888888;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  font-size: 13px;
+  color: #888888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .main-review .txt .cont {
-    font-size: 14px;
-    color: #222;
-    line-height: 1.5em;
-    height: 3em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+  font-size: 14px;
+  color: #222;
+  font-weight: 400;
+  line-height: 1.5em;
+  height: 38px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .main-review .btn {
-    margin: 56px auto 0;
-    text-align: center;
+  margin: 56px auto 0;
+  text-align: center;
 }
 .main-review .btn a {
-    display: inline-block;
-    position: relative;
-    padding: 0.8rem 4rem;
-    font-size: 0.9rem;
-    line-height: 0.9rem;
-    color: #fff;
-    font-weight: 500;
-    border: 1px solid #222;
-    background: #222;
-    border-radius: 30px;
-    transition: all 0.3s;
+  display: inline-block;
+  position: relative;
+  padding: 0.8rem 4rem;
+  font-size: 0.9rem;
+  line-height: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+  border: 1px solid #222;
+  background: #222;
+  border-radius: 30px;
+  transition: all 0.3s;
 }
 .main-review .btn a:hover {
-    color: #222;
-    background: transparent;
+  color: #222;
+  background: transparent;
+}
+/* Original mobile overrides: full-width band, tighter padding, smaller type
+   and 64%-wide slides that show one review plus a peek of the next. Kept after
+   the base rules so they win the cascade. */
+@media (max-width: 767px) {
+  .main-review .inner {
+    width: 100%;
+    padding: 20px 0 50px;
+  }
+  .main-review .sub-title {
+    padding: 0 calc(2% + 8px);
+  }
+  .main-review .sub-title .sub {
+    font-size: 13.76px;
+    line-height: 20.64px;
+  }
+  .main-review .sub-title h2 {
+    font-size: 20.64px;
+    line-height: 28.896px;
+  }
+  .main-review .review-slide > ul > li {
+    position: relative;
+    width: calc(64% - 16px);
+    margin: 0 8px;
+  }
+  .main-review .best-badge {
+    width: 36px;
+    height: 36px;
+    font-size: 10px;
+  }
+  .main-review .txt .cont {
+    height: 36px;
+    font-size: 13px;
+  }
+  .main-review .btn {
+    margin: 32px auto 0;
+  }
 }
 
 /*
@@ -717,113 +785,128 @@ body {
  * auto-scrolling marquee of rounded square posts under the #our__nara title.
  */
 .insta {
-    position: relative;
-    margin: 0 auto;
-    padding: 100px 0;
-    background: #fff;
+  position: relative;
+  margin: 0 auto;
+  padding: 100px 0;
+  background: #fff;
 }
 .insta .insta-inner {
-    position: relative;
-    width: 94%;
-    margin: 0 auto;
-    padding: 0 8px;
-    box-sizing: border-box;
+  position: relative;
+  width: 94%;
+  margin: 0 auto;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 .insta .sub-title {
-    text-align: center;
+  text-align: center;
 }
 .insta .sub-title .sub {
-    display: block;
-    font-size: 1rem;
-    line-height: 1.5rem;
-    color: #6f2dbd;
-    font-weight: 500;
-    letter-spacing: -0.2px;
+  display: block;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: #6f2dbd;
+  font-weight: 500;
+  letter-spacing: -0.2px;
 }
 .insta .sub-title .sub a {
-    color: inherit;
+  color: inherit;
 }
 .insta .sub-title h2 {
-    font-size: 1.5rem;
-    line-height: 2rem;
-    font-weight: 700;
-    color: #222;
-    letter-spacing: -0.5px;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: -0.5px;
 }
 .insta .insta-marquee {
-    overflow: hidden;
-    margin: 32px auto 0;
-    -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
-    mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  overflow: hidden;
+  margin: 32px auto 0;
+  cursor: grab;
+  /* Let vertical page scrolls through; horizontal drags drive the marquee. */
+  touch-action: pan-y;
+}
+.insta .insta-marquee.is-dragging {
+  cursor: grabbing;
 }
 .insta .insta-marquee-track {
-    display: flex;
-    gap: 10px;
-    width: max-content;
-    animation: insta-scroll 40s linear infinite;
-}
-.insta .insta-marquee:hover .insta-marquee-track {
-    animation-play-state: paused;
+  display: flex;
+  gap: 10px;
+  width: max-content;
+  will-change: transform;
 }
 .insta .insta-item {
-    flex-shrink: 0;
-    width: clamp(120px, 20vw, 240px);
+  flex-shrink: 0;
+  /* The original's Swiper shows 3 posts per view on phones, 6 from 768px
+     (`slidesPerView: 3 / 6`, `spaceBetween: 10`) inside a 96% / 94% inner. */
+  width: calc(32vw - 12px);
+}
+@media (min-width: 768px) {
+  .insta .insta-item {
+    width: calc(15.6667vw - 11px);
+  }
 }
 .insta .insta-item img {
-    display: block;
-    width: 100%;
-    border-radius: 16px;
+  display: block;
+  width: 100%;
+  border-radius: 16px;
+  user-select: none;
+  -webkit-user-drag: none;
 }
-@keyframes insta-scroll {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-50%);
-    }
-}
-@media (prefers-reduced-motion: reduce) {
-    .insta .insta-marquee-track {
-        animation: none;
-    }
+@media (max-width: 767px) {
+  .insta {
+    padding: 40px 0 60px;
+  }
+  .insta .insta-inner {
+    width: 96%;
+  }
+  .insta .sub-title .sub {
+    font-size: 13.76px;
+    line-height: 20.64px;
+  }
+  .insta .sub-title h2 {
+    font-size: 20.64px;
+    line-height: 28.896px;
+  }
 }
 
 /* Scroll-reveal: sections fade/slide in the first time they enter the viewport. */
 .reveal {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
 }
 .reveal-visible {
-    opacity: 1;
-    transform: none;
+  opacity: 1;
+  transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
-    .reveal {
-        opacity: 1;
-        transform: none;
-        transition: none;
-    }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /*
  * Admin sheet (right-side settings panel). Slides in from the right edge.
  */
 @keyframes sheet-in {
-    from {
-        transform: translateX(100%);
-    }
-    to {
-        transform: translateX(0);
-    }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 .sheet-in {
-    animation: sheet-in 0.28s ease-out;
+  animation: sheet-in 0.28s ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-    .sheet-in {
-        animation: none;
-    }
+  .sheet-in {
+    animation: none;
+  }
 }
 
 /*
@@ -835,25 +918,25 @@ body {
  * backdrop — off the invoice.
  */
 @media print {
-    @page {
-        margin: 14mm;
-    }
+  @page {
+    margin: 14mm;
+  }
 
-    body * {
-        visibility: hidden;
-    }
+  body * {
+    visibility: hidden;
+  }
 
-    [data-print-root],
-    [data-print-root] * {
-        visibility: visible;
-    }
+  [data-print-root],
+  [data-print-root] * {
+    visibility: visible;
+  }
 
-    /* Pin the printed block to the page origin: its ancestors are still laid
+  /* Pin the printed block to the page origin: its ancestors are still laid
        out, and a fixed dialog would otherwise print where the viewport has it. */
-    [data-print-root] {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
+  [data-print-root] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
 }

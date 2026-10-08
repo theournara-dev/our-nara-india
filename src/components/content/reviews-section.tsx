@@ -30,9 +30,12 @@ export function ReviewsSection() {
 
     const swiper = new Swiper(el, {
       modules: [Pagination],
-      speed: 600,
-      slidesPerView: 1.2,
-      spaceBetween: 16,
+      // The original uses `slidesPerView: 'auto'` on phones: the CSS gives each
+      // slide `calc(64% - 16px)` with 8px margins, so one review and a peek of
+      // the next show at once. From 768px it switches to four per view.
+      speed: 300,
+      slidesPerView: "auto",
+      spaceBetween: 0,
       watchOverflow: true,
       pagination: {
         el: paginationRef.current as HTMLElement,
