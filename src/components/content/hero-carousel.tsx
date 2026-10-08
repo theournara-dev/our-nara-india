@@ -79,7 +79,7 @@ export function HeroCarousel({ slides = [] }: { slides?: HeroSlide[] }) {
           {heroSlides.map(({ key, item: slide }) => (
             <div
               key={key}
-              className="swiper-slide relative rounded-xl opacity-50 [&.swiper-slide-active]:opacity-100 [&.swiper-slide-prev]:opacity-100 [&.swiper-slide-next]:opacity-100"
+              className="swiper-slide relative rounded-2xl opacity-50 [&.swiper-slide-active]:opacity-100 [&.swiper-slide-prev]:opacity-100 [&.swiper-slide-next]:opacity-100"
             >
               {slide.preorder && config.preOrderEnabled && (
                 <div className="pointer-events-none absolute right-5 top-5 z-10 flex h-20 w-20 items-center justify-center rounded-full bg-point-500 text-center text-[13px] font-semibold leading-tight tracking-wide text-white">

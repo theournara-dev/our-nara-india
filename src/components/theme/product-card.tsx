@@ -71,6 +71,23 @@ export function ThemeProductCard({
             </div>
           )}
 
+          {/* Dots showing how many images the product has, as on the original. */}
+          {product.images.length > 1 && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-2 z-[5] flex items-center justify-center gap-1"
+            >
+              {product.images.slice(0, 8).map((src, i) => (
+                <span
+                  key={src}
+                  className={`h-[5px] w-[5px] rounded-full ${
+                    i === 0 ? "bg-black" : "bg-black/20"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Quick actions (wishlist + cart), revealed on hover */}
           <div
             className={cn(
@@ -116,7 +133,7 @@ export function ThemeProductCard({
           the original's mobile values and step up on tablet and desktop. The
           brand is deliberately smaller than the name. */}
       <div className="mt-6 text-left">
-        <span className="my-[2px] block text-[12px] font-normal leading-[16.8px] text-black">
+        <span className="my-[2px] block text-[12px] font-normal leading-[16.8px] text-black md:text-[14px] md:leading-[19.6px]">
           [{product.brand.name}]
         </span>
         <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">

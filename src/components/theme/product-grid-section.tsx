@@ -65,7 +65,7 @@ export function ProductGridSection({
           <div className="mt-8 text-center">
             <Link
               href={moreHref}
-              className="inline-flex h-[38px] min-w-[140px] items-center justify-center rounded-full border border-[#6f2dbd] bg-white px-[22px] text-[13px] font-medium text-[#6f2bdb] transition-colors duration-300 hover:bg-[#6f2dbd] hover:text-white"
+              className="inline-flex h-10 w-[186px] items-center justify-center rounded-full border border-[#6f2dbd] bg-white text-[13px] font-medium text-[#6f2bdb] transition-colors duration-300 hover:bg-[#6f2dbd] hover:text-white"
             >
               {moreLabel}
             </Link>

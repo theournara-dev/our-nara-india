@@ -13,8 +13,9 @@ const LINK =
   "transition-[background-color,color,transform,box-shadow] duration-200 [transition-timing-function:ease] hover:bg-white hover:text-[#6f2dbd] hover:[transform:translateY(-2px)] hover:shadow-[0_4px_12px_rgba(111,45,189,0.2)] focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-[#6f2dbd] focus-visible:outline-offset-[3px]";
 
 // `relative` keeps the screen-reader text inside the scrolling row; without it
-// the text is positioned against the page and widens the document.
-const DISABLED = `${CIRCLE} relative cursor-default opacity-40`;
+// the text is positioned against the page and widens the document. The original
+// shows every letter as a solid circle, so the disabled ones are not dimmed.
+const DISABLED = `${CIRCLE} relative cursor-default`;
 
 // Mobile: a full-bleed strip that scrolls sideways with its scrollbar hidden.
 // Desktop: one line spread across the full brand width.

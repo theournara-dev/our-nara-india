@@ -272,7 +272,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                           className={
                             item.label === "AMBASSADOR"
                               ? "flex h-7 shrink-0 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-base font-semibold whitespace-nowrap text-white max-md:ml-2.5 max-md:mr-6 max-md:text-[15px]"
-                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2.5 max-md:mx-0 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2 2xl:mx-2.5 max-md:mx-0 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
                           }
                         >
                           {item.label}
