@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Globe, Loader2 } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
 import {
   StorePickerCards,
@@ -97,10 +97,68 @@ export function VersionSwitcher({
 
   return (
     <div ref={ref} className={`relative ${className}`}>
-      <div data-store-control className="flex items-center gap-1.5">
-        {/* Current store, on the left: names the store and opens the panel of
-            store cards. The bobbing hint (admin-editable) sits above this chip,
-            just in from its left edge. */}
+      <div data-store-control className="flex items-center gap-2">
+        {/* Store switch — its own component, to the left of the popup button:
+            the K-Drop mark, the two blocks and the current store's name. */}
+        <div
+          role="group"
+          aria-label="Store switch"
+          className="flex items-center gap-1.5"
+        >
+          <Image
+            src={content.brandLogo || KDROP_LOGO_SRC}
+            alt=""
+            width={756}
+            height={143}
+            unoptimized
+            className={logoClassName}
+          />
+
+          {/* Local / Global switch: two plain blocks, the active one filled and
+              sliding across on change. */}
+          <div
+            className="relative flex h-7 shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
+            style={{ width: TOGGLE_BLOCK_PX * 2 + 4 }}
+          >
+            {/* Sliding highlight behind the active block. */}
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute top-0.5 left-0.5 h-[22px] rounded-full shadow-sm transition-transform duration-200 ease-out ${
+                version === "local" ? "bg-blue-600" : "bg-point-500"
+              }`}
+              style={{
+                width: TOGGLE_BLOCK_PX,
+                transform: `translateX(${version === "local" ? 0 : TOGGLE_BLOCK_PX}px)`,
+              }}
+            />
+            {TOGGLE_OPTIONS.map(({ store, label }) => {
+              const active = version === store;
+              return (
+                <button
+                  key={store}
+                  type="button"
+                  onClick={() => choose(store)}
+                  aria-pressed={active}
+                  aria-label={label}
+                  title={label}
+                  className="relative z-10 h-[22px] cursor-pointer rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500"
+                  style={{ width: TOGGLE_BLOCK_PX }}
+                />
+              );
+            })}
+          </div>
+
+          {/* The store the switch is currently on. */}
+          <span
+            data-store-switch-label
+            className="text-[12px] font-semibold whitespace-nowrap text-zinc-900 max-[374px]:hidden"
+          >
+            {activeBlock?.title ?? version}
+          </span>
+        </div>
+
+        {/* Popup button — unchanged: names the store and opens the panel of
+            store cards. The bobbing hint (admin-editable) sits above it. */}
         <div className="relative">
           <StoreNudge
             nudge={content.nudge}
@@ -123,11 +181,13 @@ export function VersionSwitcher({
             title={`Store: ${activeBlock?.title ?? version}`}
             className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
           >
-            {pendingTo && (
+            {pendingTo ? (
               <Loader2
                 className="h-3.5 w-3.5 animate-spin text-point-500"
                 aria-hidden
               />
+            ) : (
+              <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
             )}
             <span className="text-zinc-900 max-[374px]:hidden">
               {activeBlock?.title ?? version}
@@ -139,53 +199,6 @@ export function VersionSwitcher({
             </span>
           </button>
         </div>
-
-        {/* Local / Global switch: two plain blocks, the active one filled and
-            sliding across on change. */}
-        <div
-          role="group"
-          aria-label="Store"
-          className="relative flex h-7 shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
-          style={{ width: TOGGLE_BLOCK_PX * 2 + 4 }}
-        >
-          {/* Sliding highlight behind the active block. */}
-          <span
-            aria-hidden
-            className={`pointer-events-none absolute top-0.5 left-0.5 h-[22px] rounded-full shadow-sm transition-transform duration-200 ease-out ${
-              version === "local" ? "bg-blue-600" : "bg-point-500"
-            }`}
-            style={{
-              width: TOGGLE_BLOCK_PX,
-              transform: `translateX(${version === "local" ? 0 : TOGGLE_BLOCK_PX}px)`,
-            }}
-          />
-          {TOGGLE_OPTIONS.map(({ store, label }) => {
-            const active = version === store;
-            return (
-              <button
-                key={store}
-                type="button"
-                onClick={() => choose(store)}
-                aria-pressed={active}
-                aria-label={label}
-                title={label}
-                className="relative z-10 h-[22px] cursor-pointer rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500"
-                style={{ width: TOGGLE_BLOCK_PX }}
-              />
-            );
-          })}
-        </div>
-
-        {/* K-Drop brand mark, closing the control: the store behind the other
-            switch block. */}
-        <Image
-          src={content.brandLogo || KDROP_LOGO_SRC}
-          alt=""
-          width={756}
-          height={143}
-          unoptimized
-          className={logoClassName}
-        />
       </div>
 
       {open && (

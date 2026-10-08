@@ -984,13 +984,21 @@ body:has([data-overlay]) nav[aria-label="Quick navigation"] {
 
 /*
  * The store control shares the header row with the ten category links. On the
- * 1200-1439px desktop tier — small laptops, where the row is at its tightest —
- * the link gutters drop from 4px to 1px a side so the last link (the AMBASSADOR
- * badge) stays inside the row. Wider screens keep the roomier gutters.
+ * 1200-1679px desktop tiers — laptops, where the row is at its tightest — the
+ * link gutters drop from 4px (and 10px above 1536px) to 1-2px a side so the
+ * last link (the AMBASSADOR badge) stays inside the row. Wider screens keep the
+ * roomier gutters.
  */
 @media (min-width: 1200px) and (max-width: 1439px) {
   [data-site-header] [data-nav-item] > a {
     margin-left: 1px;
     margin-right: 1px;
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1679px) {
+  [data-site-header] [data-nav-item] > a {
+    margin-left: 2px;
+    margin-right: 2px;
   }
 }
