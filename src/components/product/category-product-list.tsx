@@ -10,14 +10,17 @@ import {
   countActiveFilters,
   EMPTY_CATEGORY_FILTERS,
   filterCategoryProducts,
+  resolveForStore,
   type AvailabilityFilter,
   type CategoryFilters,
+  type FilterableProduct,
 } from "@/lib/category-filters";
 import {
   getSubcategoryForProduct,
   type Subcategory,
 } from "@/data/subcategories";
 import type { ProductCard } from "@/data/products";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 interface CategoryProductListProps {
   products: ProductCard[];
@@ -59,6 +62,7 @@ export function CategoryProductList({
     initialFilters ?? EMPTY_CATEGORY_FILTERS,
   );
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { version } = useSiteVersion();
 
   // Keep the address bar in step without asking the server for a re-render.
   useEffect(() => {
@@ -70,47 +74,81 @@ export function CategoryProductList({
 
   const subOf = (slug: string) => getSubcategoryForProduct(slug) ?? undefined;
 
+  // Every facet works off the browsing store's view of the product: its own
+  // price and its own sale state (a product that is a pre-order in India can be
+  // a ready-to-ship buy-now internationally).
+  const rows = useMemo(
+    () =>
+      products.map((card) => ({
+        card,
+        view: resolveForStore(card, version) as FilterableProduct,
+      })),
+    [products, version],
+  );
+  const views = useMemo(() => rows.map((r) => r.view), [rows]);
+  const cardOf = useMemo(
+    () => new Map(rows.map((r) => [r.view.slug, r.card] as const)),
+    [rows],
+  );
+
   // Facet counts ignore their own facet, the usual listing behaviour.
   const brands = useMemo(
-    () => brandCounts(products, filters, subOf),
-    [products, filters],
+    () => brandCounts(views, filters, subOf),
+    [views, filters],
   );
   const availability = useMemo(
-    () => availabilityCounts(products, filters, subOf),
-    [products, filters],
+    () => availabilityCounts(views, filters, subOf),
+    [views, filters],
   );
   const subCounts = useMemo(() => {
     const counts = new Map<string, number>();
     const withoutSub = { ...filters, sub: undefined };
-    for (const product of filterCategoryProducts(products, withoutSub, subOf)) {
-      const slug = subOf(product.slug);
+    for (const view of filterCategoryProducts(views, withoutSub, subOf)) {
+      const slug = subOf(view.slug);
       if (slug) counts.set(slug, (counts.get(slug) ?? 0) + 1);
     }
     return counts;
-  }, [products, filters]);
+  }, [views, filters]);
 
   const visible = useMemo(
-    () => filterCategoryProducts(products, filters, subOf),
-    [products, filters],
+    () => filterCategoryProducts(views, filters, subOf),
+    [views, filters],
   );
 
   const sorted = useMemo(() => {
     const arr = [...visible];
     switch (sort) {
       case "name":
-        return arr.sort((a, b) => a.name.localeCompare(b.name));
+        return arr.sort((a, b) =>
+          (cardOf.get(a.slug)?.name ?? a.slug).localeCompare(
+            cardOf.get(b.slug)?.name ?? b.slug,
+          ),
+        );
       case "lowest":
         return arr.sort((a, b) => a.priceCents - b.priceCents);
       case "highest":
         return arr.sort((a, b) => b.priceCents - a.priceCents);
       case "manufacturer":
-        return arr.sort((a, b) => a.brand.name.localeCompare(b.brand.name));
+        return arr.sort((a, b) =>
+          (a.brand.name ?? a.brand.slug).localeCompare(
+            b.brand.name ?? b.brand.slug,
+          ),
+        );
       case "new":
       case "review":
       default:
         return arr;
     }
-  }, [visible, sort]);
+  }, [visible, sort, cardOf]);
+
+  // The cards for the surviving rows, in the sorted order above.
+  const sortedCards = useMemo(
+    () =>
+      sorted
+        .map((view) => cardOf.get(view.slug))
+        .filter((card): card is ProductCard => Boolean(card)),
+    [sorted, cardOf],
+  );
 
   const activeCount = countActiveFilters(filters);
 
@@ -198,7 +236,7 @@ export function CategoryProductList({
           </div>
 
           <div className="mt-6">
-            <ProductGrid products={sorted} columns={columns} />
+            <ProductGrid products={sortedCards} columns={columns} />
           </div>
         </div>
       </div>

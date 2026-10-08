@@ -8,6 +8,14 @@
  *   /category/skin-care?sub=mask&brand=acnes,hyggee&min=500&max=2000&avail=ready
  */
 
+import { priceForVersion } from "@/lib/money";
+import {
+  saleStateForVersion,
+  type ProductSaleState,
+  type ProductStoreFlags,
+} from "@/lib/product-flags";
+import type { SiteVersion } from "@/lib/site-version";
+
 export type AvailabilityFilter = "preorder" | "ready";
 
 export interface CategoryFilters {
@@ -88,12 +96,49 @@ export function countActiveFilters(filters: CategoryFilters): number {
   );
 }
 
-/** The slice of a product the filters read. */
+/**
+ * The slice of a product the filters read — already resolved for the store the
+ * shopper is browsing (see `resolveForStore`), so the price the filter compares
+ * and the availability bucket are the ones that store actually charges/sells.
+ */
 export interface FilterableProduct {
   slug: string;
+  /** The browsing store's price, in minor units. */
   priceCents: number;
-  isPreOrder: boolean;
+  /** How the browsing store sells it (buy-now / pre-order / not yet). */
+  saleState: ProductSaleState;
   brand: { slug: string; name?: string };
+}
+
+/** A product with both stores' fields, as the catalogue carries it. */
+export interface StoreResolvableProduct extends ProductStoreFlags {
+  slug: string;
+  priceCents: number;
+  globalPriceCents?: number | null;
+  brand: { slug: string; name?: string };
+}
+
+/**
+ * Project a product into what the filters read for one store: its price and its
+ * sale state there. The availability facet used to read the shared pre-order
+ * flag and the local price, so a product that is a pre-order in India but a
+ * normal buy-now product internationally was bucketed (and priced) wrongly on
+ * the international storefront.
+ */
+export function resolveForStore(
+  product: StoreResolvableProduct,
+  version: SiteVersion,
+): FilterableProduct {
+  return {
+    slug: product.slug,
+    priceCents: priceForVersion(
+      product.priceCents,
+      product.globalPriceCents,
+      version,
+    ),
+    saleState: saleStateForVersion(product, version),
+    brand: product.brand,
+  };
 }
 
 export function matchesFilters(
@@ -112,10 +157,16 @@ export function matchesFilters(
   if (filters.minRupees != null && rupees < filters.minRupees) return false;
   if (filters.maxRupees != null && rupees > filters.maxRupees) return false;
   if (filters.availability.length > 0) {
-    const bucket: AvailabilityFilter = product.isPreOrder
-      ? "preorder"
-      : "ready";
-    if (!filters.availability.includes(bucket)) return false;
+    // "Ready to ship" means buy-now on this store, "pre-order" means flagged
+    // as a pre-order here. A product that is neither is in no bucket, so it
+    // only shows while the facet is off.
+    const bucket: AvailabilityFilter | null =
+      product.saleState === "preorder"
+        ? "preorder"
+        : product.saleState === "buynow"
+          ? "ready"
+          : null;
+    if (!bucket || !filters.availability.includes(bucket)) return false;
   }
   return true;
 }
@@ -164,7 +215,8 @@ export function availabilityCounts<T extends FilterableProduct>(
   const counts: Record<AvailabilityFilter, number> = { preorder: 0, ready: 0 };
   for (const product of products) {
     if (!matchesFilters(product, withoutAvail, subcategoryOf)) continue;
-    counts[product.isPreOrder ? "preorder" : "ready"] += 1;
+    if (product.saleState === "preorder") counts.preorder += 1;
+    else if (product.saleState === "buynow") counts.ready += 1;
   }
   return counts;
 }
