@@ -170,8 +170,37 @@ export function ProductDetail({
       <div className="flex flex-wrap">
         {/* ── Gallery (left) ── */}
         <div className="box-border w-full lg:w-[52%]">
-          <div className="flex gap-2">
-            <div className="relative aspect-[4/5] min-w-0 flex-1 overflow-hidden bg-white">
+          {/* Thumbnails form a vertical strip on the left at desktop, as on the
+              original; on phones they stay a horizontal strip under the image
+              because our main image is not swipeable. */}
+          <div className="flex flex-col lg:flex-row lg:items-start">
+            {images.length > 1 && (
+              <div className="order-2 mt-2 flex gap-2.5 overflow-x-auto pb-1 lg:order-1 lg:mt-0 lg:w-[89px] lg:shrink-0 lg:flex-col lg:overflow-visible lg:pb-0">
+                {images.map((image, i) => (
+                  <button
+                    key={image}
+                    type="button"
+                    onClick={() => setActiveImage(i)}
+                    aria-label={`Photo ${i + 1}`}
+                    aria-current={i === activeImage}
+                    className={`relative aspect-square w-[72px] shrink-0 cursor-pointer overflow-hidden rounded-2xl border lg:w-[89px] ${
+                      i === activeImage ? "border-[#999]" : "border-transparent"
+                    }`}
+                  >
+                    <Image
+                      src={image}
+                      alt=""
+                      fill
+                      sizes="89px"
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* One square main image filling the rest of the gallery. */}
+            <div className="relative order-1 aspect-square min-w-0 flex-1 overflow-hidden rounded-2xl bg-white lg:order-2 lg:ml-[15px]">
               {images.length > 0 ? (
                 // Every gallery image is mounted and crossfaded, so switching
                 // (including from an option chip) reads like a gallery swipe
@@ -195,56 +224,15 @@ export function ProductDetail({
                   {product.brand.name}
                 </div>
               )}
+              {/* Photo counter, bottom right of the main image like the original. */}
+              {images.length > 0 && (
+                <span className="pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white md:bg-transparent md:px-0 md:py-0 md:text-[13px] md:font-normal md:text-[#333]">
+                  {String(activeImage + 1).padStart(2, "0")} /{" "}
+                  {String(images.length).padStart(2, "0")}
+                </span>
+              )}
             </div>
-
-            {/* The photo that follows, shown beside the active one (desktop
-                only), as on the client's reference product page. */}
-            {images.length > 1 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setActiveImage((activeImage + 1) % images.length)
-                }
-                aria-label="Show the next photo"
-                className="relative hidden aspect-[4/5] w-[42%] shrink-0 cursor-pointer overflow-hidden bg-white lg:block"
-              >
-                <Image
-                  src={images[(activeImage + 1) % images.length]}
-                  alt=""
-                  fill
-                  sizes="20vw"
-                  className="object-cover"
-                />
-              </button>
-            )}
           </div>
-
-          {images.length > 1 && (
-            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-              {images.map((image, i) => (
-                <button
-                  key={image}
-                  type="button"
-                  onClick={() => setActiveImage(i)}
-                  aria-label={`Photo ${i + 1}`}
-                  aria-current={i === activeImage}
-                  className={`relative aspect-square w-[72px] shrink-0 cursor-pointer overflow-hidden border-2 ${
-                    i === activeImage
-                      ? "border-point-500"
-                      : "border-transparent"
-                  }`}
-                >
-                  <Image
-                    src={image}
-                    alt=""
-                    fill
-                    sizes="72px"
-                    className="object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* ── Info panel (right) ── */}
@@ -369,20 +357,21 @@ export function ProductDetail({
             className="mt-4"
           />
 
-          {/* Product Info — a compact view of the INFO rows; More opens the tab */}
+          {/* Product Info — the admin's INFO rows in two columns (label |
+              value); More opens the tab with the full content. */}
           {visibleInfoRows.length > 0 && (
             <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
               <p className="text-[15px] font-bold text-ink">Product Info</p>
-              <dl className="mt-1">
-                {visibleInfoRows.slice(0, 4).map((row) => (
+              <dl className="mt-2">
+                {visibleInfoRows.map((row, i) => (
                   <div
-                    key={row.heading}
-                    className="flex items-start justify-between gap-6 border-b border-[#f2f2f2] py-2.5 last:border-b-0"
+                    key={`${row.heading}-${i}`}
+                    className="grid grid-cols-[85px_minmax(0,1fr)] gap-x-3 border-b border-[#f2f2f2] py-2.5 last:border-b-0 md:grid-cols-[130px_minmax(0,1fr)]"
                   >
-                    <dt className="shrink-0 text-[15px] font-medium text-[#333]">
+                    <dt className="text-[15px] leading-[24px] text-[#aaa]">
                       {row.heading}
                     </dt>
-                    <dd className="line-clamp-2 min-w-0 text-right text-[15px] whitespace-pre-line text-[#777]">
+                    <dd className="text-[15px] leading-[24px] whitespace-pre-line text-[#333]">
                       {row.body}
                     </dd>
                   </div>
