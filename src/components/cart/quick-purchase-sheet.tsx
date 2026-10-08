@@ -24,7 +24,7 @@ import {
 import { IdDocumentDialog } from "./id-document-dialog";
 import { CouponBox, type AppliedCoupon } from "./coupon-box";
 import { ShippingProgressBar } from "./shipping-progress";
-import { computeShippingCents } from "@/lib/shipping";
+import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 /**
@@ -448,14 +448,12 @@ export function QuickPurchaseSheet({
                 </dd>
               </div>
             </dl>
-            {!appliedCoupon?.freeShipping && (
-              <ShippingProgressBar
-                subtotalCents={payableSubtotalCents}
-                settings={shipping}
-                currency={currency}
-                className="mt-3"
-              />
-            )}
+            <ShippingProgressBar
+              subtotalCents={payableSubtotalCents}
+              settings={appliedCoupon?.freeShipping ? FREE_SHIPPING : shipping}
+              currency={currency}
+              className="mt-3"
+            />
             <button
               type="button"
               onClick={() => placeOrder()}

@@ -78,10 +78,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     local: {
       shippingCents: localSite.shippingCents,
       freeShippingOverCents: localSite.freeShippingOverCents,
+      dispatchCutoffHour: localSite.dispatchCutoffHour,
     },
     global: {
       shippingCents: globalSite.shippingCents,
       freeShippingOverCents: globalSite.freeShippingOverCents,
+      dispatchCutoffHour: globalSite.dispatchCutoffHour,
     },
   };
 

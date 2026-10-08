@@ -837,12 +837,9 @@ model SiteConfig {
   address String?
 
   // ── Stores page (/stores) ──────────────────────────────────────────
-  // Heading, business hours (free text, may span lines) and the place the
-  // embedded map and "Open in Maps" link point at. An empty map location falls
-  // back to the store address. Address, phone and email come from above.
-  storeName     String? @map("store_name")
-  storeHours    String? @map("store_hours")
-  storeMapQuery String? @map("store_map_query")
+  // Stores are their own table (`stores`) so the admin can keep a list per
+  // storefront; the old per-version store_* columns were dropped with the
+  // stores_list migration.
 
   // ── Shipping ───────────────────────────────────────────────────────
   // What this store charges for delivery, and the order value above which
@@ -850,6 +847,8 @@ model SiteConfig {
   // bar towards the milestone while it is set.
   shippingCents         Int  @default(0) @map("shipping_cents")
   freeShippingOverCents Int? @map("free_shipping_over_cents")
+  // Hour (0–23) after which an order joins tomorrow's dispatch; 3 PM when unset.
+  dispatchCutoffHour Int? @map("dispatch_cutoff_hour")
 
   // ── Invoice "from" block ───────────────────────────────────────────
   // Printed on this store's invoices; the legal entity differs per store, so
@@ -940,4 +939,30 @@ model Feedback {
   @@index([email])
   @@index([createdAt])
   @@map("feedback")
+}
+
+// ---------------------------------------------------------------------------
+// Stores: the physical shops shown on /stores
+// ---------------------------------------------------------------------------
+// A dynamic list per storefront version. The admin adds, edits, reorders and
+// removes rows in /admin/stores; the /stores page renders them in `sortOrder`.
+// `hours` holds one entry per weekday (see src/lib/store-hours.ts) and
+// `mapQuery` is a place name/address or "lat,lng" for the embedded map.
+
+model Store {
+  id        String   @id @default(cuid())
+  version   String // "local" | "global"
+  name      String   @default("")
+  address   String   @default("")
+  phone     String   @default("")
+  email     String   @default("")
+  hours     Json?
+  mapQuery  String   @default("") @map("map_query")
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([version, sortOrder])
+  @@map("stores")
 }

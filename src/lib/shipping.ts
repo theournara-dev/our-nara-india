@@ -13,6 +13,8 @@ export type ShippingSettings = {
   shippingCents: number;
   /** Order value above which delivery is free; null = no milestone. */
   freeShippingOverCents: number | null;
+  /** Hour (0–23) after which an order joins tomorrow's dispatch; default 3 PM. */
+  dispatchCutoffHour?: number;
 };
 
 /** A store with no shipping configuration at all: free delivery, no milestone. */
@@ -101,4 +103,61 @@ export function shippingProgress(
     feeCents,
     milestoneCents,
   };
+}
+
+/** "3:00 PM" — the daily dispatch cut-off as the shipment notice writes it. */
+export function formatCutoffLabel(hour: number): string {
+  const clamped = Math.min(23, Math.max(0, Math.round(hour)));
+  const twelve = clamped % 12 === 0 ? 12 : clamped % 12;
+  return `${twelve}:00 ${clamped < 12 ? "AM" : "PM"}`;
+}
+
+const WEEKDAY_SHORT = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const WEEKDAY_LONG = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+/** Weekends are not dispatch days. */
+function isDispatchDay(date: Date): boolean {
+  const day = date.getDay();
+  return day >= 1 && day <= 5;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+/**
+ * The day a parcel ordered now leaves the warehouse, phrased like the client's
+ * reference: a cart ordered before today's cut-off makes today's batch and
+ * ships on the next dispatch day, one ordered later makes tomorrow's batch.
+ *
+ * Returns e.g. "Tomorrow 10/07(WED)" or "Monday 10/12(MON)". Callers compute
+ * this on the client — it depends on the shopper's clock.
+ */
+export function nextDispatchLabel(now: Date, cutoffHour: number): string {
+  const ship = new Date(now);
+  if (now.getHours() >= cutoffHour) ship.setDate(ship.getDate() + 1);
+  do {
+    ship.setDate(ship.getDate() + 1);
+  } while (!isDispatchDay(ship));
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const mm = String(ship.getMonth() + 1).padStart(2, "0");
+  const dd = String(ship.getDate()).padStart(2, "0");
+  const prefix = isSameDay(ship, tomorrow)
+    ? "Tomorrow"
+    : WEEKDAY_LONG[ship.getDay()];
+  return `${prefix} ${mm}/${dd}(${WEEKDAY_SHORT[ship.getDay()]})`;
 }

@@ -15,13 +15,14 @@ export function StoreInfo({
   address: string;
   phone: string;
   email: string;
-  hours: string;
+  /** Compressed opening-hours lines, e.g. ["Mon–Fri 09:00–18:00"]. */
+  hours: string[];
 }) {
   const rows = [
     ["Address", address],
     ["Phone", phone],
     ["Email", email],
-    ["Business Hours", hours],
+    ["Business Hours", hours.join("\n")],
   ] as const;
 
   return (

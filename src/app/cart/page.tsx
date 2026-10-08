@@ -26,7 +26,7 @@ import { notify, notifyErrorWithContact } from "@/lib/toast";
 import { IdDocumentDialog } from "@/components/cart/id-document-dialog";
 import { CouponBox, type AppliedCoupon } from "@/components/cart/coupon-box";
 import { ShippingProgressBar } from "@/components/cart/shipping-progress";
-import { computeShippingCents } from "@/lib/shipping";
+import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 export default function CartPage() {
@@ -140,15 +140,25 @@ export default function CartPage() {
       <PageHeader eyebrow="Your basket" title="Cart" />
       <Container className="pb-16">
         {items.length === 0 ? (
-          <div className="mx-auto max-w-xl rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center">
-            <p className="text-3xl">🛍️</p>
-            <p className="mt-3 text-zinc-600">Your cart is empty.</p>
-            <Link
-              href="/category/skin-care"
-              className="mt-6 inline-flex h-10 items-center justify-center rounded border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              Start shopping
-            </Link>
+          <div className="mx-auto max-w-xl">
+            <div className="rounded-2xl border border-dashed border-zinc-200 bg-white p-12 text-center">
+              <p className="text-3xl">🛍️</p>
+              <p className="mt-3 text-zinc-600">Your cart is empty.</p>
+              <Link
+                href="/category/skin-care"
+                className="mt-6 inline-flex h-10 items-center justify-center rounded border border-zinc-200 bg-white px-5 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+              >
+                Start shopping
+              </Link>
+            </div>
+            {/* The delivery block stays visible with an empty cart: it carries
+                today's dispatch cut-off and the free-delivery milestone. */}
+            <ShippingProgressBar
+              subtotalCents={0}
+              settings={shipping}
+              currency={currency}
+              className="mt-4"
+            />
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-3">
@@ -330,14 +340,14 @@ export default function CartPage() {
                   </dd>
                 </div>
               </dl>
-              {!appliedCoupon?.freeShipping && (
-                <ShippingProgressBar
-                  subtotalCents={payableSubtotalCents}
-                  settings={shipping}
-                  currency={currency}
-                  className="mt-3"
-                />
-              )}
+              <ShippingProgressBar
+                subtotalCents={payableSubtotalCents}
+                settings={
+                  appliedCoupon?.freeShipping ? FREE_SHIPPING : shipping
+                }
+                currency={currency}
+                className="mt-3"
+              />
               <button
                 type="button"
                 onClick={() => placeOrder()}

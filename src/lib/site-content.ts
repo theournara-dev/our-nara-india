@@ -59,15 +59,12 @@ export type SiteContent = {
   email: string;
   phone: string;
   address: string;
-  /** The /stores page heading and business hours (hours may span lines). */
-  storeName: string;
-  storeHours: string;
-  /** Address or place name for the store map; empty = use the address. */
-  storeMapQuery: string;
   /** Delivery fee charged by this store, and when delivery becomes free. */
   shippingCents: number;
   /** Order value above which delivery is free; null = never free. */
   freeShippingOverCents: number | null;
+  /** Hour (0–23) after which an order joins tomorrow's dispatch; default 3 PM. */
+  dispatchCutoffHour: number;
   /** "From" block printed on this store's invoices. */
   invoice: {
     legalName: string;
@@ -131,8 +128,6 @@ const LOCAL_ADDRESS =
   "One World, S.V. Road, Near N L School, Malad West, Mumbai, Maharashtra 400064";
 const GLOBAL_ADDRESS =
   "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon, Republic of Korea";
-/** Business hours from the original footer; both stores share them. */
-const DEFAULT_STORE_HOURS = "Week 09:00 - 18:00\nSat, Sun, Holiday OFF";
 
 export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
   local: {
@@ -140,12 +135,10 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     email: "theournara@gmail.com",
     phone: "+91-88283-38323",
     address: LOCAL_ADDRESS,
-    storeName: "OURNARA",
-    storeHours: DEFAULT_STORE_HOURS,
-    storeMapQuery: LOCAL_ADDRESS,
     // Delivery is free until an admin sets a fee in /admin/site.
     shippingCents: 0,
     freeShippingOverCents: null,
+    dispatchCutoffHour: 15,
     invoice: {
       legalName: "Seoulveda Trading LLP",
       address:
@@ -163,11 +156,9 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     email: "tft@thefirstteam.co.kr",
     phone: "",
     address: GLOBAL_ADDRESS,
-    storeName: "OURNARA",
-    storeHours: DEFAULT_STORE_HOURS,
-    storeMapQuery: GLOBAL_ADDRESS,
     shippingCents: 0,
     freeShippingOverCents: null,
+    dispatchCutoffHour: 15,
     invoice: {
       legalName: "The Firstteam Corp",
       address:
@@ -280,11 +271,9 @@ export function siteContentFromRow(
     email: string | null;
     phone: string | null;
     address: string | null;
-    storeName: string | null;
-    storeHours: string | null;
-    storeMapQuery: string | null;
     shippingCents: number | null;
     freeShippingOverCents: number | null;
+    dispatchCutoffHour: number | null;
     invoiceLegalName: string | null;
     invoiceAddress: string | null;
     invoiceEmail: string | null;
@@ -302,13 +291,9 @@ export function siteContentFromRow(
     email: row.email?.trim() || base.email,
     phone: row.phone?.trim() ?? base.phone,
     address: row.address?.trim() || base.address,
-    storeName: row.storeName?.trim() || base.storeName,
-    // NULL = never set, so the default applies. An emptied field is stored as ""
-    // and stays empty (shown as "-"; the map falls back to the address).
-    storeHours: row.storeHours?.trim() ?? base.storeHours,
-    storeMapQuery: row.storeMapQuery?.trim() ?? base.storeMapQuery,
     shippingCents: row.shippingCents ?? base.shippingCents,
     freeShippingOverCents: row.freeShippingOverCents ?? null,
+    dispatchCutoffHour: row.dispatchCutoffHour ?? base.dispatchCutoffHour,
     invoice: {
       legalName: row.invoiceLegalName?.trim() || base.invoice.legalName,
       address: row.invoiceAddress?.trim() || base.invoice.address,

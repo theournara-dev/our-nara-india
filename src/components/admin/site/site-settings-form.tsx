@@ -114,19 +114,16 @@ function SiteSettingsInner({
         email: current.email,
         phone: current.phone,
         address: current.address,
-        storeName: current.storeName,
-        storeHours: current.storeHours,
-        storeMapQuery: current.storeMapQuery,
         topBanner: current.topBanner,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
+        dispatchCutoffHour: current.dispatchCutoffHour,
         invoice: current.invoice,
       }),
     );
 
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
-    gate.registerHandler("stores", () => saveStore("stores"));
     gate.registerHandler("banner", () => saveStore("banner"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
@@ -219,55 +216,6 @@ function SiteSettingsInner({
         </div>
       </section>
 
-      {/* ── Stores page ─────────────────────────────────────────────────── */}
-      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-        <h2 className="mb-1 text-sm font-semibold text-zinc-900">
-          Stores page
-        </h2>
-        <p className="mb-4 text-xs text-zinc-400">
-          The /stores page: its heading, business hours and map. Its address,
-          phone and email rows come from Contact details above.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className={labelCls}>Store name</span>
-            <input
-              value={current.storeName}
-              onChange={(e) => patch({ storeName: e.target.value })}
-              className={inputCls}
-            />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Map location</span>
-            <input
-              value={current.storeMapQuery}
-              onChange={(e) => patch({ storeMapQuery: e.target.value })}
-              placeholder="Address or place name. Empty = the store address"
-              className={inputCls}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className={labelCls}>Business hours</span>
-            <textarea
-              rows={3}
-              value={current.storeHours}
-              onChange={(e) => patch({ storeHours: e.target.value })}
-              className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
-            />
-          </label>
-        </div>
-        <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => void gate.save("stores")}
-            disabled={saving !== null}
-            className={saveBtnCls}
-          >
-            {saving === "stores" ? "Saving…" : "Save stores page"}
-          </button>
-        </div>
-      </section>
-
       {/* ── Delivery ────────────────────────────────────────────────────── */}
       <section className="rounded-2xl border border-zinc-100 bg-white p-5">
         <h2 className="mb-1 text-sm font-semibold text-zinc-900">Delivery</h2>
@@ -294,6 +242,28 @@ function SiteSettingsInner({
               onChange={(cents) => patch({ freeShippingOverCents: cents })}
               placeholder="Empty = no free-delivery threshold"
             />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Dispatch cut-off (hour, 0–23)</span>
+            <input
+              type="number"
+              min={0}
+              max={23}
+              value={current.dispatchCutoffHour}
+              onChange={(e) =>
+                patch({
+                  dispatchCutoffHour: Math.min(
+                    23,
+                    Math.max(0, Number(e.target.value) || 0),
+                  ),
+                })
+              }
+              className={inputCls}
+            />
+            <span className="mt-1 block text-[11px] text-zinc-400">
+              Orders placed after this hour join the next dispatch day. Shown in
+              the cart as “Today&apos;s shipment closes at …”.
+            </span>
           </label>
         </div>
         <div className="mt-4">
