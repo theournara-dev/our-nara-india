@@ -362,17 +362,35 @@ export async function toggleProductActive(id: string, isActive: boolean) {
   revalidateCatalog();
 }
 
-/** Enable/disable the Buy Now button for a single product on the India store. */
-export async function toggleProductBuyNow(id: string, enabled: boolean) {
-  await requireAdmin();
-  await db.product.update({ where: { id }, data: { buyNowEnabled: enabled } });
-  revalidateCatalog();
-}
+/**
+ * The column behind each per-store flag, so the products table can toggle any
+ * of the six from one place (see StoreFlagToggles).
+ */
+const STORE_FLAG_COLUMNS = {
+  local: {
+    show: "isActive",
+    preorder: "isPreOrder",
+    buynow: "buyNowEnabled",
+  },
+  global: {
+    show: "globalIsActive",
+    preorder: "globalIsPreOrder",
+    buynow: "globalBuyNowEnabled",
+  },
+} as const;
 
-/** Mark/unmark a product as a pre-order on the India store. */
-export async function toggleProductPreOrder(id: string, enabled: boolean) {
+/** Toggle one product flag for one storefront (show / pre-order / buy now). */
+export async function setProductStoreFlag(
+  id: string,
+  store: "local" | "global",
+  flag: "show" | "preorder" | "buynow",
+  value: boolean,
+) {
   await requireAdmin();
-  await db.product.update({ where: { id }, data: { isPreOrder: enabled } });
+  const storeColumns = STORE_FLAG_COLUMNS[store];
+  const column = storeColumns?.[flag];
+  if (!column) throw new Error("Unknown store flag");
+  await db.product.update({ where: { id }, data: { [column]: value } });
   revalidateCatalog();
 }
 

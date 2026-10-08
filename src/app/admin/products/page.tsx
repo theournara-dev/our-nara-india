@@ -6,13 +6,13 @@ import {
   toggleProductActive,
   softDeleteProduct,
   hardDeleteProduct,
-  toggleProductBuyNow,
-  toggleProductPreOrder,
+  setProductStoreFlag,
   toggleBrandBuyNow,
 } from "./actions";
 import { ProductRowActions } from "./row-actions";
 import { ProductFilters } from "./filters";
 import { FeatureToggle } from "@/components/admin/feature-toggle";
+import { StoreFlagToggles } from "@/components/admin/store-flag-toggles";
 import { ProductsTabs } from "@/components/admin/products-tabs";
 import { currentQuery } from "./lib";
 
@@ -84,7 +84,6 @@ export default async function AdminProductsPage({
         brand: true,
         category: true,
         variants: true,
-        _count: { select: { preorders: true } },
       },
     }),
     db.product.count({ where }),
@@ -176,8 +175,15 @@ export default async function AdminProductsPage({
       )}
 
       {/* Table */}
+      <p className="mb-2 text-xs text-zinc-400">
+        Stores — IN (India) · GL (International):{" "}
+        <span className="font-medium text-zinc-500">show</span> ·{" "}
+        <span className="font-medium text-zinc-500">pre-order</span> ·{" "}
+        <span className="font-medium text-zinc-500">buy now</span>. Click a
+        button to toggle it; hover for the full label.
+      </p>
       <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-zinc-100 text-[11px] uppercase tracking-wide text-zinc-400">
               <th className="px-2 py-2 font-medium">Product</th>
@@ -185,10 +191,12 @@ export default async function AdminProductsPage({
               <th className="px-2 py-2 font-medium">Category</th>
               <th className="px-2 py-2 font-medium">Price</th>
               <th className="px-2 py-2 font-medium">Stock</th>
-              <th className="px-2 py-2 font-medium">Pre-orders</th>
-              <th className="px-2 py-2 font-medium">Status · IN</th>
-              <th className="px-2 py-2 font-medium">Pre-order · IN</th>
-              <th className="px-2 py-2 font-medium">Buy Now · IN</th>
+              <th className="px-2 py-2 font-medium">
+                Stores
+                <span className="ml-1 font-normal normal-case text-zinc-300">
+                  IN · GL
+                </span>
+              </th>
               <th className="px-2 py-2 text-right font-medium">Actions</th>
             </tr>
           </thead>
@@ -196,7 +204,7 @@ export default async function AdminProductsPage({
             {products.length === 0 ? (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={7}
                   className="px-2 py-8 text-center text-sm text-zinc-500"
                 >
                   No products found.
@@ -262,38 +270,25 @@ export default async function AdminProductsPage({
                       {stock}
                     </td>
                     <td className="px-2 py-1.5">
-                      <Link
-                        href="/admin/preorders"
-                        className="text-sm font-medium text-zinc-900 hover:text-point-500"
-                      >
-                        {p._count.preorders}
-                      </Link>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-medium ${
-                          p.isActive
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-zinc-100 text-zinc-500"
-                        }`}
-                      >
-                        {p.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <FeatureToggle
+                      {/* One compact block per store instead of a column per
+                          flag: two rows (IN / GL) × show · pre-order · buy now,
+                          each button toggles its own flag. */}
+                      <StoreFlagToggles
                         id={p.id}
-                        checked={p.isPreOrder}
-                        onChange={toggleProductPreOrder}
-                        label={`Pre-order for ${p.name}`}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <FeatureToggle
-                        id={p.id}
-                        checked={p.buyNowEnabled}
-                        onChange={toggleProductBuyNow}
-                        label={`Buy Now for ${p.name}`}
+                        name={p.name}
+                        onChange={setProductStoreFlag}
+                        flags={{
+                          local: {
+                            show: p.isActive,
+                            preorder: p.isPreOrder,
+                            buynow: p.buyNowEnabled,
+                          },
+                          global: {
+                            show: p.globalIsActive,
+                            preorder: p.globalIsPreOrder,
+                            buynow: p.globalBuyNowEnabled,
+                          },
+                        }}
                       />
                     </td>
                     <td className="px-2 py-1.5 text-right">
