@@ -27,6 +27,15 @@ export async function GET() {
       ctaHref: true,
       placement: true,
       frequency: true,
+      size: true,
+      widthPx: true,
+      scale: true,
+      delaySeconds: true,
+      timeoutSeconds: true,
+      overlay: true,
+      overlayOpacity: true,
+      closeOnOverlay: true,
+      hideToday: true,
     },
   });
 

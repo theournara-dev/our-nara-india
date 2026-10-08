@@ -736,7 +736,29 @@ model Popup {
   ctaLabel  String?   @map("cta_label") // button label
   ctaHref   String?   @map("cta_href") // button link target
   placement String    @default("center") // "center" | "bottom"
-  frequency String    @default("once") // "once" | "every"
+  frequency String    @default("once") // "once" | "day" | "every"
+
+  // ── Layout ─────────────────────────────────────────────────────────
+  // Size preset ("sm" | "md" | "lg" | "xl" | "custom"); a custom size uses
+  // widthPx. `scale` zooms the rendered card in percent without touching the
+  // layout width, so admins can fine-tune without re-uploading artwork.
+  size    String @default("md")
+  widthPx Int?   @map("width_px")
+  scale   Int    @default(100) // 50–150
+
+  // ── Timing ─────────────────────────────────────────────────────────
+  // delaySeconds waits before the popup appears; timeoutSeconds closes it
+  // automatically (0 = it waits for the visitor).
+  delaySeconds   Int @default(0) @map("delay_seconds")
+  timeoutSeconds Int @default(0) @map("timeout_seconds")
+
+  // ── Overlay & dismissal ────────────────────────────────────────────
+  overlay        Boolean @default(true)
+  overlayOpacity Int     @default(50) @map("overlay_opacity") // 0–90 (%)
+  closeOnOverlay Boolean @default(true) @map("close_on_overlay")
+  // Show the "Don't show again today" link in the popup's footer.
+  hideToday Boolean @default(true) @map("hide_today")
+
   isActive  Boolean   @default(true) @map("is_active")
   startsAt  DateTime? @map("starts_at")
   expiresAt DateTime? @map("expires_at")

@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "popups" ADD COLUMN     "size" TEXT NOT NULL DEFAULT 'md',
+ADD COLUMN     "width_px" INTEGER,
+ADD COLUMN     "scale" INTEGER NOT NULL DEFAULT 100,
+ADD COLUMN     "delay_seconds" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "timeout_seconds" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "overlay" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "overlay_opacity" INTEGER NOT NULL DEFAULT 50,
+ADD COLUMN     "close_on_overlay" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "hide_today" BOOLEAN NOT NULL DEFAULT true;
