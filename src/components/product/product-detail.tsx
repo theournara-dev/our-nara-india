@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
@@ -84,6 +84,27 @@ export function ProductDetail({
     }
   }
   const images = galleryImages;
+  const thumbStripRef = useRef<HTMLDivElement>(null);
+  // Keep the active thumbnail visible inside the scrolling strip (desktop
+  // shows a fixed-height column, so later photos would otherwise hide).
+  useEffect(() => {
+    const strip = thumbStripRef.current;
+    if (!strip || strip.scrollHeight <= strip.clientHeight) return;
+    const thumb = strip.querySelector<HTMLElement>(
+      `[data-thumb="${activeImage}"]`,
+    );
+    if (!thumb) return;
+    const top = thumb.offsetTop;
+    const bottom = top + thumb.offsetHeight;
+    if (top < strip.scrollTop) {
+      strip.scrollTo({ top, behavior: "smooth" });
+    } else if (bottom > strip.scrollTop + strip.clientHeight) {
+      strip.scrollTo({
+        top: bottom - strip.clientHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [activeImage]);
   // A variant price overrides the product price (and re-bases the discount).
   // The override only engages when the variant has its own local price —
   // createOrder resolves the same way, so the displayed price and the amount
@@ -174,13 +195,17 @@ export function ProductDetail({
           {/* Thumbnails form a vertical strip on the left at desktop, as on the
               original; on phones they stay a horizontal strip under the image
               because our main image is not swipeable. */}
-          <div className="flex flex-col lg:flex-row lg:items-start">
+          <div className="relative flex flex-col lg:block lg:pl-[104px]">
             {images.length > 1 && (
-              <div className="order-2 mt-2 flex gap-2.5 overflow-x-auto pb-1 lg:order-1 lg:mt-0 lg:w-[89px] lg:shrink-0 lg:flex-col lg:overflow-visible lg:pb-0">
+              <div
+                ref={thumbStripRef}
+                className="order-2 mt-2 flex gap-2.5 overflow-x-auto pb-1 lg:absolute lg:inset-y-0 lg:left-0 lg:mt-0 lg:w-[89px] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
                 {images.map((image, i) => (
                   <button
                     key={image}
                     type="button"
+                    data-thumb={i}
                     onClick={() => setActiveImage(i)}
                     aria-label={`Photo ${i + 1}`}
                     aria-current={i === activeImage}
@@ -201,7 +226,7 @@ export function ProductDetail({
             )}
 
             {/* One square main image filling the rest of the gallery. */}
-            <div className="relative order-1 aspect-square min-w-0 flex-1 overflow-hidden rounded-2xl bg-white lg:order-2 lg:ml-[15px]">
+            <div className="relative order-1 aspect-square min-w-0 overflow-hidden rounded-2xl bg-white">
               {images.length > 0 ? (
                 // Every gallery image is mounted and crossfaded, so switching
                 // (including from an option chip) reads like a gallery swipe
