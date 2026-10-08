@@ -4,13 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { ProductDetail, InfoRow } from "@/data/products";
-import { addProductToCart, useCart } from "@/lib/cart";
+import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
 import { computeShippingCents } from "@/lib/shipping";
 import { listCouponsForProduct } from "@/app/actions/coupons";
-import { ShippingProgressBar } from "@/components/cart/shipping-progress";
+import { FreeShippingBox } from "./free-shipping-box";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { PreorderDialog } from "./preorder-dialog";
@@ -49,7 +49,6 @@ export function ProductDetail({
 }: ProductDetailProps) {
   const { version, config, shipping } = useSiteVersion();
   const { openQuickPurchase } = useCartSheet();
-  const cart = useCart();
   const [activeImage, setActiveImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [option, setOption] = useState("");
@@ -101,6 +100,8 @@ export function ProductDetail({
   const compareAtCents =
     compareAt != null && compareAt > displayPrice ? compareAt : undefined;
   const needsOption = product.variants.length > 0 && !option;
+  // The INFO rows the storefront shows (per-product overrides can hide rows).
+  const visibleInfoRows = infoRows.filter((row) => row.visible !== false);
 
   // Coupons whose scope covers this product — a hint, since the real discount
   // depends on the cart and the shopper's history (resolved at checkout).
@@ -122,26 +123,10 @@ export function ProductDetail({
     };
   }, [product.id]);
 
-  // Delivery for what checkout would charge right now: the cart subtotal, plus
-  // this product's line when it is not in the cart yet (so the estimate matches
-  // the cart page instead of double-counting an item already added).
-  const cartSubtotalCents = cart.reduce(
-    (sum, item) =>
-      sum +
-      priceForVersion(item.priceCents, item.globalPriceCents, version) *
-        item.qty,
-    0,
-  );
+  // Delivery for this product's own line, so the Shipping Fee row matches what
+  // checkout would charge once the item is in the cart.
   const thisLineCents = displayPrice * qty;
-  const estimateSubtotalCents = cart.some(
-    (item) => item.productId === product.id,
-  )
-    ? cartSubtotalCents
-    : cartSubtotalCents + thisLineCents;
-  const shippingForThisLine = computeShippingCents(
-    estimateSubtotalCents,
-    shipping,
-  );
+  const shippingForThisLine = computeShippingCents(thisLineCents, shipping);
   // Option chips grouped by their label ("Shade", "Size"), kept in admin order.
   const optionGroups = product.variants.reduce<
     { label: string; items: ProductDetail["variants"] }[]
@@ -184,48 +169,76 @@ export function ProductDetail({
     <div className="mx-auto box-border w-[92%] max-w-[1560px] px-2">
       <div className="flex flex-wrap">
         {/* ── Gallery (left) ── */}
-        <div className="box-border w-full lg:w-[50%] lg:pr-6">
-          <div className="relative aspect-square overflow-hidden rounded-xl border border-[#e9e9e9] bg-white">
-            {images.length > 0 ? (
-              // Every gallery image is mounted and crossfaded, so switching
-              // (including from an option chip) reads like a gallery swipe
-              // rather than a hard swap.
-              images.map((src, i) => (
+        <div className="box-border w-full lg:w-[52%]">
+          <div className="flex gap-2">
+            <div className="relative aspect-[4/5] min-w-0 flex-1 overflow-hidden bg-white">
+              {images.length > 0 ? (
+                // Every gallery image is mounted and crossfaded, so switching
+                // (including from an option chip) reads like a gallery swipe
+                // rather than a hard swap.
+                images.map((src, i) => (
+                  <Image
+                    key={src}
+                    src={src}
+                    alt={i === activeImage ? product.name : ""}
+                    aria-hidden={i !== activeImage}
+                    fill
+                    priority={i === 0}
+                    sizes="(min-width: 1024px) 40vw, 100vw"
+                    className={`object-cover transition-opacity duration-500 ease-in-out ${
+                      i === activeImage ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                ))
+              ) : (
+                <div className="flex h-full items-center justify-center bg-[#f6f6f6] text-zinc-400">
+                  {product.brand.name}
+                </div>
+              )}
+            </div>
+
+            {/* The photo that follows, shown beside the active one (desktop
+                only), as on the client's reference product page. */}
+            {images.length > 1 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setActiveImage((activeImage + 1) % images.length)
+                }
+                aria-label="Show the next photo"
+                className="relative hidden aspect-[4/5] w-[42%] shrink-0 cursor-pointer overflow-hidden bg-white lg:block"
+              >
                 <Image
-                  key={src}
-                  src={src}
-                  alt={i === activeImage ? product.name : ""}
-                  aria-hidden={i !== activeImage}
+                  src={images[(activeImage + 1) % images.length]}
+                  alt=""
                   fill
-                  priority={i === 0}
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className={`object-cover transition-opacity duration-500 ease-in-out ${
-                    i === activeImage ? "opacity-100" : "opacity-0"
-                  }`}
+                  sizes="20vw"
+                  className="object-cover"
                 />
-              ))
-            ) : (
-              <div className="flex h-full items-center justify-center bg-[#f6f6f6] text-zinc-400">
-                {product.brand.name}
-              </div>
+              </button>
             )}
           </div>
+
           {images.length > 1 && (
-            <div className="mt-3 flex gap-2">
+            <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
               {images.map((image, i) => (
                 <button
                   key={image}
                   type="button"
                   onClick={() => setActiveImage(i)}
-                  className={`relative aspect-square w-16 cursor-pointer overflow-hidden rounded-lg border ${
-                    i === activeImage ? "border-point-500" : "border-[#e9e9e9]"
+                  aria-label={`Photo ${i + 1}`}
+                  aria-current={i === activeImage}
+                  className={`relative aspect-square w-[72px] shrink-0 cursor-pointer overflow-hidden border-2 ${
+                    i === activeImage
+                      ? "border-point-500"
+                      : "border-transparent"
                   }`}
                 >
                   <Image
                     src={image}
                     alt=""
                     fill
-                    sizes="64px"
+                    sizes="72px"
                     className="object-cover"
                   />
                 </button>
@@ -235,7 +248,7 @@ export function ProductDetail({
         </div>
 
         {/* ── Info panel (right) ── */}
-        <div className="box-border w-full pt-8 lg:w-[50%] lg:pl-6 lg:pt-0">
+        <div className="box-border w-full pt-8 lg:w-[48%] lg:pl-6 lg:pt-0">
           <Link
             href={`/brand/${product.brand.slug}`}
             className="text-sm font-medium uppercase tracking-wider text-zinc-400 hover:text-point-500"
@@ -273,75 +286,6 @@ export function ProductDetail({
                 {product.preOrderNotice ??
                   "Order now, ships when stock arrives."}
               </span>
-            </div>
-          )}
-
-          {/* Options — chips/swatches per option label, like the original */}
-          {product.variants.length > 0 && (
-            <div className="mt-5">
-              <p className="mb-1.5 text-sm font-semibold text-ink">
-                Option Information
-              </p>
-              <div className="space-y-3">
-                {optionGroups.map((group) => (
-                  <div key={group.label || "option"}>
-                    {group.label && (
-                      <p className="mb-1 text-xs font-medium text-[#888]">
-                        {group.label}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2">
-                      {group.items.map((v) => {
-                        const selected = option === v.id;
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => {
-                              setOption(v.id);
-                              // Move the gallery to the option's first image,
-                              // the way picking an option swaps the original's
-                              // linked main image.
-                              const index = firstImageIndex.get(v.id);
-                              if (index != null) setActiveImage(index);
-                            }}
-                            aria-pressed={selected}
-                            title={v.optionValue}
-                            className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                              selected
-                                ? "border-point-500 bg-point-50 font-medium text-point-600"
-                                : "border-[#e9e9e9] bg-white text-[#222] hover:border-point-200"
-                            }`}
-                          >
-                            {v.color ? (
-                              <span
-                                aria-hidden
-                                className="inline-block h-4 w-4 shrink-0 rounded-full border border-black/10"
-                                style={{ backgroundColor: v.color }}
-                              />
-                            ) : v.images[0] ? (
-                              <Image
-                                src={v.images[0]}
-                                alt=""
-                                width={20}
-                                height={20}
-                                unoptimized
-                                className="h-5 w-5 shrink-0 rounded-full object-cover"
-                              />
-                            ) : null}
-                            <span>{v.optionValue}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {needsOption && (
-                <p className="mt-2 text-xs text-rose-500">
-                  [Required] Please select options.
-                </p>
-              )}
             </div>
           )}
 
@@ -384,13 +328,13 @@ export function ProductDetail({
             )}
           </div>
 
-          {/* Buy buttons — shown based on their feature flags */}
-          <div className="mt-5 flex gap-2">
+          {/* Primary action — one solid button, as on the client's reference */}
+          <div className="mt-4 flex gap-2">
             {showPreOrder && (
               <button
                 type="button"
                 onClick={handlePreorder}
-                className="h-12 flex-1 rounded bg-point-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-point-600"
+                className="h-14 flex-1 cursor-pointer rounded-lg bg-point-500 px-6 text-[15px] font-bold text-white transition-colors hover:bg-point-600"
               >
                 PRE-ORDER
               </button>
@@ -402,7 +346,7 @@ export function ProductDetail({
                   onClick={handleBuyNow}
                   disabled={needsOption}
                   title={needsOption ? "Select an option first" : undefined}
-                  className="h-12 flex-1 rounded border border-ink px-6 text-sm font-semibold text-ink transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-ink"
+                  className="h-14 flex-1 cursor-pointer rounded-lg bg-point-500 px-6 text-[15px] font-bold text-white transition-colors hover:bg-point-600 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   BUY NOW
                 </button>
@@ -411,20 +355,135 @@ export function ProductDetail({
                   type="button"
                   disabled
                   title="Payment is not available yet on this site."
-                  className="h-12 flex-1 cursor-not-allowed rounded border border-ink px-6 text-sm font-semibold text-zinc-400 opacity-70"
+                  className="h-14 flex-1 cursor-not-allowed rounded-lg bg-zinc-200 px-6 text-[15px] font-bold text-zinc-500"
                 >
                   Payment coming soon
                 </button>
               ))}
           </div>
 
-          {/* Free-delivery progress, then any coupon that covers this product. */}
-          <ShippingProgressBar
-            subtotalCents={estimateSubtotalCents}
+          {/* Free-delivery terms for this store */}
+          <FreeShippingBox
             settings={shipping}
             currency={product.currency}
             className="mt-4"
           />
+
+          {/* Product Info — a compact view of the INFO rows; More opens the tab */}
+          {visibleInfoRows.length > 0 && (
+            <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
+              <p className="text-[15px] font-bold text-ink">Product Info</p>
+              <dl className="mt-1">
+                {visibleInfoRows.slice(0, 4).map((row) => (
+                  <div
+                    key={row.heading}
+                    className="flex items-start justify-between gap-6 border-b border-[#f2f2f2] py-2.5 last:border-b-0"
+                  >
+                    <dt className="shrink-0 text-[15px] font-medium text-[#333]">
+                      {row.heading}
+                    </dt>
+                    <dd className="line-clamp-2 min-w-0 text-right text-[15px] whitespace-pre-line text-[#777]">
+                      {row.body}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("INFO");
+                  document
+                    .getElementById("product-tabs")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="mt-3 cursor-pointer text-[13px] font-medium text-point-600 underline underline-offset-2"
+              >
+                More
+              </button>
+            </div>
+          )}
+
+          {/* Options — round image swatches, as on the reference */}
+          {product.variants.length > 0 && (
+            <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
+              <p className="text-[15px] font-bold text-ink">
+                Please Select Variants
+              </p>
+              <div className="mt-3 space-y-3">
+                {optionGroups.map((group) => (
+                  <div key={group.label || "option"}>
+                    {group.label && (
+                      <p className="mb-2 text-xs font-medium text-[#888]">
+                        {group.label}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2.5">
+                      {group.items.map((v) => {
+                        const selected = option === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setOption(v.id);
+                              // Move the gallery to the option's first image,
+                              // the way picking an option swaps the original's
+                              // linked main image.
+                              const index = firstImageIndex.get(v.id);
+                              if (index != null) setActiveImage(index);
+                            }}
+                            aria-pressed={selected}
+                            aria-label={v.optionValue}
+                            title={v.optionValue}
+                            className={`relative size-[52px] cursor-pointer overflow-hidden rounded-full border-2 bg-white transition-colors ${
+                              selected
+                                ? "border-point-500"
+                                : "border-[#e5e5e5] hover:border-point-200"
+                            }`}
+                          >
+                            {v.images[0] ? (
+                              <Image
+                                src={v.images[0]}
+                                alt=""
+                                fill
+                                sizes="52px"
+                                className="object-cover"
+                              />
+                            ) : v.color ? (
+                              <span
+                                aria-hidden
+                                className="absolute inset-0"
+                                style={{ backgroundColor: v.color }}
+                              />
+                            ) : (
+                              <span className="grid h-full w-full place-items-center text-[11px] font-semibold text-[#666]">
+                                {v.optionValue}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {selectedVariant && (
+                <p className="mt-3 text-[13px] text-[#666]">
+                  {selectedVariant.optionLabel
+                    ? `${selectedVariant.optionLabel}: `
+                    : ""}
+                  {selectedVariant.optionValue}
+                </p>
+              )}
+              {needsOption && (
+                <p className="mt-2 text-xs text-rose-500">
+                  [Required] Please select options.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Coupons that cover this product */}
           {productCoupons.length > 0 && (
             <ul className="mt-3 space-y-1">
               {productCoupons.map((coupon) => (
@@ -443,7 +502,7 @@ export function ProductDetail({
       </div>
 
       {/* ── Tabs ── */}
-      <div className="mt-12">
+      <div id="product-tabs" className="mt-12">
         <ul className="flex w-full border-b border-[#e9e9e9] text-sm">
           {(["DETAIL", "INFO", "Q&A", "REVIEW"] as const).map((t) => (
             <li key={t} className="flex-1">
