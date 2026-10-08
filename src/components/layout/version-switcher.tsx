@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Globe, Loader2, MapPin } from "lucide-react";
+import { Globe, Loader2 } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
 import {
   StorePickerCards,
@@ -15,24 +15,18 @@ import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
 
 /** The two sides of the Local / Global toggle, in display order. */
-const TOGGLE_OPTIONS: {
-  store: SiteVersion;
-  label: string;
-  Icon: typeof MapPin;
-}[] = [
-  { store: "local", label: "Local store", Icon: MapPin },
-  { store: "global", label: "Global store", Icon: Globe },
+const TOGGLE_OPTIONS: { store: SiteVersion; label: string }[] = [
+  { store: "local", label: "Local store" },
+  { store: "global", label: "Global store" },
 ];
 
-/** Short label inside each toggle block. */
-const TOGGLE_TEXT: Record<SiteVersion, string> = {
-  local: "Local",
-  global: "Global",
-};
+/** Width of one toggle block and of the highlight that slides under it. */
+const TOGGLE_BLOCK_PX = 28;
 
 /**
- * Store picker. A compact icon-only Local / Global toggle sits to the left of
- * the store chip; the chip shows the current store and opens the panel of store
+ * Store picker: the K-Drop mark, a plain Local / Global switch and the store
+ * chip. The switch is a two-block control — the filled block shows which store
+ * is active — and the chip names the current store and opens the panel of store
  * cards (content is admin-editable per store in /admin/site). A bobbing hint
  * above the control draws the eye to the choice. Choosing the other store
  * toggles the runtime version in development and navigates to the other domain
@@ -114,13 +108,26 @@ export function VersionSwitcher({
           className={logoClassName}
         />
 
-        {/* Local / Global toggle: two blocks, the active one filled. */}
+        {/* Local / Global switch: two plain blocks, the active one filled and
+            sliding across on change. */}
         <div
           role="group"
           aria-label="Store"
-          className="flex h-7 shrink-0 items-center gap-0.5 rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
+          className="relative flex h-7 shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
+          style={{ width: TOGGLE_BLOCK_PX * 2 + 4 }}
         >
-          {TOGGLE_OPTIONS.map(({ store, label, Icon }) => {
+          {/* Sliding highlight behind the active block. */}
+          <span
+            aria-hidden
+            className={`pointer-events-none absolute top-0.5 left-0.5 h-[22px] rounded-full shadow-sm transition-transform duration-200 ease-out ${
+              version === "local" ? "bg-blue-600" : "bg-point-500"
+            }`}
+            style={{
+              width: TOGGLE_BLOCK_PX,
+              transform: `translateX(${version === "local" ? 0 : TOGGLE_BLOCK_PX}px)`,
+            }}
+          />
+          {TOGGLE_OPTIONS.map(({ store, label }) => {
             const active = version === store;
             return (
               <button
@@ -130,17 +137,9 @@ export function VersionSwitcher({
                 aria-pressed={active}
                 aria-label={label}
                 title={label}
-                className={`flex h-[22px] cursor-pointer items-center gap-1 rounded-full px-1.5 text-[11px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 ${
-                  active
-                    ? `text-white shadow-sm ${
-                        store === "local" ? "bg-blue-600" : "bg-point-500"
-                      }`
-                    : "text-zinc-500 hover:text-zinc-700"
-                }`}
-              >
-                <Icon className="h-3 w-3" aria-hidden />
-                <span data-store-toggle-label>{TOGGLE_TEXT[store]}</span>
-              </button>
+                className="relative z-10 h-[22px] cursor-pointer rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500"
+                style={{ width: TOGGLE_BLOCK_PX }}
+              />
             );
           })}
         </div>
@@ -167,7 +166,7 @@ export function VersionSwitcher({
             aria-expanded={open}
             aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
             title={`Store: ${activeBlock?.title ?? version}`}
-            className="flex h-7 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
           >
             {pendingTo ? (
               <Loader2
@@ -179,6 +178,11 @@ export function VersionSwitcher({
             )}
             <span className="text-zinc-900 max-[374px]:hidden">
               {activeBlock?.title ?? version}
+            </span>
+            {/* The currency is the first thing to go on the desktop widths
+                where the nav and the control share the row. */}
+            <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
+              {activeBlock?.currency}
             </span>
           </button>
         </div>

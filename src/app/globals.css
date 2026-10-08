@@ -981,18 +981,3 @@ body {
 body:has([data-overlay]) nav[aria-label="Quick navigation"] {
   display: none;
 }
-
-/*
- * The store control shares the header row with the 10 category links. Between
- * 1200px (where the desktop nav starts) and 1680px there is not enough room for
- * both the toggle labels and the last nav items, so the toggle drops to its
- * icon blocks — the filled block still shows which store is active, the store
- * name stays visible in the chip beside it, and the tooltip/aria-label keep the
- * meaning. From 1680px the labels come back. Scoped to the header so the mobile
- * drawer keeps its labelled toggle.
- */
-@media (min-width: 1200px) and (max-width: 1679px) {
-  [data-site-header] [data-store-toggle-label] {
-    display: none;
-  }
-}
