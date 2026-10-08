@@ -153,14 +153,22 @@ export function PopupCard({
           ? "h-full w-full"
           : // Never taller than the viewport: a tall image used to push the
             // close button and the footer off-screen with no way to scroll.
-            "max-h-[calc(100dvh-2rem)] w-full rounded-2xl"
+            // `mx-auto` keeps a card narrower than its column (a scaled one is
+            // capped, see maxWidth below) centred instead of left-aligned.
+            "mx-auto max-h-[calc(100dvh-2rem)] w-full rounded-2xl"
       }`}
       style={
         full
           ? undefined
           : {
               width,
-              maxWidth: "100%",
+              // A scale multiplies the drawn width, so the layout width is also
+              // capped by the room the viewport leaves at that zoom — otherwise
+              // a 150% card would stick out past both edges on a phone.
+              maxWidth:
+                preview || scale <= 100
+                  ? "100%"
+                  : `min(100%, calc((100vw - 2rem) / ${scale / 100}))`,
               // Zoom without reflowing the layout, so a preset size stays the
               // anchor. A full-screen card ignores scale (it would overflow).
               transform: scale === 100 ? undefined : `scale(${scale / 100})`,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
@@ -131,6 +131,16 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
   const [textAlign, setTextAlign] = useState(popup?.textAlign ?? "left");
   // Blob URL of a picked-but-unsaved image, so the preview updates on upload.
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  // Preview geometry: the frame the popup is drawn in and the card's own size,
+  // measured so the preview can zoom a card that is larger than the panel.
+  const previewFrameRef = useRef<HTMLDivElement>(null);
+  const previewCardRef = useRef<HTMLDivElement>(null);
+  const [previewBox, setPreviewBox] = useState({
+    frameW: 0,
+    frameH: 0,
+    cardW: 0,
+    cardH: 0,
+  });
   const [delaySeconds, setDelaySeconds] = useState(popup?.delaySeconds ?? 0);
   const [timeoutSeconds, setTimeoutSeconds] = useState(
     popup?.timeoutSeconds ?? 0,
@@ -214,10 +224,46 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
     gate.registerHandler("popup", submitPopup);
   });
 
+  // Track the frame and the card so a card too big for the panel is zoomed out
+  // instead of being clipped (see `previewZoom`).
+  useEffect(() => {
+    const frame = previewFrameRef.current;
+    const card = previewCardRef.current;
+    if (!frame || !card) return;
+    const observer = new ResizeObserver(() => {
+      setPreviewBox({
+        frameW: frame.clientWidth,
+        frameH: frame.clientHeight,
+        cardW: card.offsetWidth,
+        cardH: card.offsetHeight,
+      });
+    });
+    observer.observe(frame);
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, []);
+
+  // How much the preview must shrink so the whole card — at its real width and
+  // the configured scale — fits the panel. The storefront caps the card at its
+  // viewport; the panel is much narrower than a real screen, so the preview
+  // zooms the card instead of re-laying it out (a capped card would wrap its
+  // text differently from the popup visitors see).
+  const scaleFactor = scale / 100;
+  const PREVIEW_PAD = 32;
+  const previewZoom =
+    previewBox.cardW > 0 && previewBox.frameW > 0
+      ? Math.min(
+          1,
+          (previewBox.frameW - PREVIEW_PAD) / (previewBox.cardW * scaleFactor),
+          (previewBox.frameH - PREVIEW_PAD) / (previewBox.cardH * scaleFactor),
+        )
+      : 1;
+  const previewScale = scaleFactor * previewZoom;
+
   return (
     <form
       onSubmit={onSubmit}
-      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]"
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] xl:grid-cols-[minmax(0,1fr)_minmax(0,560px)]"
     >
       <div className="space-y-6">
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">
@@ -617,7 +663,10 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
           Preview
         </p>
-        <div className="relative h-[28rem] overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-zinc-200">
+        <div
+          ref={previewFrameRef}
+          className="relative h-[28rem] overflow-hidden rounded-xl border border-zinc-200 bg-gradient-to-b from-zinc-50 to-zinc-200"
+        >
           <div className="absolute inset-x-0 top-0 flex items-center gap-3 border-b border-zinc-200/70 bg-white/70 px-3 py-2">
             <span className="h-2 w-2 rounded-full bg-zinc-300" />
             <span className="h-2 w-2 rounded-full bg-zinc-300" />
@@ -671,30 +720,53 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
                 placement === "bottom" ? "bottom-4" : "top-1/2 -translate-y-1/2"
               }`}
             >
-              <PopupCard
-                preview
-                switcher={switcher}
-                data={{
-                  contentKind,
-                  title,
-                  body,
-                  image: imagePreview ?? image,
-                  ctaLabel,
-                  ctaHref,
-                  placement,
-                  size,
-                  widthPx,
-                  scale,
-                  contentLayout,
-                  imageHeightPx: imageHeightPx > 0 ? imageHeightPx : null,
-                  textAlign,
-                  overlay,
-                  overlayOpacity,
-                  closeOnOverlay,
-                  hideToday,
-                }}
-                onClose={() => {}}
-              />
+              {/* The box holds the *scaled* size so centring and the bottom
+                  placement measure the card as it is actually drawn. */}
+              <div
+                style={
+                  previewBox.cardW > 0
+                    ? {
+                        width: previewBox.cardW * previewScale,
+                        height: previewBox.cardH * previewScale,
+                      }
+                    : undefined
+                }
+              >
+                <div
+                  ref={previewCardRef}
+                  style={{
+                    width: previewBox.cardW > 0 ? previewBox.cardW : undefined,
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: "top left",
+                  }}
+                >
+                  <PopupCard
+                    preview
+                    switcher={switcher}
+                    data={{
+                      contentKind,
+                      title,
+                      body,
+                      image: imagePreview ?? image,
+                      ctaLabel,
+                      ctaHref,
+                      placement,
+                      size,
+                      widthPx,
+                      // The preview applies the scale itself (see previewScale).
+                      scale: 100,
+                      contentLayout,
+                      imageHeightPx: imageHeightPx > 0 ? imageHeightPx : null,
+                      textAlign,
+                      overlay,
+                      overlayOpacity,
+                      closeOnOverlay,
+                      hideToday,
+                    }}
+                    onClose={() => {}}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -704,9 +776,15 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
             : imagePreview
               ? "Showing the picked image — it uploads when you save. "
               : ""}
-          A full-screen popup is drawn inside the frame above; otherwise the
-          card is capped to this panel, so a wide popup looks narrower here than
-          on the storefront.
+          {!isFullScreenSize(size) &&
+          previewBox.cardW > 0 &&
+          previewZoom < 0.999
+            ? `Zoomed to ${Math.round(previewScale * 100)}% to fit the panel — the popup renders ${Math.round(
+                previewBox.cardW * scaleFactor,
+              )}px wide on the storefront.`
+            : isFullScreenSize(size)
+              ? "A full-screen popup fills the frame above; scale does not apply to it."
+              : "Drawn at the size the storefront renders it."}
         </p>
       </section>
 
