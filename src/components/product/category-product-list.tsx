@@ -10,7 +10,6 @@ import {
   countActiveFilters,
   EMPTY_CATEGORY_FILTERS,
   filterCategoryProducts,
-  priceBounds,
   type AvailabilityFilter,
   type CategoryFilters,
 } from "@/lib/category-filters";
@@ -18,7 +17,6 @@ import {
   getSubcategoryForProduct,
   type Subcategory,
 } from "@/data/subcategories";
-import { formatMoney } from "@/lib/money";
 import type { ProductCard } from "@/data/products";
 
 interface CategoryProductListProps {
@@ -81,7 +79,6 @@ export function CategoryProductList({
     () => availabilityCounts(products, filters, subOf),
     [products, filters],
   );
-  const bounds = useMemo(() => priceBounds(products), [products]);
   const subCounts = useMemo(() => {
     const counts = new Map<string, number>();
     const withoutSub = { ...filters, sub: undefined };
@@ -123,7 +120,6 @@ export function CategoryProductList({
       onChange={setFilters}
       brands={brands}
       availability={availability}
-      bounds={bounds}
     />
   );
 
@@ -254,13 +250,11 @@ function FilterPanel({
   onChange,
   brands,
   availability,
-  bounds,
 }: {
   filters: CategoryFilters;
   onChange: (next: CategoryFilters) => void;
   brands: { slug: string; name: string; count: number }[];
   availability: Record<AvailabilityFilter, number>;
-  bounds: { min: number; max: number };
 }) {
   const [minInput, setMinInput] = useState("");
   const [maxInput, setMaxInput] = useState("");
@@ -331,7 +325,7 @@ function FilterPanel({
             onKeyDown={(e) => {
               if (e.key === "Enter") applyPrice();
             }}
-            placeholder={String(bounds.min)}
+            placeholder="Min"
             aria-label="Minimum price"
             className="h-8 w-full min-w-0 rounded border border-[#e9e9e9] px-2 text-[13px] outline-none focus:border-point-500"
           />
@@ -347,14 +341,11 @@ function FilterPanel({
             onKeyDown={(e) => {
               if (e.key === "Enter") applyPrice();
             }}
-            placeholder={String(bounds.max)}
+            placeholder="Max"
             aria-label="Maximum price"
             className="h-8 w-full min-w-0 rounded border border-[#e9e9e9] px-2 text-[13px] outline-none focus:border-point-500"
           />
         </div>
-        <p className="mt-1.5 text-[11px] text-[#999]">
-          {formatMoney(bounds.min * 100)} – {formatMoney(bounds.max * 100)}
-        </p>
       </FilterGroup>
 
       <FilterGroup title="Availability">
