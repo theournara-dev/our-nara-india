@@ -739,12 +739,20 @@ model Popup {
   frequency String    @default("once") // "once" | "day" | "every"
 
   // ── Layout ─────────────────────────────────────────────────────────
-  // Size preset ("sm" | "md" | "lg" | "xl" | "custom"); a custom size uses
-  // widthPx. `scale` zooms the rendered card in percent without touching the
-  // layout width, so admins can fine-tune without re-uploading artwork.
+  // Size preset ("sm" | "md" | "lg" | "xl" | "full" | "custom"); a custom
+  // size uses widthPx and "full" fills the viewport. `scale` zooms the rendered
+  // card in percent without touching the layout width.
   size    String @default("md")
   widthPx Int?   @map("width_px")
   scale   Int    @default(100) // 50–150
+  // How the image and the text share the card: "auto" (image above text),
+  // "image" (an image-only popup that fills the card) or "text".
+  contentLayout String @default("auto") @map("content_layout")
+  // Fixed media height in px; null = the image keeps its own aspect ratio.
+  // A set height crops the image to fill it.
+  imageHeightPx Int? @map("image_height_px")
+  // Text alignment inside the card: "left" | "center".
+  textAlign String @default("left") @map("text_align")
 
   // ── Timing ─────────────────────────────────────────────────────────
   // delaySeconds waits before the popup appears; timeoutSeconds closes it

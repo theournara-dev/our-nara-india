@@ -31,11 +31,14 @@ export const FREQUENCY_HINTS: Record<PopupFrequency, string> = {
   every: "Shows on every page load.",
 };
 
-export const POPUP_SIZES = ["sm", "md", "lg", "xl", "custom"] as const;
+export const POPUP_SIZES = ["sm", "md", "lg", "xl", "full", "custom"] as const;
 export type PopupSize = (typeof POPUP_SIZES)[number];
 
 /** Width presets in px, matching the card's rendered width. */
-export const POPUP_SIZE_WIDTHS: Record<Exclude<PopupSize, "custom">, number> = {
+export const POPUP_SIZE_WIDTHS: Record<
+  Exclude<PopupSize, "custom" | "full">,
+  number
+> = {
   sm: 360,
   md: 440,
   lg: 560,
@@ -47,7 +50,38 @@ export const SIZE_LABELS: Record<PopupSize, string> = {
   md: "Medium — 440px",
   lg: "Large — 560px",
   xl: "Extra large — 720px",
+  full: "Full screen",
   custom: "Custom width",
+};
+
+/** "full" fills the viewport instead of using a width. */
+export function isFullScreenSize(size: string | null | undefined): boolean {
+  return size === "full";
+}
+
+/** How the image and the text share the card. */
+export const POPUP_CONTENT_LAYOUTS = ["auto", "image", "text"] as const;
+export type PopupContentLayout = (typeof POPUP_CONTENT_LAYOUTS)[number];
+
+export const CONTENT_LAYOUT_LABELS: Record<PopupContentLayout, string> = {
+  auto: "Image above text",
+  image: "Image only — fills the card",
+  text: "Text only",
+};
+
+export const CONTENT_LAYOUT_HINTS: Record<PopupContentLayout, string> = {
+  auto: "The image sits above the title, body and button.",
+  image: "The image is the popup — title, body and button stay hidden.",
+  text: "The image is not shown.",
+};
+
+/** Text alignment inside the card. */
+export const POPUP_TEXT_ALIGNS = ["left", "center"] as const;
+export type PopupTextAlign = (typeof POPUP_TEXT_ALIGNS)[number];
+
+export const TEXT_ALIGN_LABELS: Record<PopupTextAlign, string> = {
+  left: "Left",
+  center: "Center",
 };
 
 /** Bounds the admin form and the server action both enforce. */
@@ -59,6 +93,8 @@ export const POPUP_LIMITS = {
   delayMax: 120,
   timeoutMax: 600,
   overlayOpacityMax: 90,
+  imageHeightMin: 120,
+  imageHeightMax: 1200,
 } as const;
 
 export const DEFAULT_POPUP_SIZE: PopupSize = "md";
@@ -86,9 +122,35 @@ function toNumberOrNull(value: number | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+export function isPopupContentLayout(
+  value: unknown,
+): value is PopupContentLayout {
+  return POPUP_CONTENT_LAYOUTS.includes(value as PopupContentLayout);
+}
+
+export function isPopupTextAlign(value: unknown): value is PopupTextAlign {
+  return POPUP_TEXT_ALIGNS.includes(value as PopupTextAlign);
+}
+
+/**
+ * The media box height in px, or null when the image keeps its own aspect
+ * ratio (the default). A set height crops the image to fill the box.
+ */
+export function popupImageHeight(
+  imageHeightPx: number | null | undefined,
+): number | null {
+  const raw = toNumberOrNull(imageHeightPx);
+  if (raw == null || raw <= 0) return null;
+  return Math.min(
+    POPUP_LIMITS.imageHeightMax,
+    Math.max(POPUP_LIMITS.imageHeightMin, Math.round(raw)),
+  );
+}
+
 /**
  * The rendered width of a popup card: the preset for the chosen size, or the
  * stored custom width (clamped to the allowed range) when size is "custom".
+ * For "full" the card fills the viewport, so the returned width is unused.
  */
 export function popupWidthPx(
   size: string | null | undefined,
@@ -105,9 +167,8 @@ export function popupWidthPx(
     );
   }
   const preset = isPopupSize(size) ? size : DEFAULT_POPUP_SIZE;
-  return preset === "custom"
-    ? DEFAULT_POPUP_WIDTH_PX
-    : POPUP_SIZE_WIDTHS[preset];
+  if (preset === "custom" || preset === "full") return DEFAULT_POPUP_WIDTH_PX;
+  return POPUP_SIZE_WIDTHS[preset];
 }
 
 /** Clamp a stored scale (percent) into the allowed range. */

@@ -13,11 +13,22 @@ export {
   FREQUENCY_HINTS,
   POPUP_SIZES,
   SIZE_LABELS,
+  POPUP_CONTENT_LAYOUTS,
+  CONTENT_LAYOUT_LABELS,
+  CONTENT_LAYOUT_HINTS,
+  POPUP_TEXT_ALIGNS,
+  TEXT_ALIGN_LABELS,
   POPUP_LIMITS,
   DEFAULT_POPUP_WIDTH_PX,
   DEFAULT_POPUP_SCALE,
 } from "@/lib/popups";
-export type { PopupPlacement, PopupFrequency, PopupSize } from "@/lib/popups";
+export type {
+  PopupPlacement,
+  PopupFrequency,
+  PopupSize,
+  PopupContentLayout,
+  PopupTextAlign,
+} from "@/lib/popups";
 
 /** Query params that make up the popups list's filter state. */
 export const FILTER_KEYS = [

@@ -9,10 +9,12 @@ import { parseInput, safeMultiline, safeText } from "@/lib/validation";
 import {
   DEFAULT_OVERLAY_OPACITY,
   DEFAULT_POPUP_SCALE,
+  POPUP_CONTENT_LAYOUTS,
   POPUP_FREQUENCIES,
   POPUP_LIMITS,
   POPUP_PLACEMENTS,
   POPUP_SIZES,
+  POPUP_TEXT_ALIGNS,
 } from "@/lib/popups";
 
 // ── Validation ──────────────────────────────────────────────────────────────
@@ -52,6 +54,12 @@ const popupInput = z.object({
     POPUP_LIMITS.scaleMax,
     DEFAULT_POPUP_SCALE,
   ),
+  contentLayout: z.enum(POPUP_CONTENT_LAYOUTS).default("auto"),
+  imageHeightPx: optionalInt(
+    POPUP_LIMITS.imageHeightMin,
+    POPUP_LIMITS.imageHeightMax,
+  ),
+  textAlign: z.enum(POPUP_TEXT_ALIGNS).default("left"),
   // Timing
   delaySeconds: defaultedInt(0, POPUP_LIMITS.delayMax, 0),
   timeoutSeconds: defaultedInt(0, POPUP_LIMITS.timeoutMax, 0),
@@ -103,6 +111,9 @@ function popupFields(data: PopupInput) {
     // surprise an admin who switches back to a preset.
     widthPx: data.size === "custom" ? (data.widthPx ?? null) : null,
     scale: data.scale,
+    contentLayout: data.contentLayout,
+    imageHeightPx: data.imageHeightPx ?? null,
+    textAlign: data.textAlign,
     delaySeconds: data.delaySeconds,
     timeoutSeconds: data.timeoutSeconds,
     overlay: data.overlay,

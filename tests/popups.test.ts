@@ -3,10 +3,16 @@ import { test } from "node:test";
 import {
   DEFAULT_OVERLAY_OPACITY,
   DEFAULT_POPUP_WIDTH_PX,
+  isFullScreenSize,
+  isPopupContentLayout,
   isPopupDue,
+  isPopupTextAlign,
   nextDuePopup,
+  POPUP_CONTENT_LAYOUTS,
   POPUP_DAY_MS,
   POPUP_LIMITS,
+  POPUP_TEXT_ALIGNS,
+  popupImageHeight,
   popupOverlayOpacity,
   popupScale,
   popupWidthPx,
@@ -38,6 +44,48 @@ test("popupScale and popupOverlayOpacity clamp junk into range", () => {
   assert.equal(popupOverlayOpacity(-5), 0);
   assert.equal(popupOverlayOpacity(100), POPUP_LIMITS.overlayOpacityMax);
   assert.equal(popupOverlayOpacity(null), DEFAULT_OVERLAY_OPACITY);
+});
+
+test("isFullScreenSize only matches the full-screen preset", () => {
+  assert.equal(isFullScreenSize("full"), true);
+  assert.equal(isFullScreenSize("lg"), false);
+  assert.equal(isFullScreenSize("custom"), false);
+  assert.equal(isFullScreenSize(null), false);
+  assert.equal(isFullScreenSize(undefined), false);
+});
+
+test("popupWidthPx ignores the stored width for full screen", () => {
+  // The card fills the viewport, so any stored width is unused; the helper
+  // still returns the medium preset so callers have a sane number.
+  assert.equal(popupWidthPx("full", null), DEFAULT_POPUP_WIDTH_PX);
+  assert.equal(popupWidthPx("full", 520), DEFAULT_POPUP_WIDTH_PX);
+});
+
+test("popupImageHeight returns null for unset and clamps into range", () => {
+  // Unset (and junk) keeps the image's own aspect ratio.
+  assert.equal(popupImageHeight(null), null);
+  assert.equal(popupImageHeight(undefined), null);
+  assert.equal(popupImageHeight(0), null);
+  assert.equal(popupImageHeight(-40), null);
+  assert.equal(popupImageHeight(Number.NaN), null);
+  // A set height crops the image to fill the media box.
+  assert.equal(popupImageHeight(320), 320);
+  assert.equal(popupImageHeight(300.6), 301);
+  assert.equal(popupImageHeight(10), POPUP_LIMITS.imageHeightMin);
+  assert.equal(popupImageHeight(9999), POPUP_LIMITS.imageHeightMax);
+});
+
+test("content layout and text alignment guards accept known values only", () => {
+  for (const value of POPUP_CONTENT_LAYOUTS) {
+    assert.equal(isPopupContentLayout(value), true);
+  }
+  assert.equal(isPopupContentLayout("fill"), false);
+  assert.equal(isPopupContentLayout(null), false);
+  for (const value of POPUP_TEXT_ALIGNS) {
+    assert.equal(isPopupTextAlign(value), true);
+  }
+  assert.equal(isPopupTextAlign("justify"), false);
+  assert.equal(isPopupTextAlign(undefined), false);
 });
 
 test("isPopupDue respects session, day and every frequencies", () => {
