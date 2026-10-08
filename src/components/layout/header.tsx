@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import { getSubcategorySlugByName } from "@/data/subcategories";
@@ -98,8 +98,27 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
   const { config } = useSiteVersion();
   const [allCateOpen, setAllCateOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  // On compact headers (phones and tablets) the search panel is pinned under
+  // the whole header instead of hanging off the icons cluster, which would put
+  // it half off-screen. Measured on open, like the store panel does.
+  const [searchPanelTop, setSearchPanelTop] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openCate, setOpenCate] = useState<string | null>(null);
+
+  // Escape closes the header's overlays (mobile drawer, search, all-categories),
+  // like any other menu.
+  useEffect(() => {
+    if (!mobileOpen && !searchOpen && !allCateOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      setMobileOpen(false);
+      setSearchOpen(false);
+      setAllCateOpen(false);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileOpen, searchOpen, allCateOpen]);
+
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
   const cartCount = useCart().reduce((sum, item) => sum + item.qty, 0);
@@ -126,9 +145,9 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
         data-site-header
         className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]"
       >
-        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-md:min-h-0 max-md:px-[7px]">
+        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-[1200px]:min-h-0 max-[1200px]:px-[7px]">
           {/* Logo (row 1, left) */}
-          <h1 className="relative order-1 pl-[18px] pr-10 max-md:flex max-md:w-[160px] max-md:shrink-0 max-md:items-center max-md:p-0">
+          <h1 className="relative order-1 pl-[18px] pr-10 max-[1200px]:flex max-[1200px]:w-[160px] max-[1200px]:shrink-0 max-[1200px]:items-center max-[1200px]:p-0">
             <Link href="/">
               <Image
                 src="/upload/goodymall1/en/main/logo_.png"
@@ -136,17 +155,17 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                 width={2483}
                 height={392}
                 loading="eager"
-                className="h-auto w-auto max-h-8 max-w-[170px] max-md:max-h-none max-md:w-[160px] max-md:max-w-none"
+                className="h-auto w-auto max-h-8 max-w-[170px] max-[1200px]:max-h-none max-[1200px]:w-[160px] max-[1200px]:max-w-none"
               />
             </Link>
           </h1>
 
           {/* Top category menu. Desktop: middle row (flex-1). Mobile: full-width
               second row that scrolls horizontally (like the original). */}
-          <div className="flex flex-1 min-w-0 order-2 items-center justify-center max-md:order-3 max-md:h-9 max-md:w-full max-md:justify-start max-md:basis-full">
-            <div className="flex w-full min-w-0 items-center max-md:w-full max-md:min-w-0">
+          <div className="flex flex-1 min-w-0 order-2 items-center justify-center max-[1200px]:order-3 max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:justify-start max-[1200px]:basis-full">
+            <div className="flex w-full min-w-0 items-center max-[1200px]:w-full max-[1200px]:min-w-0">
               {/* All categories button (desktop-only) */}
-              <div className="relative h-20 w-[50px] shrink-0 max-md:hidden">
+              <div className="relative h-20 w-[50px] shrink-0 max-[1200px]:hidden">
                 <button
                   type="button"
                   aria-label="All categories"
@@ -173,7 +192,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
 
               {/* All-categories panel (desktop-only) */}
               {allCateOpen && (
-                <div className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)] max-md:hidden">
+                <div className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)] max-[1200px]:hidden">
                   <div className="mx-auto box-border w-[96%] max-w-[1440px] px-2.5 py-[30px]">
                     <div className="flex">
                       <div className="w-[70%]">
@@ -255,24 +274,24 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center lg:mr-0 lg:w-[calc(100%-50px)] max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
-                <div className="relative z-[39] min-w-0 max-md:w-full max-md:min-w-0">
-                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-x-clip max-md:h-9 max-md:w-full max-md:gap-4 max-md:overflow-y-hidden">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center lg:mr-0 lg:w-[calc(100%-50px)] max-[1200px]:mr-0 max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:min-w-0">
+                <div className="relative z-[39] min-w-0 max-[1200px]:w-full max-[1200px]:min-w-0">
+                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[1200px]:overflow-x-clip max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:gap-4 max-[1200px]:overflow-y-hidden">
                     {navItems.map((item, index) => (
                       <li
                         key={item.href}
                         className={
                           item.label === "AMBASSADOR"
                             ? "relative grid shrink-0 place-items-center"
-                            : "group relative inline-block leading-20 max-md:leading-9"
+                            : "group relative inline-block leading-20 max-[1200px]:leading-9"
                         }
                       >
                         <Link
                           href={item.href}
                           className={
                             item.label === "AMBASSADOR"
-                              ? "flex h-7 shrink-0 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-base font-semibold whitespace-nowrap text-white max-md:ml-2.5 max-md:mr-6 max-md:text-[15px]"
-                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2 2xl:mx-2.5 max-md:mx-0 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
+                              ? "flex h-7 shrink-0 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-base font-semibold whitespace-nowrap text-white max-[1200px]:ml-2.5 max-[1200px]:mr-6 max-[1200px]:text-[15px]"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2 2xl:mx-2.5 max-[1200px]:mx-0 max-[1200px]:pb-0 max-[1200px]:text-[15px] max-[1200px]:leading-9"
                           }
                         >
                           {item.label}
@@ -325,15 +344,15 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
           </div>
 
           {/* Right icons + search */}
-          <div className="order-3 grid shrink-0 place-items-center max-md:order-2 max-md:h-[50px]">
+          <div className="order-3 grid shrink-0 place-items-center max-[1200px]:order-2 max-[1200px]:h-[50px]">
             <div className="relative flex items-center">
               {/* User / log state (desktop-only; drawer covers mobile) */}
               <ul className="inline-flex items-center">
                 {/* Store switcher (leftmost) */}
-                <li className="relative flex items-center px-1 max-md:pl-0 max-md:pr-2">
+                <li className="relative flex items-center px-1 max-[1200px]:pl-0 max-[1200px]:pr-2">
                   <VersionSwitcher content={siteContent.switcher} />
                 </li>
-                <li className="group relative min-w-6 px-1 max-md:hidden">
+                <li className="group relative min-w-6 px-1 max-[1200px]:hidden">
                   <div>
                     <Link href="/account">
                       <Image
@@ -402,7 +421,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                   )}
                 </li>
                 {/* Basket */}
-                <li className="relative flex items-center min-w-6 px-1 max-md:px-0">
+                <li className="relative flex items-center min-w-6 px-1 max-[1200px]:px-0">
                   <Link
                     href="/cart"
                     className="block text-center text-[13px] font-medium text-[#555]"
@@ -427,11 +446,28 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
               </ul>
 
               {/* Search */}
-              <div className="relative min-w-6 cursor-pointer pl-1 max-md:pl-2">
+              <div className="relative min-w-6 cursor-pointer pl-1 max-[1200px]:pl-2">
                 <button
                   type="button"
                   aria-label="Search"
-                  onClick={() => setSearchOpen(true)}
+                  onClick={() => {
+                    if (window.innerWidth < 1200) {
+                      const header =
+                        document.querySelector<HTMLElement>(
+                          "[data-site-header]",
+                        );
+                      setSearchPanelTop(
+                        header
+                          ? Math.round(
+                              header.getBoundingClientRect().bottom + 6,
+                            )
+                          : null,
+                      );
+                    } else {
+                      setSearchPanelTop(null);
+                    }
+                    setSearchOpen(true);
+                  }}
                   className="flex items-center justify-center"
                 >
                   <Image
@@ -446,7 +482,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
               </div>
 
               {/* Hamburger (mobile-only, inline in the header like the original) */}
-              <div className="relative ml-1 hidden h-8 w-8 max-md:block">
+              <div className="relative ml-1 hidden h-8 w-8 max-[1200px]:block">
                 <button
                   type="button"
                   aria-label="Open menu"
@@ -466,7 +502,12 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
 
               {/* Search overlay */}
               {searchOpen && (
-                <div className="absolute right-[-10%] top-[46px] z-[99] box-border w-[92vw] max-w-[380px] overflow-visible border border-[#e9e9e9] bg-white shadow-[1px_1px_10px_rgba(0,0,0,0.1)]">
+                <div
+                  className="absolute right-[-10%] top-[46px] z-[99] box-border w-[92vw] max-w-[380px] overflow-visible border border-[#e9e9e9] bg-white shadow-[1px_1px_10px_rgba(0,0,0,0.1)] max-[1200px]:fixed max-[1200px]:right-2 max-[1200px]:left-2 max-[1200px]:w-auto max-[1200px]:max-w-none"
+                  style={
+                    searchPanelTop == null ? undefined : { top: searchPanelTop }
+                  }
+                >
                   <form
                     action="/search"
                     method="get"
@@ -524,7 +565,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
 
         {/* Mobile drawer — matches the original #aside (right-side slide-out) */}
         {mobileOpen && (
-          <div className="fixed inset-0 z-50">
+          <div className="fixed inset-0 z-[110]" data-overlay>
             <button
               type="button"
               aria-label="Close menu"

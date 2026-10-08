@@ -130,7 +130,7 @@ export function VersionSwitcher({
         <div className="relative">
           <StoreNudge
             nudge={content.nudge}
-            className="pointer-events-none absolute -top-[30px] left-3 max-md:hidden"
+            className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
           />
           <button
             type="button"
