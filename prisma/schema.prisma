@@ -836,6 +836,14 @@ model SiteConfig {
   phone   String?
   address String?
 
+  // ── Stores page (/stores) ──────────────────────────────────────────
+  // Heading, business hours (free text, may span lines) and the place the
+  // embedded map and "Open in Maps" link point at. An empty map location falls
+  // back to the store address. Address, phone and email come from above.
+  storeName     String? @map("store_name")
+  storeHours    String? @map("store_hours")
+  storeMapQuery String? @map("store_map_query")
+
   // ── Shipping ───────────────────────────────────────────────────────
   // What this store charges for delivery, and the order value above which
   // delivery is free (null = never free). The storefront shows a progress

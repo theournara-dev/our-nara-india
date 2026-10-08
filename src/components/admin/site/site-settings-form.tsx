@@ -101,10 +101,10 @@ function SiteSettingsInner({
     });
   }
 
-  // The contact and banner panels share one row-level save action, so both send
-  // the full current state of the store (never a stale half). Each save goes
-  // through the gate: any image picked in the panel uploads first, then the
-  // handler re-runs against the state holding its URL.
+  // The contact, stores page and banner panels share one row-level save action,
+  // so each sends the full current state of the store (never a stale half).
+  // Each save goes through the gate: any image picked in the panel uploads
+  // first, then the handler re-runs against the state holding its URL.
   const gate = useUploadGate();
 
   const saveStore = (label: string) =>
@@ -114,6 +114,9 @@ function SiteSettingsInner({
         email: current.email,
         phone: current.phone,
         address: current.address,
+        storeName: current.storeName,
+        storeHours: current.storeHours,
+        storeMapQuery: current.storeMapQuery,
         topBanner: current.topBanner,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
@@ -123,6 +126,7 @@ function SiteSettingsInner({
 
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
+    gate.registerHandler("stores", () => saveStore("stores"));
     gate.registerHandler("banner", () => saveStore("banner"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
@@ -170,8 +174,9 @@ function SiteSettingsInner({
           Contact details
         </h2>
         <p className="mb-4 text-xs text-zinc-400">
-          Shown in the footer, the policies and the order emails. The email is
-          also the inbox that receives the store&apos;s new-order notifications.
+          Shown in the footer, the policies, the stores page and the order
+          emails. The email is also the inbox that receives the store&apos;s
+          new-order notifications.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
@@ -210,6 +215,55 @@ function SiteSettingsInner({
             className={saveBtnCls}
           >
             {saving === "contact" ? "Saving…" : "Save contact details"}
+          </button>
+        </div>
+      </section>
+
+      {/* ── Stores page ─────────────────────────────────────────────────── */}
+      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+          Stores page
+        </h2>
+        <p className="mb-4 text-xs text-zinc-400">
+          The /stores page: its heading, business hours and map. Its address,
+          phone and email rows come from Contact details above.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCls}>Store name</span>
+            <input
+              value={current.storeName}
+              onChange={(e) => patch({ storeName: e.target.value })}
+              className={inputCls}
+            />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Map location</span>
+            <input
+              value={current.storeMapQuery}
+              onChange={(e) => patch({ storeMapQuery: e.target.value })}
+              placeholder="Address or place name. Empty = the store address"
+              className={inputCls}
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelCls}>Business hours</span>
+            <textarea
+              rows={3}
+              value={current.storeHours}
+              onChange={(e) => patch({ storeHours: e.target.value })}
+              className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+            />
+          </label>
+        </div>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => void gate.save("stores")}
+            disabled={saving !== null}
+            className={saveBtnCls}
+          >
+            {saving === "stores" ? "Saving…" : "Save stores page"}
           </button>
         </div>
       </section>

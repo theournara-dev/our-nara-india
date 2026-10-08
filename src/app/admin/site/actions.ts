@@ -29,6 +29,13 @@ const contentInput = z.object({
   email: safeEmail(),
   phone: safeText(40).optional(),
   address: safeMultiline(300).optional(),
+  // ── Stores page (/stores) ─────────────────────────────────────────────────
+  storeName: safeText(80, {
+    min: 1,
+    message: "Store name is required",
+  }).optional(),
+  storeHours: safeMultiline(300).optional(),
+  storeMapQuery: safeText(300).optional(),
   topBanner: z.array(z.unknown()).max(10, "A banner holds at most 10 blocks"),
   // ── Delivery pricing (minor units) ────────────────────────────────────────
   shippingCents: z.coerce.number().int().min(0).max(10_000_000).optional(),
@@ -60,7 +67,10 @@ function toVersion(raw: string) {
   return parsed;
 }
 
-/** Save the contact details, top banner, delivery pricing and invoice block. */
+/**
+ * Save the contact details, stores page, top banner, delivery pricing and
+ * invoice block.
+ */
 export async function saveSiteContent(input: z.infer<typeof contentInput>) {
   await requireAdmin();
   const data = parseInput(contentInput, input, "site.content");
@@ -84,6 +94,13 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
       : {}),
     ...(data.freeShippingOverCents !== undefined
       ? { freeShippingOverCents: data.freeShippingOverCents || null }
+      : {}),
+    // An emptied hours / map field is stored as "" rather than NULL: NULL means
+    // never set and would bring the default back on the stores page.
+    ...(data.storeName !== undefined ? { storeName: data.storeName } : {}),
+    ...(data.storeHours !== undefined ? { storeHours: data.storeHours } : {}),
+    ...(data.storeMapQuery !== undefined
+      ? { storeMapQuery: data.storeMapQuery }
       : {}),
     ...(data.invoice
       ? {

@@ -2,8 +2,8 @@ import type { SiteVersion } from "@/lib/site-version";
 
 /**
  * Storefront content that admins edit per site version: the contact details
- * shown in the footer and policies, the rotating strips pinned above the
- * header, and the store-picker popup.
+ * shown in the footer, policies and the stores page, the rotating strips pinned
+ * above the header, and the store-picker popup.
  *
  * Types + defaults + normalizers live here (no server imports) so client
  * components can render the same shapes; the DB read is in `site-config.ts`.
@@ -59,6 +59,11 @@ export type SiteContent = {
   email: string;
   phone: string;
   address: string;
+  /** The /stores page heading and business hours (hours may span lines). */
+  storeName: string;
+  storeHours: string;
+  /** Address or place name for the store map; empty = use the address. */
+  storeMapQuery: string;
   /** Delivery fee charged by this store, and when delivery becomes free. */
   shippingCents: number;
   /** Order value above which delivery is free; null = never free. */
@@ -122,13 +127,22 @@ const DEFAULT_SWITCHER: SwitcherContent = {
   ],
 };
 
+const LOCAL_ADDRESS =
+  "One World, S.V. Road, Near N L School, Malad West, Mumbai, Maharashtra 400064";
+const GLOBAL_ADDRESS =
+  "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon, Republic of Korea";
+/** Business hours from the original footer; both stores share them. */
+const DEFAULT_STORE_HOURS = "Week 09:00 - 18:00\nSat, Sun, Holiday OFF";
+
 export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
   local: {
     version: "local",
     email: "theournara@gmail.com",
     phone: "+91-88283-38323",
-    address:
-      "One World, S.V. Road, Near N L School, Malad West, Mumbai, Maharashtra 400064",
+    address: LOCAL_ADDRESS,
+    storeName: "OURNARA",
+    storeHours: DEFAULT_STORE_HOURS,
+    storeMapQuery: LOCAL_ADDRESS,
     // Delivery is free until an admin sets a fee in /admin/site.
     shippingCents: 0,
     freeShippingOverCents: null,
@@ -148,8 +162,10 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     version: "global",
     email: "tft@thefirstteam.co.kr",
     phone: "",
-    address:
-      "Room 1816, Building B, Incheon Techno Valley U1 Center, 94, Galsan-dong, Bupyeong-gu, Incheon, Republic of Korea",
+    address: GLOBAL_ADDRESS,
+    storeName: "OURNARA",
+    storeHours: DEFAULT_STORE_HOURS,
+    storeMapQuery: GLOBAL_ADDRESS,
     shippingCents: 0,
     freeShippingOverCents: null,
     invoice: {
@@ -264,6 +280,9 @@ export function siteContentFromRow(
     email: string | null;
     phone: string | null;
     address: string | null;
+    storeName: string | null;
+    storeHours: string | null;
+    storeMapQuery: string | null;
     shippingCents: number | null;
     freeShippingOverCents: number | null;
     invoiceLegalName: string | null;
@@ -283,6 +302,11 @@ export function siteContentFromRow(
     email: row.email?.trim() || base.email,
     phone: row.phone?.trim() ?? base.phone,
     address: row.address?.trim() || base.address,
+    storeName: row.storeName?.trim() || base.storeName,
+    // NULL = never set, so the default applies. An emptied field is stored as ""
+    // and stays empty (shown as "-"; the map falls back to the address).
+    storeHours: row.storeHours?.trim() ?? base.storeHours,
+    storeMapQuery: row.storeMapQuery?.trim() ?? base.storeMapQuery,
     shippingCents: row.shippingCents ?? base.shippingCents,
     freeShippingOverCents: row.freeShippingOverCents ?? null,
     invoice: {
