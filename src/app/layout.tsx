@@ -114,9 +114,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <Footer />
           </CartProvider>
           <MobileTabBar />
+          {/* Inside the provider: a store-picker popup switches the store, and
+              the card reads the current version to mark the active card. */}
+          <PopupHost switcher={siteContent.switcher} />
         </SiteVersionProvider>
         <Toaster richColors position="top-center" />
-        <PopupHost />
         <ContactDialogHost />
       </body>
     </html>

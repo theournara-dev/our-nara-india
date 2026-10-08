@@ -16,6 +16,9 @@ export {
   POPUP_CONTENT_LAYOUTS,
   CONTENT_LAYOUT_LABELS,
   CONTENT_LAYOUT_HINTS,
+  POPUP_CONTENT_KINDS,
+  CONTENT_KIND_LABELS,
+  CONTENT_KIND_HINTS,
   POPUP_TEXT_ALIGNS,
   TEXT_ALIGN_LABELS,
   POPUP_LIMITS,
@@ -27,6 +30,7 @@ export type {
   PopupFrequency,
   PopupSize,
   PopupContentLayout,
+  PopupContentKind,
   PopupTextAlign,
 } from "@/lib/popups";
 

@@ -30,6 +30,7 @@ export async function GET() {
       size: true,
       widthPx: true,
       scale: true,
+      contentKind: true,
       contentLayout: true,
       imageHeightPx: true,
       textAlign: true,

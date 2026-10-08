@@ -10,6 +10,7 @@ import {
   DEFAULT_OVERLAY_OPACITY,
   DEFAULT_POPUP_SCALE,
   POPUP_CONTENT_LAYOUTS,
+  POPUP_CONTENT_KINDS,
   POPUP_FREQUENCIES,
   POPUP_LIMITS,
   POPUP_PLACEMENTS,
@@ -55,6 +56,7 @@ const popupInput = z.object({
     DEFAULT_POPUP_SCALE,
   ),
   contentLayout: z.enum(POPUP_CONTENT_LAYOUTS).default("auto"),
+  contentKind: z.enum(POPUP_CONTENT_KINDS).default("custom"),
   imageHeightPx: optionalInt(
     POPUP_LIMITS.imageHeightMin,
     POPUP_LIMITS.imageHeightMax,
@@ -112,6 +114,7 @@ function popupFields(data: PopupInput) {
     widthPx: data.size === "custom" ? (data.widthPx ?? null) : null,
     scale: data.scale,
     contentLayout: data.contentLayout,
+    contentKind: data.contentKind,
     imageHeightPx: data.imageHeightPx ?? null,
     textAlign: data.textAlign,
     delaySeconds: data.delaySeconds,

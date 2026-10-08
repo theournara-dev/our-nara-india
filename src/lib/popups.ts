@@ -63,6 +63,25 @@ export function isFullScreenSize(size: string | null | undefined): boolean {
 export const POPUP_CONTENT_LAYOUTS = ["auto", "image", "text"] as const;
 export type PopupContentLayout = (typeof POPUP_CONTENT_LAYOUTS)[number];
 
+/** What the popup renders: its own content, or the store-switcher cards. */
+export const POPUP_CONTENT_KINDS = ["custom", "store-picker"] as const;
+export type PopupContentKind = (typeof POPUP_CONTENT_KINDS)[number];
+
+export const CONTENT_KIND_LABELS: Record<PopupContentKind, string> = {
+  custom: "Custom content",
+  "store-picker": "Store switcher",
+};
+
+export const CONTENT_KIND_HINTS: Record<PopupContentKind, string> = {
+  custom: "The title, body, image and button below.",
+  "store-picker":
+    "The same cards as the header's store switcher (edited in Site settings → Store picker); image, text and button are hidden. Large (560px) or wider fits the two cards best, and “Once per session” makes a once-a-visit store prompt.",
+};
+
+export function isPopupContentKind(value: unknown): value is PopupContentKind {
+  return POPUP_CONTENT_KINDS.includes(value as PopupContentKind);
+}
+
 export const CONTENT_LAYOUT_LABELS: Record<PopupContentLayout, string> = {
   auto: "Image above text",
   image: "Image only — fills the card",

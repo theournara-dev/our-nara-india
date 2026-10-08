@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   isFullScreenSize,
+  isPopupContentKind,
   isPopupContentLayout,
   isPopupTextAlign,
   popupImageHeight,
@@ -13,6 +14,9 @@ import {
   type PopupContentLayout,
   type PopupTextAlign,
 } from "@/lib/popups";
+import { StorePickerCards } from "@/components/layout/store-picker-cards";
+import { useSiteVersion } from "@/components/site-version-provider";
+import type { SwitcherContent } from "@/lib/site-content";
 
 /** Everything the popup card renders, from either the DB or the admin preview. */
 export interface PopupCardData {
@@ -22,6 +26,8 @@ export interface PopupCardData {
   ctaLabel?: string | null;
   ctaHref?: string | null;
   placement: string;
+  /** "custom" (title/body/image/button) or "store-picker" (switcher cards). */
+  contentKind?: string | null;
   size: string;
   widthPx?: number | null;
   scale?: number | null;
@@ -58,14 +64,25 @@ export function PopupCard({
   onClose,
   onHideToday,
   preview = false,
+  switcher = null,
 }: {
   data: PopupCardData;
   onClose: () => void;
   onHideToday?: () => void;
   /** Preview mode: nothing is clickable (the admin is only looking). */
   preview?: boolean;
+  /**
+   * Store-switcher content, needed when `contentKind` is "store-picker": the
+   * popup then shows the same cards as the header's store popup.
+   */
+  switcher?: SwitcherContent | null;
 }) {
+  const { version, setVersion } = useSiteVersion();
   const full = isFullScreenSize(data.size);
+  const contentKind = isPopupContentKind(data.contentKind)
+    ? data.contentKind
+    : "custom";
+  const storePicker = contentKind === "store-picker" && switcher != null;
   const layout: PopupContentLayout = isPopupContentLayout(data.contentLayout)
     ? data.contentLayout
     : "auto";
@@ -76,11 +93,11 @@ export function PopupCard({
   const scale = popupScale(data.scale);
   const mediaHeight = popupImageHeight(data.imageHeightPx);
 
-  const showImage = Boolean(data.image) && layout !== "text";
+  const showImage = !storePicker && Boolean(data.image) && layout !== "text";
   const hasText = Boolean(
     data.title || data.body || (data.ctaLabel && data.ctaHref),
   );
-  const showText = hasText && layout !== "image";
+  const showText = !storePicker && hasText && layout !== "image";
   const centreText = full || align === "center";
   const overArtwork = full && showImage;
 
@@ -155,6 +172,33 @@ export function PopupCard({
       {/* Scrolls when the content is taller than the capped card, keeping the
           close button and the footer in reach. */}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {storePicker && switcher && (
+          <div className="p-4 sm:p-5">
+            <div className="mb-3 px-1 text-center">
+              <p className="text-base font-semibold text-ink">
+                {switcher.title}
+              </p>
+              {switcher.subtitle && (
+                <p className="mt-0.5 text-xs text-[#888]">
+                  {switcher.subtitle}
+                </p>
+              )}
+            </div>
+            <StorePickerCards
+              content={switcher}
+              activeStore={version}
+              onChoose={
+                preview
+                  ? undefined
+                  : (store) => {
+                      setVersion(store);
+                      onClose();
+                    }
+              }
+            />
+          </div>
+        )}
+
         {showImage &&
           (full ? (
             // Full screen: the artwork covers the card.
@@ -256,11 +300,23 @@ export function PopupSurface({
   data,
   onClose,
   onHideToday,
+  switcher = null,
 }: {
   data: PopupCardData;
   onClose: () => void;
   onHideToday: () => void;
+  /** Store-picker content for popups whose content kind is "store-picker". */
+  switcher?: SwitcherContent | null;
 }) {
+  // A store-picker popup needs a card wide enough for two columns.
+  const card = (
+    <PopupCard
+      data={data}
+      switcher={switcher}
+      onClose={onClose}
+      onHideToday={onHideToday}
+    />
+  );
   if (isFullScreenSize(data.size)) {
     return (
       <div className="fixed inset-0 z-[100]" data-overlay>
@@ -274,9 +330,7 @@ export function PopupSurface({
             aria-hidden
           />
         )}
-        <div className="absolute inset-0">
-          <PopupCard data={data} onClose={onClose} onHideToday={onHideToday} />
-        </div>
+        <div className="absolute inset-0">{card}</div>
       </div>
     );
   }
@@ -288,7 +342,7 @@ export function PopupSurface({
           className="mx-auto w-full"
           style={{ maxWidth: popupWidthPx(data.size, data.widthPx) }}
         >
-          <PopupCard data={data} onClose={onClose} onHideToday={onHideToday} />
+          {card}
         </div>
       </div>
     );
@@ -313,7 +367,7 @@ export function PopupSurface({
         className="relative w-full"
         style={{ maxWidth: popupWidthPx(data.size, data.widthPx) }}
       >
-        <PopupCard data={data} onClose={onClose} onHideToday={onHideToday} />
+        {card}
       </div>
     </div>
   );

@@ -26,13 +26,21 @@ import {
   POPUP_CONTENT_LAYOUTS,
   CONTENT_LAYOUT_LABELS,
   CONTENT_LAYOUT_HINTS,
+  POPUP_CONTENT_KINDS,
+  CONTENT_KIND_LABELS,
+  CONTENT_KIND_HINTS,
   POPUP_TEXT_ALIGNS,
   TEXT_ALIGN_LABELS,
   POPUP_LIMITS,
   DEFAULT_POPUP_WIDTH_PX,
   DEFAULT_POPUP_SCALE,
 } from "@/app/admin/popups/lib";
-import { isFullScreenSize, isPopupFrequency } from "@/lib/popups";
+import {
+  isFullScreenSize,
+  isPopupFrequency,
+  isPopupContentKind,
+} from "@/lib/popups";
+import type { SwitcherContent } from "@/lib/site-content";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
@@ -54,6 +62,7 @@ function numberValue(
 
 type PopupModel = {
   id: string;
+  contentKind: string;
   title: string | null;
   body: string | null;
   image: string | null;
@@ -81,6 +90,8 @@ type PopupModel = {
 type PopupFormProps = {
   popup: PopupModel | null;
   backHref: string;
+  /** Store-picker content, rendered by the preview when the kind is picked. */
+  switcher: SwitcherContent;
 };
 
 /** Create/edit form for a popup; its image uploads when the form is saved. */
@@ -92,10 +103,15 @@ export function PopupForm(props: PopupFormProps) {
   );
 }
 
-function PopupFormInner({ popup, backHref }: PopupFormProps) {
+function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
   const isEdit = Boolean(popup);
   const [pending, startTransition] = useTransition();
 
+  const [contentKind, setContentKind] = useState(
+    popup?.contentKind ?? "custom",
+  );
+  // Store-picker popups render the store cards instead of the fields below.
+  const storePicker = contentKind === "store-picker";
   const [title, setTitle] = useState(popup?.title ?? "");
   const [body, setBody] = useState(popup?.body ?? "");
   const [image, setImage] = useState(popup?.image ?? "");
@@ -140,6 +156,7 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
 
   function submitPopup() {
     const input: PopupInput = {
+      contentKind: isPopupContentKind(contentKind) ? contentKind : "custom",
       title: title.trim() || undefined,
       body: body.trim() || undefined,
       image: image.trim() || undefined,
@@ -207,59 +224,84 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
           <h2 className="mb-4 text-sm font-semibold text-zinc-900">Content</h2>
           <div className="grid gap-4">
             <label className="block">
-              <span className={labelCls}>Title</span>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Flat 20% off this week"
+              <span className={labelCls}>Content type</span>
+              <select
+                value={contentKind}
+                onChange={(e) => setContentKind(e.target.value)}
                 className={inputCls}
-              />
+              >
+                {POPUP_CONTENT_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {CONTENT_KIND_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+              <span className={hintCls}>
+                {isPopupContentKind(contentKind)
+                  ? CONTENT_KIND_HINTS[contentKind]
+                  : CONTENT_KIND_HINTS.custom}
+              </span>
             </label>
-            <label className="block">
-              <span className={labelCls}>Body</span>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={3}
-                placeholder="Supporting text shown below the title."
-                className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
-              />
-            </label>
-            <ImageField
-              value={image}
-              onChange={setImage}
-              onPreviewChange={setImagePreview}
-              label="Image (optional)"
-              hint="Shown above the text, or as the whole popup with the Image only layout."
-            />
+            {!storePicker && (
+              <>
+                <label className="block">
+                  <span className={labelCls}>Title</span>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Flat 20% off this week"
+                    className={inputCls}
+                  />
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Body</span>
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    rows={3}
+                    placeholder="Supporting text shown below the title."
+                    className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+                  />
+                </label>
+                <ImageField
+                  value={image}
+                  onChange={setImage}
+                  onPreviewChange={setImagePreview}
+                  label="Image (optional)"
+                  hint="Shown above the text, or as the whole popup with the Image only layout."
+                />
+              </>
+            )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-          <h2 className="mb-4 text-sm font-semibold text-zinc-900">
-            Button (optional)
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className={labelCls}>Button label</span>
-              <input
-                value={ctaLabel}
-                onChange={(e) => setCtaLabel(e.target.value)}
-                placeholder="e.g. Shop now"
-                className={inputCls}
-              />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Button link</span>
-              <input
-                value={ctaHref}
-                onChange={(e) => setCtaHref(e.target.value)}
-                placeholder="e.g. /category/skin-care"
-                className={inputCls}
-              />
-            </label>
-          </div>
-        </section>
+        {!storePicker && (
+          <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900">
+              Button (optional)
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className={labelCls}>Button label</span>
+                <input
+                  value={ctaLabel}
+                  onChange={(e) => setCtaLabel(e.target.value)}
+                  placeholder="e.g. Shop now"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Button link</span>
+                <input
+                  value={ctaHref}
+                  onChange={(e) => setCtaHref(e.target.value)}
+                  placeholder="e.g. /category/skin-care"
+                  className={inputCls}
+                />
+              </label>
+            </div>
+          </section>
+        )}
 
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">
           <h2 className="mb-1 text-sm font-semibold text-zinc-900">Layout</h2>
@@ -325,67 +367,71 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
                 </span>
               </label>
             )}
-            <label className="block">
-              <span className={labelCls}>Content</span>
-              <select
-                value={contentLayout}
-                onChange={(e) => setContentLayout(e.target.value)}
-                className={inputCls}
-              >
-                {POPUP_CONTENT_LAYOUTS.map((l) => (
-                  <option key={l} value={l}>
-                    {CONTENT_LAYOUT_LABELS[l]}
-                  </option>
-                ))}
-              </select>
-              <span className={hintCls}>
-                {
-                  CONTENT_LAYOUT_HINTS[
-                    contentLayout === "image" || contentLayout === "text"
-                      ? contentLayout
-                      : "auto"
-                  ]
-                }
-              </span>
-            </label>
-            <label className="block">
-              <span className={labelCls}>Image height (px, 0 = auto)</span>
-              <input
-                inputMode="numeric"
-                value={String(imageHeightPx)}
-                onChange={(e) =>
-                  setImageHeightPx(
-                    numberValue(
-                      e.target.value,
-                      0,
-                      0,
-                      POPUP_LIMITS.imageHeightMax,
-                    ),
-                  )
-                }
-                disabled={contentLayout === "text"}
-                className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
-              />
-              <span className={hintCls}>
-                A set height crops the image to fill it (full screen ignores
-                this).
-              </span>
-            </label>
-            <label className="block">
-              <span className={labelCls}>Text alignment</span>
-              <select
-                value={textAlign}
-                onChange={(e) => setTextAlign(e.target.value)}
-                disabled={contentLayout === "image"}
-                className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
-              >
-                {POPUP_TEXT_ALIGNS.map((a) => (
-                  <option key={a} value={a}>
-                    {TEXT_ALIGN_LABELS[a]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {!storePicker && (
+              <>
+                <label className="block">
+                  <span className={labelCls}>Content</span>
+                  <select
+                    value={contentLayout}
+                    onChange={(e) => setContentLayout(e.target.value)}
+                    className={inputCls}
+                  >
+                    {POPUP_CONTENT_LAYOUTS.map((l) => (
+                      <option key={l} value={l}>
+                        {CONTENT_LAYOUT_LABELS[l]}
+                      </option>
+                    ))}
+                  </select>
+                  <span className={hintCls}>
+                    {
+                      CONTENT_LAYOUT_HINTS[
+                        contentLayout === "image" || contentLayout === "text"
+                          ? contentLayout
+                          : "auto"
+                      ]
+                    }
+                  </span>
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Image height (px, 0 = auto)</span>
+                  <input
+                    inputMode="numeric"
+                    value={String(imageHeightPx)}
+                    onChange={(e) =>
+                      setImageHeightPx(
+                        numberValue(
+                          e.target.value,
+                          0,
+                          0,
+                          POPUP_LIMITS.imageHeightMax,
+                        ),
+                      )
+                    }
+                    disabled={contentLayout === "text"}
+                    className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
+                  />
+                  <span className={hintCls}>
+                    A set height crops the image to fill it (full screen ignores
+                    this).
+                  </span>
+                </label>
+                <label className="block">
+                  <span className={labelCls}>Text alignment</span>
+                  <select
+                    value={textAlign}
+                    onChange={(e) => setTextAlign(e.target.value)}
+                    disabled={contentLayout === "image"}
+                    className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
+                  >
+                    {POPUP_TEXT_ALIGNS.map((a) => (
+                      <option key={a} value={a}>
+                        {TEXT_ALIGN_LABELS[a]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
           </div>
         </section>
 
@@ -595,7 +641,9 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
               <div className="h-full w-full overflow-hidden rounded-lg border border-zinc-300 shadow-sm">
                 <PopupCard
                   preview
+                  switcher={switcher}
                   data={{
+                    contentKind,
                     title,
                     body,
                     image: imagePreview ?? image,
@@ -625,7 +673,9 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
             >
               <PopupCard
                 preview
+                switcher={switcher}
                 data={{
+                  contentKind,
                   title,
                   body,
                   image: imagePreview ?? image,
@@ -649,9 +699,11 @@ function PopupFormInner({ popup, backHref }: PopupFormProps) {
           )}
         </div>
         <p className="mt-2 text-xs text-zinc-400">
-          {imagePreview
-            ? "Showing the picked image — it uploads when you save. "
-            : ""}
+          {storePicker
+            ? "The preview shows the same store cards as the header's store switcher. "
+            : imagePreview
+              ? "Showing the picked image — it uploads when you save. "
+              : ""}
           A full-screen popup is drawn inside the frame above; otherwise the
           card is capped to this panel, so a wide popup looks narrower here than
           on the storefront.

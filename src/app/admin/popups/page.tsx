@@ -1,19 +1,12 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Store } from "lucide-react";
 import { db } from "@/lib/db";
 import { ContentTabs } from "@/components/admin/content-tabs";
-import {
-  togglePopupActive,
-  softDeletePopup,
-  hardDeletePopup,
-} from "./actions";
+import { togglePopupActive, softDeletePopup, hardDeletePopup } from "./actions";
 import { PopupRowActions } from "./row-actions";
 import { PopupFilters } from "./filters";
-import {
-  currentQuery,
-  PLACEMENT_LABELS,
-  FREQUENCY_LABELS,
-} from "./lib";
+import { currentQuery, PLACEMENT_LABELS, FREQUENCY_LABELS } from "./lib";
 
 export const dynamic = "force-dynamic";
 
@@ -175,6 +168,11 @@ export default async function AdminPopupsPage({
                           loading="lazy"
                           className="h-10 w-10 shrink-0 rounded object-cover"
                         />
+                      ) : p.contentKind === "store-picker" ? (
+                        // A store-picker popup has no artwork of its own.
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-zinc-100 text-zinc-400">
+                          <Store className="h-5 w-5" aria-hidden />
+                        </div>
                       ) : (
                         <div className="h-10 w-10 shrink-0 rounded bg-zinc-100" />
                       )}
@@ -183,7 +181,10 @@ export default async function AdminPopupsPage({
                           href={`/admin/popups/${p.id}/edit${filterQuery}`}
                           className="block max-w-[260px] truncate font-medium text-zinc-900 hover:text-point-500"
                         >
-                          {p.title || "Untitled"}
+                          {p.title ||
+                            (p.contentKind === "store-picker"
+                              ? "Store switcher"
+                              : "Untitled")}
                         </Link>
                         {p.body && (
                           <span className="block max-w-[320px] truncate text-xs text-zinc-400">
@@ -194,12 +195,14 @@ export default async function AdminPopupsPage({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-zinc-600">
-                    {PLACEMENT_LABELS[p.placement as keyof typeof PLACEMENT_LABELS] ??
-                      p.placement}
+                    {PLACEMENT_LABELS[
+                      p.placement as keyof typeof PLACEMENT_LABELS
+                    ] ?? p.placement}
                   </td>
                   <td className="px-4 py-3 text-zinc-600">
-                    {FREQUENCY_LABELS[p.frequency as keyof typeof FREQUENCY_LABELS] ??
-                      p.frequency}
+                    {FREQUENCY_LABELS[
+                      p.frequency as keyof typeof FREQUENCY_LABELS
+                    ] ?? p.frequency}
                   </td>
                   <td className="px-4 py-3">
                     <span

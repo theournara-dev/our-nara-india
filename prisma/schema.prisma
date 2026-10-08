@@ -744,6 +744,11 @@ model Banner {
 // session ("once") or on every page load ("every").
 model Popup {
   id        String    @id @default(cuid())
+  // ── Content ─────────────────────────────────────────────────────────
+  // "custom" renders title/body/image/button; "store-picker" renders the
+  // store-switcher cards instead (the same content as the header's store popup,
+  // edited in /admin/site) — used for the once-per-session store prompt.
+  contentKind String  @default("custom") @map("content_kind")
   title     String? // headline
   body      String? // supporting text
   image     String? // optional image

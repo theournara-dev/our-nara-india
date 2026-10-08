@@ -6,6 +6,7 @@ import {
   type PopupCardData,
 } from "@/components/popups/popup-card";
 import { nextDuePopup } from "@/lib/popups";
+import type { SwitcherContent } from "@/lib/site-content";
 
 type Popup = PopupCardData & {
   id: string;
@@ -71,8 +72,11 @@ function suppress(id: string, at: number) {
  * auto-close timeout, "once per session" / "once a day" / "every visit"
  * frequency, the "don't show again today" footer link, overlay dimming and
  * click-outside closing. Kept client-side so the root layout stays static.
+ *
+ * `switcher` is the store-picker content, handed to popups whose content kind
+ * is "store-picker" so they render the same cards as the store switcher.
  */
-export function PopupHost() {
+export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
   const [queue, setQueue] = useState<Popup[]>([]);
   const [current, setCurrent] = useState<Popup | null>(null);
   const [ready, setReady] = useState(false);
@@ -166,6 +170,7 @@ export function PopupHost() {
   return (
     <PopupSurface
       data={current}
+      switcher={switcher}
       onClose={() => dismiss(current)}
       onHideToday={() => hideToday(current)}
     />
