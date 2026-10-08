@@ -15,6 +15,7 @@ import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { saleStateForVersion } from "@/lib/product-flags";
+import { KDropMark } from "@/components/product/kdrop-mark";
 import { PreorderDialog } from "./preorder-dialog";
 import { ProductBlocks } from "./blocks/block-renderer";
 import { ReviewForm } from "./review-form";
@@ -272,6 +273,9 @@ export function ProductDetail({
             {product.brand.name}
           </Link>
           <h1 className="mt-1 font-display text-3xl font-semibold leading-tight text-ink">
+            {/* International storefront: the K-Drop mark prefixes the title,
+                sized to the title itself. */}
+            <KDropMark className="mr-2 align-middle h-[30px] md:h-[34px]" />
             {product.name}
           </h1>
 
