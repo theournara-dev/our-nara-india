@@ -1,23 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeftRight, ChevronDown, Globe, Loader2 } from "lucide-react";
+import { Globe, Loader2, MapPin } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
 import {
   StorePickerCards,
   STORE_PICKER_PANEL_CLASS,
 } from "@/components/layout/store-picker-cards";
+import { StoreNudge } from "@/components/layout/store-nudge";
 import { notify } from "@/lib/toast";
 import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
 
+/** The two sides of the Local / Global toggle, in display order. */
+const TOGGLE_OPTIONS: {
+  store: SiteVersion;
+  label: string;
+  Icon: typeof MapPin;
+}[] = [
+  { store: "local", label: "Local store", Icon: MapPin },
+  { store: "global", label: "Global store", Icon: Globe },
+];
+
 /**
- * Store picker. A one-icon toggle flips between the two stores in a tap; the
- * chip beside it shows the current store and opens the panel of store cards
- * (content is admin-editable per store in /admin/site). A bobbing arrow points
- * at the control so the choice is noticed. Choosing the other store toggles the
- * runtime version in development and navigates to the other domain in
- * production.
+ * Store picker. A compact icon-only Local / Global toggle sits to the left of
+ * the store chip; the chip shows the current store and opens the panel of store
+ * cards (content is admin-editable per store in /admin/site). A bobbing hint
+ * above the control draws the eye to the choice. Choosing the other store
+ * toggles the runtime version in development and navigates to the other domain
+ * in production.
  */
 export function VersionSwitcher({
   content,
@@ -55,7 +66,6 @@ export function VersionSwitcher({
   }, [open]);
 
   const activeBlock = content.blocks.find((b) => b.store === version);
-  const otherBlock = content.blocks.find((b) => b.store !== version);
 
   function choose(next: SiteVersion) {
     setOpen(false);
@@ -79,27 +89,47 @@ export function VersionSwitcher({
 
   return (
     <div ref={ref} className={`relative ${className}`}>
-      {/* Bobbing arrow, pointing down at the store control. */}
-      <span
-        aria-hidden
-        className="store-switcher-nudge pointer-events-none absolute -top-[21px] left-1/2 hidden -translate-x-1/2 text-point-500 md:block"
-      >
-        <ChevronDown className="h-4 w-4" strokeWidth={3} />
-      </span>
+      {/* Bobbing hint pointing down at the store control (admin-editable). */}
+      <StoreNudge
+        nudge={content.nudge}
+        className="pointer-events-none absolute -top-[30px] left-1/2 -translate-x-1/2 max-md:hidden"
+      />
 
       <div className="flex items-center gap-1.5">
-        {/* One-icon toggle: flip stores without opening the panel. */}
-        {otherBlock && (
-          <button
-            type="button"
-            onClick={() => choose(otherBlock.store)}
-            aria-label={`Switch to ${otherBlock.title}`}
-            title={`Switch to ${otherBlock.title}`}
-            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-500 transition-colors hover:border-zinc-300 hover:bg-white hover:text-point-600"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        )}
+        {/* Local / Global toggle: icon-only pill, left of the store chip. */}
+        <div
+          role="group"
+          aria-label="Store"
+          className="relative flex h-8 w-[68px] shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
+        >
+          {/* Sliding highlight behind the active icon. */}
+          <span
+            aria-hidden
+            className={`pointer-events-none absolute top-0.5 left-0.5 h-[26px] w-[31px] rounded-full shadow-sm ring-2 transition-transform duration-200 ease-out ${
+              version === "local"
+                ? "translate-x-0 bg-blue-600 ring-blue-500/25"
+                : "translate-x-[31px] bg-point-500 ring-point-500/30"
+            }`}
+          />
+          {TOGGLE_OPTIONS.map(({ store, label, Icon }) => {
+            const active = version === store;
+            return (
+              <button
+                key={store}
+                type="button"
+                onClick={() => choose(store)}
+                aria-pressed={active}
+                aria-label={label}
+                title={label}
+                className={`relative z-10 grid h-[26px] w-[31px] cursor-pointer place-items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 ${
+                  active ? "text-white" : "text-zinc-400 hover:text-zinc-600"
+                }`}
+              >
+                <Icon className="h-[15px] w-[15px]" aria-hidden />
+              </button>
+            );
+          })}
+        </div>
 
         {/* Current store; opens the panel of store cards. */}
         <button

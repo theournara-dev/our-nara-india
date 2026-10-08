@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { ImageField } from "@/components/admin/image-field";
+import { StoreNudge } from "@/components/layout/store-nudge";
 import {
   StorePickerCards,
   STORE_PICKER_PANEL_CLASS,
@@ -16,6 +17,7 @@ import type {
   SiteContent,
   SwitcherBlock,
   SwitcherContent,
+  SwitcherNudgeIcon,
   TopBannerBlock,
 } from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
@@ -805,6 +807,90 @@ function StorePickerEditor({
             />
           </div>
         ))}
+      </div>
+
+      <div className="mt-5 rounded-lg border border-zinc-100 bg-zinc-50/60 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-zinc-700">Store hint</p>
+            <p className="text-xs text-zinc-400">
+              The bobbing badge above the store control on the storefront.
+            </p>
+          </div>
+          <label className="flex shrink-0 items-center gap-2 text-xs font-medium text-zinc-600">
+            <input
+              type="checkbox"
+              checked={content.nudge.enabled}
+              onChange={(e) =>
+                onChange({
+                  ...content,
+                  nudge: { ...content.nudge, enabled: e.target.checked },
+                })
+              }
+              className="h-4 w-4 accent-point-500"
+            />
+            Show
+          </label>
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCls}>Arrow icon</span>
+            <select
+              value={content.nudge.icon}
+              disabled={Boolean(content.nudge.image)}
+              onChange={(e) =>
+                onChange({
+                  ...content,
+                  nudge: {
+                    ...content.nudge,
+                    icon: e.target.value as SwitcherNudgeIcon,
+                  },
+                })
+              }
+              className={`${inputCls} disabled:bg-zinc-100 disabled:text-zinc-400`}
+            >
+              <option value="chevron">Chevron down</option>
+              <option value="arrow">Arrow down</option>
+              <option value="pointer">Click pointer</option>
+              <option value="sparkle">Sparkle</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelCls}>Text (optional)</span>
+            <input
+              value={content.nudge.text}
+              onChange={(e) =>
+                onChange({
+                  ...content,
+                  nudge: { ...content.nudge, text: e.target.value },
+                })
+              }
+              placeholder="Choose your store"
+              className={inputCls}
+            />
+          </label>
+        </div>
+
+        <div className="mt-3">
+          <ImageField
+            label="Custom image (optional)"
+            value={content.nudge.image}
+            onChange={(image) =>
+              onChange({ ...content, nudge: { ...content.nudge, image } })
+            }
+            hint="Shown instead of the arrow icon — a small PNG or SVG works best."
+          />
+        </div>
+
+        <div className="mt-3 flex items-center gap-3 rounded border border-zinc-100 bg-white px-3 py-3">
+          <span className="text-xs text-zinc-400">Preview</span>
+          <StoreNudge
+            nudge={{ ...content.nudge, enabled: true }}
+            animated={false}
+            className="text-zinc-700"
+          />
+        </div>
       </div>
 
       <div className="mt-4">

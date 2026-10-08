@@ -8,6 +8,7 @@ import {
   DEFAULT_SWITCHER_CONTENT,
   normalizeSwitcher,
   normalizeTopBanner,
+  SWITCHER_NUDGE_ICONS,
 } from "@/lib/site-content";
 import { parseSiteVersion } from "@/lib/site-version";
 import {
@@ -113,10 +114,18 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
   revalidateSite();
 }
 
+const nudgeInput = z.object({
+  enabled: z.boolean().optional(),
+  icon: z.enum(SWITCHER_NUDGE_ICONS).optional(),
+  image: safeText(500).optional(),
+  text: safeText(80).optional(),
+});
+
 const switcherInput = z.object({
   title: safeText(120, { min: 1, message: "Title is required" }),
   subtitle: safeText(200).optional(),
   blocks: z.array(z.unknown()).min(1, "At least one store card is required"),
+  nudge: nudgeInput.optional(),
 });
 
 /**

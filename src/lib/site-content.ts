@@ -51,6 +51,29 @@ export type SwitcherContent = {
   title: string;
   subtitle?: string;
   blocks: SwitcherBlock[];
+  nudge: SwitcherNudge;
+};
+
+/** Built-in icons an admin can pick for the hint that points at the switcher. */
+export const SWITCHER_NUDGE_ICONS = [
+  "chevron",
+  "arrow",
+  "pointer",
+  "sparkle",
+] as const;
+export type SwitcherNudgeIcon = (typeof SWITCHER_NUDGE_ICONS)[number];
+
+/**
+ * The hint above the store control: a bobbing badge (built-in icon or a custom
+ * image the admin uploads) with an optional label. Edited in /admin/site.
+ */
+export type SwitcherNudge = {
+  enabled: boolean;
+  icon: SwitcherNudgeIcon;
+  /** Custom image shown instead of the built-in icon; empty = use the icon. */
+  image: string;
+  /** Optional text shown beside the badge. */
+  text: string;
 };
 
 export type SiteContent = {
@@ -102,6 +125,12 @@ const DEFAULT_BANNER: TopBannerBlock[] = [
 const DEFAULT_SWITCHER: SwitcherContent = {
   title: "Choose your store",
   subtitle: "Shipping and pricing depend on where you are.",
+  nudge: {
+    enabled: true,
+    icon: "chevron",
+    image: "",
+    text: "",
+  },
   blocks: [
     {
       id: "s1",
@@ -257,10 +286,28 @@ export function normalizeSwitcher(
     });
   });
 
+  const rawNudge = isRecord(value.nudge) ? value.nudge : {};
+  const defNudge = fallback.nudge;
+  const nudgeIcon = SWITCHER_NUDGE_ICONS.includes(
+    rawNudge.icon as SwitcherNudgeIcon,
+  )
+    ? (rawNudge.icon as SwitcherNudgeIcon)
+    : defNudge.icon;
+  const nudge: SwitcherNudge = {
+    enabled:
+      typeof rawNudge.enabled === "boolean"
+        ? rawNudge.enabled
+        : defNudge.enabled,
+    icon: nudgeIcon,
+    image: str(rawNudge.image, defNudge.image),
+    text: str(rawNudge.text, defNudge.text),
+  };
+
   return {
     title: str(value.title, fallback.title),
     subtitle: str(value.subtitle) || undefined,
     blocks: blocks.length > 0 ? blocks : fallback.blocks,
+    nudge,
   };
 }
 
