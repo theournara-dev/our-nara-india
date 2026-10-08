@@ -35,11 +35,12 @@ export function ProductGrid({
   return (
     <div className={`grid gap-x-4 gap-y-8 ${cols} ${className ?? ""}`}>
       {products.map((product, index) => (
-        <ThemeProductCard
-          key={product.id}
-          product={product}
-          priority={index === 0}
-        />
+        // The card renders two blocks (image, then text). Wrapping each card in
+        // its own cell keeps them together — without this the image and text
+        // would land in separate grid cells.
+        <div key={product.id}>
+          <ThemeProductCard product={product} priority={index === 0} />
+        </div>
       ))}
     </div>
   );

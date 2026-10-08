@@ -74,7 +74,7 @@ export function ThemeProductCard({
           {/* Quick actions (wishlist + cart), revealed on hover */}
           <div
             className={cn(
-              "absolute bottom-2 -right-50 z-10 flex flex-col gap-1 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:right-2",
+              "absolute bottom-2 -right-50 z-10 flex flex-col gap-1 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:right-2 max-md:hidden",
             )}
           >
             <button
@@ -112,11 +112,14 @@ export function ThemeProductCard({
 
       {/* Item text rows — mirrors the original `listitem` rows: brand, name,
           overview (pre-order), product summary, price. */}
-      <div className="mt-6 px-2 text-left">
-        <span className="my-[2px] block text-sm font-medium leading-[1.4] text-black">
+      {/* Text sits flush with the image edge, as in the original. Sizes follow
+          the original's mobile values and step up on tablet and desktop. The
+          brand is deliberately smaller than the name. */}
+      <div className="mt-6 text-left">
+        <span className="my-[2px] block text-[12px] font-normal leading-[16.8px] text-black">
           [{product.brand.name}]
         </span>
-        <strong className="mb-2 block text-left text-[15px] font-normal leading-6 text-black line-clamp-2">
+        <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
           <Link href={`/products/${product.slug}`} className="text-black">
             {product.name}
           </Link>
@@ -127,11 +130,11 @@ export function ThemeProductCard({
           </span>
         )}
         {product.shortTags.length > 0 && (
-          <span className="mb-2 block text-sm font-medium leading-[1.4] text-[#333]">
+          <span className="mb-2 block text-[13px] font-normal leading-[18.2px] text-[#888] md:text-[14px] md:leading-[19.6px]">
             {product.shortTags.join(" · ")}
           </span>
         )}
-        <span className="block text-lg font-bold leading-[1.4] text-black">
+        <span className="block text-[14px] font-bold leading-[19.6px] text-black md:text-[18px] md:leading-[25.2px]">
           {formatMoney(
             priceForVersion(product.priceCents, product.globalPriceCents),
             product.currency,
