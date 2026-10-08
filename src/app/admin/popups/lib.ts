@@ -1,3 +1,24 @@
+/**
+ * The popups admin's list helpers. The popup rules themselves (placements,
+ * frequencies, sizes, limits) live in `@/lib/popups` so the storefront, the
+ * admin form and the preview all read the same values; they are re-exported
+ * here for the admin pages that already import them from this module.
+ */
+
+export {
+  POPUP_PLACEMENTS,
+  PLACEMENT_LABELS,
+  POPUP_FREQUENCIES,
+  FREQUENCY_LABELS,
+  FREQUENCY_HINTS,
+  POPUP_SIZES,
+  SIZE_LABELS,
+  POPUP_LIMITS,
+  DEFAULT_POPUP_WIDTH_PX,
+  DEFAULT_POPUP_SCALE,
+} from "@/lib/popups";
+export type { PopupPlacement, PopupFrequency, PopupSize } from "@/lib/popups";
+
 /** Query params that make up the popups list's filter state. */
 export const FILTER_KEYS = [
   "search",
@@ -27,19 +48,3 @@ export function buildBackHref(
 export function currentQuery(params: Record<string, string>): string {
   return buildBackHref(params).replace(/^\/admin\/popups/, "");
 }
-
-export const POPUP_PLACEMENTS = ["center", "bottom"] as const;
-export type PopupPlacement = (typeof POPUP_PLACEMENTS)[number];
-
-export const PLACEMENT_LABELS: Record<PopupPlacement, string> = {
-  center: "Center modal",
-  bottom: "Bottom banner",
-};
-
-export const POPUP_FREQUENCIES = ["once", "every"] as const;
-export type PopupFrequency = (typeof POPUP_FREQUENCIES)[number];
-
-export const FREQUENCY_LABELS: Record<PopupFrequency, string> = {
-  once: "Once per session",
-  every: "Every visit",
-};

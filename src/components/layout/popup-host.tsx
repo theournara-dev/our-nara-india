@@ -1,24 +1,25 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  PopupSurface,
+  type PopupCardData,
+} from "@/components/popups/popup-card";
+import { nextDuePopup } from "@/lib/popups";
 
-type Popup = {
+type Popup = PopupCardData & {
   id: string;
-  title: string | null;
-  body: string | null;
-  image: string | null;
-  ctaLabel: string | null;
-  ctaHref: string | null;
-  placement: string; // "center" | "bottom"
-  frequency: string; // "once" | "every"
+  frequency: string;
+  delaySeconds: number;
+  timeoutSeconds: number;
 };
 
 const SESSION_KEY = "ournara:seen-popups";
+const SUPPRESS_KEY = "ournara:popup-suppressed";
 
-/** Ids already shown this session, used to respect "once" frequency. */
-function seenIds(): string[] {
+/** Popup ids already shown during this browser session ("once" frequency). */
+function seenThisSession(): string[] {
+  if (typeof window === "undefined") return [];
   try {
     return JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "[]") as string[];
   } catch {
@@ -28,32 +29,63 @@ function seenIds(): string[] {
 
 function markSeen(id: string) {
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify([...seenIds(), id]));
+    sessionStorage.setItem(
+      SESSION_KEY,
+      JSON.stringify([...seenThisSession(), id]),
+    );
+  } catch {
+    // ignore storage errors (private mode)
+  }
+}
+
+/** Per-id timestamp of the last "don't show again today" / "once a day" show. */
+function suppressedAt(): Record<string, number> {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(SUPPRESS_KEY) ?? "{}") as Record<
+      string,
+      number
+    >;
+  } catch {
+    return {};
+  }
+}
+
+function suppress(id: string, at: number) {
+  try {
+    localStorage.setItem(
+      SUPPRESS_KEY,
+      JSON.stringify({ ...suppressedAt(), [id]: at }),
+    );
   } catch {
     // ignore storage errors
   }
 }
 
 /**
- * Fetches active popups and shows them as an overlay. Renders nothing when
- * there are no active popups or the visitor has already seen them this session.
- * Kept client-side so the root layout stays static.
+ * Fetches the active popups and shows them one after another: the queue is
+ * walked in order and each popup is dismissed (or auto-closes) before the next
+ * one appears, so several active popups never fight over the screen.
+ *
+ * Per popup the visitor's settings are honoured — delay before it appears,
+ * auto-close timeout, "once per session" / "once a day" / "every visit"
+ * frequency, the "don't show again today" footer link, overlay dimming and
+ * click-outside closing. Kept client-side so the root layout stays static.
  */
 export function PopupHost() {
-  const [popups, setPopups] = useState<Popup[]>([]);
+  const [queue, setQueue] = useState<Popup[]>([]);
   const [current, setCurrent] = useState<Popup | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  const pickNext = useCallback(
-    (list: Popup[], skipId?: string): Popup | null => {
-      const seen = new Set(seenIds());
-      const eligible = list.filter(
-        (p) => p.id !== skipId && (p.frequency === "every" || !seen.has(p.id)),
-      );
-      return eligible[0] ?? null;
-    },
-    [],
-  );
+  const [ready, setReady] = useState(false);
+  // Popups already put on screen during this page load, so "every visit"
+  // popups still only show once per visit and the queue always advances.
+  const [shownThisLoad, setShownThisLoad] = useState<Set<string>>(new Set());
+  // The configured delay applies to the first popup of a visit only; the rest
+  // follow as soon as the previous one is dismissed.
+  const firstShow = useRef(true);
+  const currentRef = useRef<Popup | null>(null);
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,87 +93,81 @@ export function PopupHost() {
       .then((r) => r.json())
       .then((data: { popups?: Popup[] }) => {
         if (cancelled) return;
-        const list = data.popups ?? [];
-        setPopups(list);
-        setCurrent(pickNext(list));
+        setQueue(data.popups ?? []);
       })
       .catch(() => {})
       .finally(() => {
-        if (!cancelled) setLoaded(true);
+        if (!cancelled) setReady(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [pickNext]);
+  }, []);
 
-  function close() {
-    if (!current) return;
-    if (current.frequency === "once") markSeen(current.id);
-    setCurrent(pickNext(popups, current.id));
-  }
+  const dismiss = useCallback((popup: Popup) => {
+    const now = Date.now();
+    if (popup.frequency === "once") markSeen(popup.id);
+    if (popup.frequency === "day") suppress(popup.id, now);
+    setCurrent(null);
+  }, []);
 
-  // Don't block interaction if nothing is showing.
-  if (!loaded || !current) return null;
+  const hideToday = useCallback((popup: Popup) => {
+    // "Don't show again today" always wins, whatever the frequency is.
+    suppress(popup.id, Date.now());
+    setCurrent(null);
+  }, []);
 
-  const hasLink = Boolean(current.ctaLabel && current.ctaHref);
-  const inner = (
-    <div className="relative w-full overflow-hidden rounded-2xl bg-white shadow-2xl">
-      {current.image && (
-        <Image
-          src={current.image}
-          alt={current.title ?? "Popup"}
-          width={640}
-          height={400}
-          unoptimized
-          className="h-auto w-full object-cover"
-        />
-      )}
-      <div className="p-6">
-        {current.title && (
-          <h2 className="text-lg font-semibold text-zinc-900">
-            {current.title}
-          </h2>
-        )}
-        {current.body && (
-          <p className="mt-1 text-sm text-zinc-600">{current.body}</p>
-        )}
-        {hasLink && (
-          <Link
-            href={current.ctaHref!}
-            onClick={close}
-            className="mt-4 inline-flex h-10 items-center justify-center rounded bg-point-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-point-600"
-          >
-            {current.ctaLabel}
-          </Link>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={close}
-        aria-label="Close popup"
-        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900/40 text-white hover:bg-zinc-900/60"
-      >
-        ✕
-      </button>
-    </div>
-  );
+  // Show the next due popup whenever nothing is on screen.
+  useEffect(() => {
+    if (!ready || current) return;
+    const now = Date.now();
+    const seen = new Set([...seenThisSession(), ...shownThisLoad]);
+    const next = nextDuePopup(queue, seen, suppressedAt(), now);
+    if (!next) return;
 
-  if (current.placement === "bottom") {
-    return (
-      <div className="fixed inset-x-0 bottom-0 z-50 p-4">
-        <div className="mx-auto w-full max-w-xl">{inner}</div>
-      </div>
+    const delayMs = firstShow.current
+      ? Math.max(0, next.delaySeconds) * 1000
+      : 0;
+    const show = () => {
+      firstShow.current = false;
+      setShownThisLoad((prev) => new Set(prev).add(next.id));
+      setCurrent(next);
+    };
+    if (delayMs === 0) {
+      show();
+      return;
+    }
+    const timer = setTimeout(show, delayMs);
+    return () => clearTimeout(timer);
+  }, [ready, queue, current, shownThisLoad]);
+
+  // Auto-close the visible popup after its timeout (0 = waits for the visitor).
+  useEffect(() => {
+    if (!current || current.timeoutSeconds <= 0) return;
+    const timer = setTimeout(
+      () => dismiss(current),
+      current.timeoutSeconds * 1000,
     );
-  }
+    return () => clearTimeout(timer);
+  }, [current, dismiss]);
+
+  // Escape closes the visible popup, like any other dialog.
+  useEffect(() => {
+    if (!current) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && currentRef.current) dismiss(currentRef.current);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [current, dismiss]);
+
+  if (!current) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
-        onClick={close}
-        aria-hidden
-      />
-      <div className="relative w-full max-w-lg">{inner}</div>
-    </div>
+    <PopupSurface
+      data={current}
+      onClose={() => dismiss(current)}
+      onHideToday={() => hideToday(current)}
+    />
   );
 }
