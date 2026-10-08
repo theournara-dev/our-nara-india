@@ -26,6 +26,7 @@ import { CouponBox, type AppliedCoupon } from "./coupon-box";
 import { ShippingProgressBar } from "./shipping-progress";
 import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { KDropMark } from "@/components/product/kdrop-mark";
 
 /**
  * Right-side "quick purchase" drawer opened from the product page's BUY NOW
@@ -297,6 +298,7 @@ export function QuickPurchaseSheet({
                           onClick={onClose}
                           className="block truncate text-sm font-medium text-zinc-900 hover:text-point-500"
                         >
+                          <KDropMark className="mr-1.5 h-[12px] align-middle" />
                           {item.name}
                         </Link>
                         {item.option && (

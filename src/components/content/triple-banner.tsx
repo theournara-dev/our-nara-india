@@ -11,6 +11,7 @@ import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { saleStateForVersion } from "@/lib/product-flags";
+import { KDropMark } from "@/components/product/kdrop-mark";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 interface TripleBannerProps {
@@ -127,6 +128,7 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
       <div className="desc">
         <span className="brand">[{product.brand.name}]</span>
         <strong className="name">
+          <KDropMark className="mr-1.5 h-[12px] align-middle" />
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
         <span className="tags">{product.shortTags.join(" · ")}</span>
