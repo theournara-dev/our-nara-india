@@ -1,6 +1,7 @@
 import { Container } from "@/components/ui/container";
 import { ProductGrid } from "@/components/product/product-grid";
 import { db } from "@/lib/db";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +12,14 @@ export default async function SearchPage({
 }) {
   const { q } = await searchParams;
   const query = q?.trim() ?? "";
+  const version = await getRequestSiteVersion();
 
   const results = query
     ? await db.product.findMany({
         where: {
-          isActive: true,
+          ...(version === "global"
+            ? { globalIsActive: true }
+            : { isActive: true }),
           OR: [
             { name: { contains: query, mode: "insensitive" } },
             { summary: { contains: query, mode: "insensitive" } },
@@ -59,7 +63,12 @@ export default async function SearchPage({
             globalPriceCents: p.globalPriceCents ?? undefined,
             globalCompareAtCents: p.globalCompareAtCents ?? undefined,
             currency: p.currency,
+            isActive: p.isActive,
             isPreOrder: p.isPreOrder,
+            buyNowEnabled: p.buyNowEnabled,
+            globalIsActive: p.globalIsActive,
+            globalIsPreOrder: p.globalIsPreOrder,
+            globalBuyNowEnabled: p.globalBuyNowEnabled,
             preOrderNotice: p.preOrderNotice ?? undefined,
             images: p.images,
             hoverImage: p.images[1] ?? p.images[0],

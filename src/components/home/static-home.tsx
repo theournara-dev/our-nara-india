@@ -18,8 +18,8 @@ import {
 } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
 import { tripleBannerBoxes } from "@/data/triple-banner";
-import { headers } from "next/headers";
-import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version";
+import { getVersionConfig } from "@/lib/site-version";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 /**
  * The original, hardcoded homepage. Used as a fallback by the dynamic page
@@ -28,32 +28,34 @@ import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version"
  * drives the layout instead.
  */
 export async function StaticHome() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host");
-  const { preOrderEnabled } = getVersionConfig(resolveRequestSiteVersion(host));
-  const featured = await getFeaturedProducts(4);
+  const version = await getRequestSiteVersion();
+  const { preOrderEnabled } = getVersionConfig(version);
+  const featured = await getFeaturedProducts(4, version);
   const shorts = await getShortsPicks();
   const longBanners = await getLongBanners();
   const tripleBoxes = await Promise.all(
     tripleBannerBoxes.map(async (box) => ({
       ...box,
-      products: await getProductsBySlugs(box.productSlugs),
+      products: await getProductsBySlugs(box.productSlugs, version),
     })),
   );
   const preOrder = preOrderEnabled
-    ? await getProductsBySlugs([
-        "centella-dark-spot-solution-ampoule-pro",
-        "peptide-volume-neck-cream",
-        "peptide-volume-lifting-pro-essence-30ml",
-        "centella-moist-soothing-gel-cream-ex",
-        "peptide-volume-lifting-pro-essence-100ml",
-      ])
+    ? await getProductsBySlugs(
+        [
+          "centella-dark-spot-solution-ampoule-pro",
+          "peptide-volume-neck-cream",
+          "peptide-volume-lifting-pro-essence-30ml",
+          "centella-moist-soothing-gel-cream-ex",
+          "peptide-volume-lifting-pro-essence-100ml",
+        ],
+        version,
+      )
     : [];
   const brandSections = await Promise.all(
     homeBrandSections.map(async (section) => ({
       ...section,
       title: getBrand(section.slug)?.name ?? section.slug,
-      products: await getProductsByBrandSlug(section.slug, 20),
+      products: await getProductsByBrandSlug(section.slug, 20, version),
     })),
   );
 

@@ -7,6 +7,7 @@ import { getCategoryBySlug } from "@/data/categories";
 import { getProductsByCategorySlug } from "@/data/products";
 import { getSubcategories } from "@/data/subcategories";
 import { parseCategoryFilters } from "@/lib/category-filters";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,9 @@ export default async function CategoryPage({
   const { sub, brand, min, max, avail } = await searchParams;
   const [category, products] = await Promise.all([
     getCategoryBySlug(slug),
-    getProductsByCategorySlug(slug, 60),
+    getRequestSiteVersion().then((version) =>
+      getProductsByCategorySlug(slug, 60, version),
+    ),
   ]);
 
   if (!category) notFound();

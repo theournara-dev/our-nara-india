@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ProductCardView } from "@/data/catalog";
+import type { SiteVersion } from "@/lib/site-version";
 
 /**
  * Database-backed product data layer. Replaces the previous static catalog so
@@ -80,14 +81,17 @@ type ProductRow = {
   globalCompareAtCents: number | null;
   currency: string;
   isPreOrder: boolean;
+  globalIsPreOrder: boolean;
   preOrderNotice: string | null;
   images: string[];
   isActive: boolean;
+  globalIsActive: boolean;
   seoTitle: string | null;
   seoDescription: string | null;
   infoRows: unknown;
   buyInfoRows: unknown;
   buyNowEnabled: boolean;
+  globalBuyNowEnabled: boolean;
   brand: {
     slug: string;
     name: string;
@@ -150,7 +154,12 @@ function toCard(p: ProductRow): ProductCard {
     globalPriceCents: p.globalPriceCents ?? undefined,
     globalCompareAtCents: p.globalCompareAtCents ?? undefined,
     currency: p.currency,
+    isActive: p.isActive,
     isPreOrder: p.isPreOrder,
+    buyNowEnabled: p.buyNowEnabled,
+    globalIsActive: p.globalIsActive,
+    globalIsPreOrder: p.globalIsPreOrder,
+    globalBuyNowEnabled: p.globalBuyNowEnabled,
     preOrderNotice: p.preOrderNotice ?? undefined,
     images: p.images,
     hoverImage: p.images[1] ?? p.images[0],
@@ -223,11 +232,34 @@ export async function getProductInfoTemplate(): Promise<InfoRow[]> {
   return parseInfoRows(row?.blocks);
 }
 
+/**
+ * The store's own "shown" filter, so a product hidden on one storefront never
+ * reaches its listings while the other store keeps selling it.
+ */
+function shownWhere(version: SiteVersion) {
+  return version === "global" ? { globalIsActive: true } : { isActive: true };
+}
+
+/** The store's own pre-order flag. */
+function preOrderWhere(version: SiteVersion) {
+  return version === "global"
+    ? { globalIsPreOrder: true }
+    : { isPreOrder: true };
+}
+
+/** The store's own buy-now flag. */
+function buyNowWhere(version: SiteVersion) {
+  return version === "global"
+    ? { globalBuyNowEnabled: true }
+    : { buyNowEnabled: true };
+}
+
 export async function getFeaturedProducts(
   take: number,
+  version: SiteVersion,
 ): Promise<ProductCard[]> {
   const rows = (await db.product.findMany({
-    where: { isActive: true },
+    where: shownWhere(version),
     take,
     orderBy: { createdAt: "desc" },
     include,
@@ -235,9 +267,13 @@ export async function getFeaturedProducts(
   return rows.map(toCard);
 }
 
-export async function getAvailableNow(take: number): Promise<ProductCard[]> {
+/** Products this store sells immediately (its own buy-now flag). */
+export async function getAvailableNow(
+  take: number,
+  version: SiteVersion,
+): Promise<ProductCard[]> {
   const rows = (await db.product.findMany({
-    where: { isActive: true, isPreOrder: false },
+    where: { ...shownWhere(version), ...buyNowWhere(version) },
     take,
     orderBy: { createdAt: "desc" },
     include,
@@ -245,11 +281,13 @@ export async function getAvailableNow(take: number): Promise<ProductCard[]> {
   return rows.map(toCard);
 }
 
+/** Products this store sells as a pre-order (its own pre-order flag). */
 export async function getPreOrderProducts(
   take: number,
+  version: SiteVersion,
 ): Promise<ProductCard[]> {
   const rows = (await db.product.findMany({
-    where: { isActive: true, isPreOrder: true },
+    where: { ...shownWhere(version), ...preOrderWhere(version) },
     take,
     orderBy: { createdAt: "desc" },
     include,
@@ -260,9 +298,10 @@ export async function getPreOrderProducts(
 export async function getProductsByCategorySlug(
   slug: string,
   take: number,
+  version: SiteVersion,
 ): Promise<ProductCard[]> {
   const rows = (await db.product.findMany({
-    where: { isActive: true, category: { slug } },
+    where: { ...shownWhere(version), category: { slug } },
     take,
     orderBy: { createdAt: "desc" },
     include,
@@ -273,9 +312,10 @@ export async function getProductsByCategorySlug(
 export async function getProductsByBrandSlug(
   slug: string,
   take: number,
+  version: SiteVersion,
 ): Promise<ProductCard[]> {
   const rows = (await db.product.findMany({
-    where: { isActive: true, brand: { slug } },
+    where: { ...shownWhere(version), brand: { slug } },
     take,
     orderBy: { createdAt: "desc" },
     include,
@@ -283,13 +323,18 @@ export async function getProductsByBrandSlug(
   return rows.map(toCard);
 }
 
-/** Products matching the given slugs, preserving slug order (missing skipped). */
+/**
+ * Products matching the given slugs, preserving slug order (missing skipped).
+ * Hidden-on-this-store products are dropped, so curated lists (triple banner,
+ * page-builder sections) follow the store's own show flag.
+ */
 export async function getProductsBySlugs(
   slugs: string[],
+  version: SiteVersion,
 ): Promise<ProductCard[]> {
   if (slugs.length === 0) return [];
   const rows = (await db.product.findMany({
-    where: { isActive: true, slug: { in: slugs } },
+    where: { ...shownWhere(version), slug: { in: slugs } },
     include,
   })) as ProductRow[];
   const bySlug = new Map(rows.map((p) => [p.slug, p]));
@@ -299,11 +344,16 @@ export async function getProductsBySlugs(
     .map(toCard);
 }
 
+/**
+ * One product by slug, regardless of either store's show flag — the product
+ * page resolves the request's store and 404s when it is hidden there
+ * (`visibleForVersion`).
+ */
 export async function getProductBySlug(
   slug: string,
 ): Promise<ProductDetail | null> {
   const row = (await db.product.findFirst({
-    where: { slug, isActive: true },
+    where: { slug },
     include: detailInclude,
   })) as ProductRow | null;
   return row ? toDetail(row) : null;

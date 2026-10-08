@@ -189,7 +189,16 @@ model Product {
   compareAtCents Int?     @map("compare_at_cents")
   globalCompareAtCents Int? @map("global_compare_at_cents")
   currency       String   @default("INR")
+  // ── Per-store sale state ──────────────────────────────────────────
+  // Every product answers the same four questions per store — price, show,
+  // pre-order, buy now — so the two storefronts can differ. The plain fields
+  // are the LOCAL (India) store; the `global*` twins are the International
+  // store. Mirrors `priceCents` / `globalPriceCents`.
+  //
+  // Sale state per store: buy-now wins over pre-order; a product with neither
+  // is shown but not purchasable yet ("coming soon").
   isPreOrder     Boolean  @default(false) @map("is_pre_order")
+  globalIsPreOrder Boolean @default(false) @map("global_is_pre_order")
   preOrderNotice String?  @map("pre_order_notice")
   images         String[]
   // Shipping weight in grams, used for Delhivery rate calc + labels.
@@ -201,9 +210,11 @@ model Product {
   // stock and this field is ignored.
   stock          Int?
   isActive       Boolean  @default(true) @map("is_active")
-  // Feature rollout: enable Buy Now for this product. Effective value is
-  // `product.flag || brand.flag` (see src/data/products.ts).
+  globalIsActive Boolean  @default(true) @map("global_is_active")
+  // Feature rollout: enable Buy Now for this product on the local store.
+  // Effective value is `product flag || brand flag` (see src/lib/product-flags.ts).
   buyNowEnabled  Boolean  @default(false) @map("buy_now_enabled")
+  globalBuyNowEnabled Boolean @default(false) @map("global_buy_now_enabled")
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
   // INFO tab: optional per-product override of the storewide
@@ -424,6 +435,9 @@ model Preorder {
   postal    String?
   country   String?  @default("IN")
   quantity  Int      @default(1)
+  // Which storefront the pre-order came from (pre-orders can be enabled per
+  // store now). "local" | "global".
+  siteVersion String @default("local") @map("site_version")
   status    String   @default("PENDING") // "PENDING" | "FULFILLED"
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

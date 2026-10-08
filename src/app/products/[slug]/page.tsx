@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { ProductGrid } from "@/components/product/product-grid";
@@ -14,13 +13,9 @@ import {
 import { getReviewSummary, getVisibleProductReviews } from "@/data/reviews";
 import { getPublishedProductQA } from "@/data/qa";
 import { priceForVersion } from "@/lib/money";
-import {
-  SITE_VERSION_COOKIE,
-  getSiteUrl,
-  getVersionConfig,
-  parseSiteVersion,
-  resolveRequestSiteVersion,
-} from "@/lib/site-version";
+import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
+import { getSiteUrl, getVersionConfig } from "@/lib/site-version";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 // Rendered on demand so a product detail is always fresh without a full
 // rebuild. The data layer still caches the underlying query.
@@ -34,8 +29,11 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
-  if (!product) {
+  const [product, version] = await Promise.all([
+    getProductBySlug(slug),
+    getRequestSiteVersion(),
+  ]);
+  if (!product || !visibleForVersion(product, version)) {
     return {
       title: "Product Not Found",
       robots: {
@@ -84,13 +82,16 @@ export default async function ProductPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
+  const version = await getRequestSiteVersion();
   const product = await getProductBySlug(slug);
 
-  if (!product) notFound();
+  // "Shown" is per store: a product hidden on this storefront 404s here while
+  // the other store keeps selling it.
+  if (!product || !visibleForVersion(product, version)) notFound();
 
   const [related, infoTemplate, user, reviews, reviewSummary, questions] =
     await Promise.all([
-      getProductsByBrandSlug(product.brand.slug, 8),
+      getProductsByBrandSlug(product.brand.slug, 8, version),
       getProductInfoTemplate(),
       getCurrentUser(),
       getVisibleProductReviews(product.id),
@@ -99,32 +100,25 @@ export default async function ProductPage({
     ]);
 
   const relatedOthers = related.filter((p) => p.id !== product.id);
-  // The active version, resolved exactly like checkout: the switcher's cookie
-  // (written client-side) wins, then the request host
-  // (our-nara.co.kr → global). The JSON-LD price must match what this store's
-  // checkout would actually charge.
-  const requestHeaders = await headers();
-  const cookieStore = await cookies();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const siteVersion =
-    parseSiteVersion(cookieStore.get(SITE_VERSION_COOKIE)?.value) ??
-    resolveRequestSiteVersion(host);
-  const siteConfig = getVersionConfig(siteVersion);
+  // The JSON-LD must describe what THIS store sells: the store's own price,
+  // pre-order state and buy-now state.
   const priceCents = priceForVersion(
     product.priceCents,
     product.globalPriceCents,
-    siteVersion,
+    version,
   );
   const isInStock = product.variants.length
     ? product.variants.some((variant) => variant.stock > 0)
     : product.stock === null || product.stock > 0;
+  const saleState = saleStateForVersion(product, version);
   const availability =
-    product.isPreOrder && siteConfig.preOrderEnabled
+    saleState === "preorder"
       ? "https://schema.org/PreOrder"
-      : isInStock
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock";
+      : saleState === "unavailable"
+        ? "https://schema.org/OutOfStock"
+        : isInStock
+          ? "https://schema.org/InStock"
+          : "https://schema.org/OutOfStock";
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -142,8 +136,8 @@ export default async function ProductPage({
     },
     offers: {
       "@type": "Offer",
-      url: `${getSiteUrl(siteVersion)}/products/${product.slug}`,
-      priceCurrency: siteConfig.currency,
+      url: `${getSiteUrl(version)}/products/${product.slug}`,
+      priceCurrency: getVersionConfig(version).currency,
       price: (priceCents / 100).toFixed(2),
       availability,
       seller: {

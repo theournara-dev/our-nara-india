@@ -6,6 +6,7 @@ import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
 import { getBrandBySlug } from "@/data/brands";
 import { getProductsByBrandSlug } from "@/data/products";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,9 @@ export default async function BrandPage({
   const { slug } = await params;
   const [brand, products] = await Promise.all([
     getBrandBySlug(slug),
-    getProductsByBrandSlug(slug, 60),
+    getRequestSiteVersion().then((version) =>
+      getProductsByBrandSlug(slug, 60, version),
+    ),
   ]);
 
   if (!brand) notFound();

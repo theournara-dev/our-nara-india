@@ -14,6 +14,7 @@ import { FreeShippingBox } from "./free-shipping-box";
 import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { saleStateForVersion } from "@/lib/product-flags";
 import { PreorderDialog } from "./preorder-dialog";
 import { ProductBlocks } from "./blocks/block-renderer";
 import { ReviewForm } from "./review-form";
@@ -160,14 +161,14 @@ export function ProductDetail({
     else groups.push({ label, items: [v] });
     return groups;
   }, []);
-  // Buttons render based on product state. A pre-order shows the pre-order
-  // dialog; available products show Buy Now (when enabled). They're mutually
-  // exclusive — pre-orders aren't eligible for buy-now express checkout.
-  // On versions without pre-orders (global), every product is directly
-  // purchasable regardless of its isPreOrder/buyNowEnabled flags.
-  const showPreOrder = product.isPreOrder && config.preOrderEnabled;
-  const showBuyNow =
-    !config.preOrderEnabled || (product.buyNowEnabled && !product.isPreOrder);
+  // Buttons render from this store's own state: a pre-order here shows the
+  // pre-order dialog, a buy-now product shows Buy Now, and a product this store
+  // does not sell yet shows a disabled placeholder. The same product can be in
+  // different states on the two storefronts.
+  const saleState = saleStateForVersion(product, version);
+  const showPreOrder = saleState === "preorder";
+  const showBuyNow = saleState === "buynow";
+  const notSellable = saleState === "unavailable";
 
   function handleBuyNow() {
     // The chosen option's label travels with the line so the cart can show it.
@@ -305,8 +306,8 @@ export function ProductDetail({
           )}
 
           {/* Quantity + shipping — hidden for pre-orders (quantity is set in the
-              pre-order dialog) */}
-          {!showPreOrder && (
+              pre-order dialog) and for products this store does not sell yet. */}
+          {showBuyNow && (
             <div className="mt-5 flex items-center justify-between border-y border-[#e9e9e9] py-3">
               <span className="text-sm font-semibold text-ink">Quantity</span>
               <div className="flex items-center rounded border border-[#e9e9e9]">
@@ -375,6 +376,16 @@ export function ProductDetail({
                   Payment coming soon
                 </button>
               ))}
+            {notSellable && (
+              <button
+                type="button"
+                disabled
+                title="This product is not on sale on this store yet."
+                className="h-14 flex-1 cursor-not-allowed rounded-lg bg-zinc-200 px-6 text-[15px] font-bold text-zinc-500"
+              >
+                Coming soon
+              </button>
+            )}
           </div>
 
           {/* Delivery block for this line — the same dispatch cut-off and

@@ -62,7 +62,17 @@ export interface ProductCardView {
   globalPriceCents?: number;
   globalCompareAtCents?: number;
   currency: string;
+  /**
+   * Per-store sale state (see src/lib/product-flags.ts). The plain fields are
+   * the local (India) store; the `global*` twins are the International store
+   * and fall back to the local value when missing.
+   */
+  isActive?: boolean;
   isPreOrder: boolean;
+  buyNowEnabled?: boolean;
+  globalIsActive?: boolean;
+  globalIsPreOrder?: boolean;
+  globalBuyNowEnabled?: boolean;
   preOrderNotice?: string;
   images: string[];
   hoverImage?: string;
@@ -687,7 +697,13 @@ export function toCardView(p: StaticProduct): ProductCardView {
     priceCents: p.priceCents,
     compareAtCents: p.compareAtCents,
     currency: p.currency,
+    isActive: true,
     isPreOrder: p.isPreOrder,
+    // The static catalogue predates the per-store flags: every product is
+    // shown and sold the same way on both stores.
+    globalIsActive: true,
+    globalIsPreOrder: p.isPreOrder,
+    globalBuyNowEnabled: true,
     preOrderNotice: p.preOrderNotice,
     images: p.images,
     hoverImage: p.hoverImage,

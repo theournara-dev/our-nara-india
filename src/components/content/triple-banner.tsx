@@ -10,6 +10,7 @@ import type { ResolvedTripleBannerBox } from "@/data/triple-banner";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
+import { saleStateForVersion } from "@/lib/product-flags";
 import { useSiteVersion } from "@/components/site-version-provider";
 
 interface TripleBannerProps {
@@ -102,7 +103,9 @@ export function TripleBanner({ boxes }: TripleBannerProps) {
 
 /** A single horizontal product row: thumbnail + brand/name/tags/price + cart. */
 function TripleBannerProduct({ product }: { product: ProductCardType }) {
-  const { config } = useSiteVersion();
+  const { version } = useSiteVersion();
+  // The badge and the quick-cart follow the browsing store's sale state.
+  const saleState = saleStateForVersion(product, version);
   function handleAddToCart() {
     addProductToCart(product);
     notifyAddedToCart(product.name);
@@ -127,15 +130,12 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
         <span className="tags">{product.shortTags.join(" · ")}</span>
-        {product.isPreOrder && config.preOrderEnabled && (
+        {saleState === "preorder" && (
           <span className="overview">PRE-ORDER/Order now, ships later</span>
         )}
         <span className="price">
           {formatMoney(
-            priceForVersion(
-              product.priceCents,
-              product.globalPriceCents,
-            ),
+            priceForVersion(product.priceCents, product.globalPriceCents),
             product.currency,
           )}
         </span>

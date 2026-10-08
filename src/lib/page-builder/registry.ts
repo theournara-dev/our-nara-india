@@ -26,6 +26,7 @@ import {
   type SectionTypeMeta,
   type ShortItem,
 } from "./types";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 /**
  * Server-side section-type registry. Maps each section type to its renderer
@@ -34,19 +35,22 @@ import {
  */
 
 async function loadProducts(source: ProductSource): Promise<ProductCard[]> {
+  // Curated storefront sections follow the requesting store, so a product
+  // hidden on one storefront never leaks into the other's page.
+  const version = await getRequestSiteVersion();
   switch (source.kind) {
     case "featured":
-      return getFeaturedProducts(source.take);
+      return getFeaturedProducts(source.take, version);
     case "pre-order":
-      return getPreOrderProducts(source.take);
+      return getPreOrderProducts(source.take, version);
     case "available-now":
-      return getAvailableNow(source.take);
+      return getAvailableNow(source.take, version);
     case "brand":
-      return getProductsByBrandSlug(source.slug, source.take);
+      return getProductsByBrandSlug(source.slug, source.take, version);
     case "category":
-      return getProductsByCategorySlug(source.slug, source.take);
+      return getProductsByCategorySlug(source.slug, source.take, version);
     case "slugs":
-      return getProductsBySlugs(source.slugs);
+      return getProductsBySlugs(source.slugs, version);
   }
 }
 
@@ -128,11 +132,12 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
     meta: SECTION_TYPE_META_BY_TYPE["triple-banner"],
     load: async (config) => {
       const c = config as { boxes?: { productSlugs: string[] }[] };
+      const version = await getRequestSiteVersion();
       return {
         boxes: await Promise.all(
           (c.boxes ?? []).map(async (box) => ({
             ...box,
-            products: await getProductsBySlugs(box.productSlugs),
+            products: await getProductsBySlugs(box.productSlugs, version),
           })),
         ),
       };

@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
+import { saleStateForVersion } from "@/lib/product-flags";
 import { notifyAddedToCart } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useSiteVersion } from "@/components/site-version-provider";
@@ -24,7 +25,10 @@ export function ThemeProductCard({
   /** Eager-load + preload this image (set for the first/above-the-fold card). */
   priority?: boolean;
 }) {
-  const { config } = useSiteVersion();
+  const { version } = useSiteVersion();
+  // The card answers per store: what this storefront sells (buy-now /
+  // pre-order / not yet) and at what price.
+  const saleState = saleStateForVersion(product, version);
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
 
@@ -108,21 +112,23 @@ export function ThemeProductCard({
                 className="rounded bg-white/60 p-1"
               />
             </button>
-            <button
-              type="button"
-              aria-label="Add to cart"
-              onClick={handleAddToCart}
-              className="block cursor-pointer"
-            >
-              <Image
-                src="/upload/icon_202508271427351600.png"
-                alt="cart"
-                width={30}
-                height={30}
-                unoptimized
-                className="rounded bg-white/60 p-1"
-              />
-            </button>
+            {saleState !== "unavailable" && (
+              <button
+                type="button"
+                aria-label="Add to cart"
+                onClick={handleAddToCart}
+                className="block cursor-pointer"
+              >
+                <Image
+                  src="/upload/icon_202508271427351600.png"
+                  alt="cart"
+                  width={30}
+                  height={30}
+                  unoptimized
+                  className="rounded bg-white/60 p-1"
+                />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -141,7 +147,7 @@ export function ThemeProductCard({
             {product.name}
           </Link>
         </strong>
-        {product.isPreOrder && config.preOrderEnabled && (
+        {saleState === "preorder" && (
           <span className="mb-2 block text-xs font-medium leading-[1.4] text-[#702dbd]">
             {product.preOrderNotice ?? "PRE-ORDER/Order now, ships later"}
           </span>
