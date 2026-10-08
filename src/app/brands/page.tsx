@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/container";
-import { PageHeader } from "@/components/ui/page-header";
+import { BrandDirectory } from "@/components/brands/brand-directory";
+import { BrandLetterNav } from "@/components/brands/brand-letter-nav";
 import { getBrands } from "@/data/brands";
+import { groupBrandsByLetter } from "@/lib/brand-index";
 
 export const metadata: Metadata = { title: "Shop by Brand" };
 
@@ -11,41 +11,21 @@ export const metadata: Metadata = { title: "Shop by Brand" };
 export const dynamic = "force-dynamic";
 
 export default async function BrandsPage() {
-  const brands = await getBrands();
+  const groups = groupBrandsByLetter(await getBrands());
+  const activeKeys = new Set(groups.map((group) => group.key));
+
   return (
-    <div>
-      <PageHeader
-        eyebrow="Our Labels"
-        title="Shop by Brand"
-        subtitle="Explore the Korean beauty brands we carry."
-      />
-      <Container className="pb-16">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {brands.map((brand) => (
-            <div
-              key={brand.slug}
-              className="flex flex-col rounded-2xl border border-zinc-100 bg-white p-6"
-            >
-              <p className="text-xl font-semibold text-zinc-900">
-                {brand.name}
-              </p>
-              {brand.description && (
-                <p className="mt-2 flex-1 text-sm text-zinc-500">
-                  {brand.description}
-                </p>
-              )}
-              <Button
-                href={`/brand/${brand.slug}`}
-                variant="outline"
-                size="sm"
-                className="mt-4 self-start"
-              >
-                View products
-              </Button>
-            </div>
-          ))}
+    <div className="mx-auto w-[98%]">
+      <div className="mx-auto box-content max-w-[1280px] px-5 pt-[41px] pb-[120px] text-[#111]">
+        <div className="mb-[15px] text-center md:mb-[50px]">
+          {/* The mobile title sits 23px higher than its box, as on the original. */}
+          <h1 className="mt-[-23px] text-[1.3rem] leading-[normal] font-bold text-[#222] md:mt-0 md:text-[2rem]">
+            BRAND
+          </h1>
         </div>
-      </Container>
+        <BrandLetterNav activeKeys={activeKeys} />
+        <BrandDirectory groups={groups} />
+      </div>
     </div>
   );
 }
