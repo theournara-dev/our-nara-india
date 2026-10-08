@@ -99,6 +99,7 @@ export default async function AdminPreordersPage({
           <thead>
             <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
               <th className="px-4 py-3 font-medium">Product</th>
+              <th className="px-4 py-3 font-medium">Store</th>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Email</th>
               <th className="px-4 py-3 font-medium">Address</th>
@@ -112,7 +113,7 @@ export default async function AdminPreordersPage({
             {preorders.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-10 text-center text-zinc-500"
                 >
                   No pre-orders found.
@@ -131,6 +132,17 @@ export default async function AdminPreordersPage({
                     >
                       {p.product.name}
                     </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        p.siteVersion === "global"
+                          ? "bg-violet-100 text-violet-700"
+                          : "bg-sky-100 text-sky-700"
+                      }`}
+                    >
+                      {p.siteVersion === "global" ? "International" : "India"}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{p.name}</td>
                   <td className="px-4 py-3 text-zinc-600">{p.email}</td>

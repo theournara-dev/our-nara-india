@@ -69,9 +69,13 @@ type Props = {
     stock: number | null;
     currency: string;
     isPreOrder: boolean;
+    globalIsPreOrder: boolean;
     preOrderNotice: string | null;
     images: string[];
     isActive: boolean;
+    globalIsActive: boolean;
+    buyNowEnabled: boolean;
+    globalBuyNowEnabled: boolean;
     seoTitle: string | null;
     seoDescription: string | null;
     variants: {
@@ -187,6 +191,21 @@ function ProductFormInner({
     product?.stock != null ? String(product.stock) : "",
   );
   const [isPreOrder, setIsPreOrder] = useState(product?.isPreOrder ?? false);
+  // International store: its own show / pre-order / buy-now flags, mirroring
+  // the per-store price fields. New products start hidden from nowhere, but
+  // not on sale anywhere until an admin enables a mode per store.
+  const [globalIsPreOrder, setGlobalIsPreOrder] = useState(
+    product?.globalIsPreOrder ?? false,
+  );
+  const [globalBuyNowEnabled, setGlobalBuyNowEnabled] = useState(
+    product?.globalBuyNowEnabled ?? false,
+  );
+  const [globalIsActive, setGlobalIsActive] = useState(
+    product?.globalIsActive ?? true,
+  );
+  const [buyNowEnabled, setBuyNowEnabled] = useState(
+    product?.buyNowEnabled ?? false,
+  );
   const [preOrderNotice, setPreOrderNotice] = useState(
     product?.preOrderNotice ?? "",
   );
@@ -357,9 +376,13 @@ function ProductFormInner({
           : Math.max(0, Math.floor(Number(stock) || 0)),
       currency: "INR",
       isPreOrder,
+      globalIsPreOrder,
       preOrderNotice: preOrderNotice.trim() || undefined,
       images,
       isActive,
+      buyNowEnabled,
+      globalIsActive,
+      globalBuyNowEnabled,
       seoTitle: seoTitle.trim() || undefined,
       seoDescription: seoDescription.trim() || undefined,
       variants: variants.map((v) => ({
@@ -518,17 +541,6 @@ function ProductFormInner({
                   pattern="[a-z0-9-]+"
                   className={inputCls}
                 />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Status</span>
-                <select
-                  value={isActive ? "active" : "inactive"}
-                  onChange={(e) => setIsActive(e.target.value === "active")}
-                  className={inputCls}
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
               </label>
               <div>
                 <span className={labelCls}>Brand</span>
@@ -781,6 +793,99 @@ function ProductFormInner({
                   />
                 </label>
               )}
+            </div>
+          </section>
+
+          {/* Per-store sale state — the same four questions per storefront:
+              price (above), show, pre-order and buy now. */}
+          <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+            <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+              Store availability
+            </h2>
+            <p className="mb-4 text-xs text-zinc-400">
+              Each storefront has its own price (above) and its own state. “Buy
+              now” wins when a store has both; with neither the product is still
+              listed but cannot be bought yet.
+            </p>
+            <div className="overflow-x-auto rounded-xl border border-zinc-100">
+              <table className="w-full min-w-[420px] text-left text-sm">
+                <thead className="bg-zinc-50 text-[11px] uppercase tracking-wide text-zinc-400">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Store</th>
+                    <th className="px-4 py-2 font-medium">Show</th>
+                    <th className="px-4 py-2 font-medium">Pre-order</th>
+                    <th className="px-4 py-2 font-medium">Buy now</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-zinc-100">
+                    <td className="px-4 py-2.5 text-zinc-700">
+                      India · our-nara.com
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                        aria-label="Show on the India store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isPreOrder}
+                        onChange={(e) => setIsPreOrder(e.target.checked)}
+                        aria-label="Pre-order on the India store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={buyNowEnabled}
+                        onChange={(e) => setBuyNowEnabled(e.target.checked)}
+                        aria-label="Buy now on the India store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                  </tr>
+                  <tr className="border-t border-zinc-100">
+                    <td className="px-4 py-2.5 text-zinc-700">
+                      International · KDrop
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={globalIsActive}
+                        onChange={(e) => setGlobalIsActive(e.target.checked)}
+                        aria-label="Show on the international store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={globalIsPreOrder}
+                        onChange={(e) => setGlobalIsPreOrder(e.target.checked)}
+                        aria-label="Pre-order on the international store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={globalBuyNowEnabled}
+                        onChange={(e) =>
+                          setGlobalBuyNowEnabled(e.target.checked)
+                        }
+                        aria-label="Buy now on the international store"
+                        className="h-4 w-4 accent-point-500"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </section>
 

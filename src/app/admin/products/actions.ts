@@ -59,10 +59,17 @@ const productInput = z.object({
   /** Product-level stock for variantless products; null = untracked. */
   stock: z.coerce.number().int().nonnegative().nullable().optional(),
   currency: z.string().default("INR"),
+  // Per-store sale state: the plain flags are the local (India) store, the
+  // `global*` ones the International store. New products start shown on both
+  // stores but not on sale anywhere — the admin picks a mode per store.
   isPreOrder: z.boolean().default(false),
+  globalIsPreOrder: z.boolean().default(false),
   preOrderNotice: safeText(300).optional(),
   images: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
+  globalIsActive: z.boolean().default(true),
+  buyNowEnabled: z.boolean().default(false),
+  globalBuyNowEnabled: z.boolean().default(false),
   seoTitle: safeText(200).optional(),
   seoDescription: safeMultiline(500).optional(),
   variants: z.array(variantInput).default([]),
@@ -173,9 +180,13 @@ export async function createProduct(input: ProductInput) {
       stock: data.stock ?? null,
       currency: data.currency,
       isPreOrder: data.isPreOrder,
+      globalIsPreOrder: data.globalIsPreOrder,
       preOrderNotice: data.preOrderNotice || null,
       images: data.images,
       isActive: data.isActive,
+      globalIsActive: data.globalIsActive,
+      buyNowEnabled: data.buyNowEnabled,
+      globalBuyNowEnabled: data.globalBuyNowEnabled,
       seoTitle: data.seoTitle || null,
       seoDescription: data.seoDescription || null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
@@ -262,9 +273,13 @@ export async function updateProduct(id: string, input: ProductInput) {
           stock: data.stock ?? null,
           currency: data.currency,
           isPreOrder: data.isPreOrder,
+          globalIsPreOrder: data.globalIsPreOrder,
           preOrderNotice: data.preOrderNotice || null,
           images: data.images,
           isActive: data.isActive,
+          globalIsActive: data.globalIsActive,
+          buyNowEnabled: data.buyNowEnabled,
+          globalBuyNowEnabled: data.globalBuyNowEnabled,
           seoTitle: data.seoTitle || null,
           seoDescription: data.seoDescription || null,
           infoRows: data.infoRows as Prisma.InputJsonValue,
@@ -347,14 +362,14 @@ export async function toggleProductActive(id: string, isActive: boolean) {
   revalidateCatalog();
 }
 
-/** Enable/disable the Buy Now button for a single product. */
+/** Enable/disable the Buy Now button for a single product on the India store. */
 export async function toggleProductBuyNow(id: string, enabled: boolean) {
   await requireAdmin();
   await db.product.update({ where: { id }, data: { buyNowEnabled: enabled } });
   revalidateCatalog();
 }
 
-/** Mark/unmark a product as a pre-order. */
+/** Mark/unmark a product as a pre-order on the India store. */
 export async function toggleProductPreOrder(id: string, enabled: boolean) {
   await requireAdmin();
   await db.product.update({ where: { id }, data: { isPreOrder: enabled } });

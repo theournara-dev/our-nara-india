@@ -1,9 +1,15 @@
 "use server";
 
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { parseInput, safeEmail, safeText } from "@/lib/validation";
+import {
+  parseSiteVersion,
+  resolveRequestSiteVersion,
+  SITE_VERSION_COOKIE,
+} from "@/lib/site-version";
 
 const preorderInput = z.object({
   productId: z.string().min(1, "Product is required"),
@@ -24,9 +30,21 @@ export type PreorderInput = z.infer<typeof preorderInput>;
 /** Save a pre-order placed from the product page. */
 export async function createPreorder(input: PreorderInput) {
   const data = parseInput(preorderInput, input, "preorders.create");
+  // The store is resolved server-side (the switcher's cookie, then the host),
+  // like checkout, so the record says which storefront it came from.
+  const [requestHeaders, cookieStore] = await Promise.all([
+    headers(),
+    cookies(),
+  ]);
+  const siteVersion =
+    parseSiteVersion(cookieStore.get(SITE_VERSION_COOKIE)?.value) ??
+    resolveRequestSiteVersion(
+      requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+    );
   await db.preorder.create({
     data: {
       productId: data.productId,
+      siteVersion,
       name: data.name,
       email: data.email,
       phone: data.phone || null,

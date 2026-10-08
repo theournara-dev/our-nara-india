@@ -177,7 +177,14 @@ async function createOrderImpl(
   // Load products from the DB to get authoritative prices (never trust client).
   const productIds = [...new Set(data.items.map((i) => i.productId))];
   const products = await db.product.findMany({
-    where: { id: { in: productIds }, isActive: true },
+    // "Shown" is per store: the checkout only accepts products this storefront
+    // lists, so a stale cart cannot buy something hidden here.
+    where: {
+      id: { in: productIds },
+      ...(requestVersion === "global"
+        ? { globalIsActive: true }
+        : { isActive: true }),
+    },
     select: {
       id: true,
       name: true,

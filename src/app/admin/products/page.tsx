@@ -186,9 +186,9 @@ export default async function AdminProductsPage({
               <th className="px-2 py-2 font-medium">Price</th>
               <th className="px-2 py-2 font-medium">Stock</th>
               <th className="px-2 py-2 font-medium">Pre-orders</th>
-              <th className="px-2 py-2 font-medium">Status</th>
-              <th className="px-2 py-2 font-medium">Pre-order</th>
-              <th className="px-2 py-2 font-medium">Buy Now</th>
+              <th className="px-2 py-2 font-medium">Status · IN</th>
+              <th className="px-2 py-2 font-medium">Pre-order · IN</th>
+              <th className="px-2 py-2 font-medium">Buy Now · IN</th>
               <th className="px-2 py-2 text-right font-medium">Actions</th>
             </tr>
           </thead>

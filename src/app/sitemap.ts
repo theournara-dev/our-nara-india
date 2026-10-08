@@ -25,13 +25,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const requestHeaders = await headers();
   const host =
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const baseUrl = getSiteUrl(resolveRequestSiteVersion(host));
+  const version = resolveRequestSiteVersion(host);
+  const baseUrl = getSiteUrl(version);
 
   const [categories, brands, products] = await Promise.all([
     getAllCategories(),
     getBrands(),
     db.product.findMany({
-      where: { isActive: true },
+      // Only the products this storefront actually lists.
+      where:
+        version === "global" ? { globalIsActive: true } : { isActive: true },
       select: { slug: true },
     }),
   ]);
