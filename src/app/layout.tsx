@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { PopupHost } from "@/components/layout/popup-host";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
@@ -99,7 +100,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
         />
       </head>
-      <body className="flex min-h-full flex-col overflow-x-clip">
+      {/* The fixed mobile tab bar sits over the page, so the body keeps a
+          matching bottom padding on phones or it would cover the footer. */}
+      <body className="flex min-h-full flex-col overflow-x-clip max-md:pb-[calc(58px+env(safe-area-inset-bottom))]">
         <SiteVersionProvider
           initialVersion={initialVersion}
           shippingByVersion={shippingByVersion}
@@ -109,6 +112,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <main className="flex-1">{children}</main>
             <Footer />
           </CartProvider>
+          <MobileTabBar />
         </SiteVersionProvider>
         <Toaster richColors position="top-center" />
         <PopupHost />
