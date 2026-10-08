@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Globe, Loader2, MapPin } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
 import {
@@ -8,6 +9,7 @@ import {
   STORE_PICKER_PANEL_CLASS,
 } from "@/components/layout/store-picker-cards";
 import { StoreNudge } from "@/components/layout/store-nudge";
+import { KDROP_LOGO_SRC } from "@/components/product/kdrop-mark";
 import { notify } from "@/lib/toast";
 import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
@@ -22,6 +24,12 @@ const TOGGLE_OPTIONS: {
   { store: "global", label: "Global store", Icon: Globe },
 ];
 
+/** Short label inside each toggle block. */
+const TOGGLE_TEXT: Record<SiteVersion, string> = {
+  local: "Local",
+  global: "Global",
+};
+
 /**
  * Store picker. A compact icon-only Local / Global toggle sits to the left of
  * the store chip; the chip shows the current store and opens the panel of store
@@ -33,9 +41,15 @@ const TOGGLE_OPTIONS: {
 export function VersionSwitcher({
   content,
   className = "",
+  logoClassName = "h-3 w-auto shrink-0 max-[560px]:hidden",
 }: {
   content: SwitcherContent;
   className?: string;
+  /**
+   * Size/visibility of the K-Drop mark that leads the control. The header hides
+   * it on small phones where the row has no room; the drawer shows it always.
+   */
+  logoClassName?: string;
 }) {
   const { version, setVersion } = useSiteVersion();
   const [open, setOpen] = useState(false);
@@ -90,21 +104,22 @@ export function VersionSwitcher({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="flex items-center gap-1.5">
-        {/* Local / Global toggle: icon-only pill, left of the store chip. */}
+        {/* K-Drop brand mark, leading the control. */}
+        <Image
+          src={content.brandLogo || KDROP_LOGO_SRC}
+          alt=""
+          width={756}
+          height={143}
+          unoptimized
+          className={logoClassName}
+        />
+
+        {/* Local / Global toggle: two blocks, the active one filled. */}
         <div
           role="group"
           aria-label="Store"
-          className="relative flex h-8 w-[68px] shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
+          className="flex h-7 shrink-0 items-center gap-0.5 rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
         >
-          {/* Sliding highlight behind the active icon. */}
-          <span
-            aria-hidden
-            className={`pointer-events-none absolute top-0.5 left-0.5 h-[26px] w-[31px] rounded-full shadow-sm ring-2 transition-transform duration-200 ease-out ${
-              version === "local"
-                ? "translate-x-0 bg-blue-600 ring-blue-500/25"
-                : "translate-x-[31px] bg-point-500 ring-point-500/30"
-            }`}
-          />
           {TOGGLE_OPTIONS.map(({ store, label, Icon }) => {
             const active = version === store;
             return (
@@ -115,11 +130,16 @@ export function VersionSwitcher({
                 aria-pressed={active}
                 aria-label={label}
                 title={label}
-                className={`relative z-10 grid h-[26px] w-[31px] cursor-pointer place-items-center rounded-full transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 ${
-                  active ? "text-white" : "text-zinc-400 hover:text-zinc-600"
+                className={`flex h-[22px] cursor-pointer items-center gap-1 rounded-full px-1.5 text-[11px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 ${
+                  active
+                    ? `text-white shadow-sm ${
+                        store === "local" ? "bg-blue-600" : "bg-point-500"
+                      }`
+                    : "text-zinc-500 hover:text-zinc-700"
                 }`}
               >
-                <Icon className="h-[15px] w-[15px]" aria-hidden />
+                <Icon className="h-3 w-3" aria-hidden />
+                <span data-store-toggle-label>{TOGGLE_TEXT[store]}</span>
               </button>
             );
           })}
@@ -147,7 +167,7 @@ export function VersionSwitcher({
             aria-expanded={open}
             aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
             title={`Store: ${activeBlock?.title ?? version}`}
-            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+            className="flex h-7 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
           >
             {pendingTo ? (
               <Loader2
@@ -159,9 +179,6 @@ export function VersionSwitcher({
             )}
             <span className="text-zinc-900 max-[374px]:hidden">
               {activeBlock?.title ?? version}
-            </span>
-            <span className="text-zinc-400 max-md:hidden">
-              {activeBlock?.currency}
             </span>
           </button>
         </div>

@@ -291,7 +291,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                           className={
                             item.label === "AMBASSADOR"
                               ? "flex h-7 shrink-0 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-base font-semibold whitespace-nowrap text-white max-[1200px]:ml-2.5 max-[1200px]:mr-6 max-[1200px]:text-[15px]"
-                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2 2xl:mx-2.5 max-[1200px]:mx-0 max-[1200px]:pb-0 max-[1200px]:text-[15px] max-[1200px]:leading-9"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-1 2xl:mx-2.5 max-[1200px]:mx-0 max-[1200px]:pb-0 max-[1200px]:text-[15px] max-[1200px]:leading-9"
                           }
                         >
                           {item.label}
@@ -597,6 +597,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                 <VersionSwitcher
                   content={siteContent.switcher}
                   className="mt-4"
+                  logoClassName="h-3.5 w-auto shrink-0"
                 />
                 {/* Account quick links */}
                 <div className="mt-6 flex w-4/5 flex-wrap gap-x-4 gap-y-2 text-[13px]">
