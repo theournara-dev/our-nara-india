@@ -128,7 +128,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
       >
         <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-md:min-h-0 max-md:px-[7px]">
           {/* Logo (row 1, left) */}
-          <h1 className="relative order-1 pl-[18px] pr-10 max-md:flex max-md:max-w-[160px] max-md:items-center max-md:p-0">
+          <h1 className="relative order-1 pl-[18px] pr-10 max-md:flex max-md:w-[160px] max-md:shrink-0 max-md:items-center max-md:p-0">
             <Link href="/">
               <Image
                 src="/upload/goodymall1/en/main/logo_.png"
@@ -136,7 +136,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                 width={2483}
                 height={392}
                 loading="eager"
-                className="h-auto w-auto max-h-8 max-w-[170px] max-md:max-h-[30px] max-md:max-w-[160px]"
+                className="h-auto w-auto max-h-8 max-w-[170px] max-md:max-h-none max-md:w-[160px] max-md:max-w-none"
               />
             </Link>
           </h1>
@@ -255,15 +255,15 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
               )}
 
               {/* Category nav */}
-              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
+              <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center lg:mr-0 lg:w-[calc(100%-50px)] max-md:mr-0 max-md:h-9 max-md:w-full max-md:min-w-0">
                 <div className="relative z-[39] min-w-0 max-md:w-full max-md:min-w-0">
-                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-x-clip max-md:h-9 max-md:w-full max-md:overflow-y-hidden">
+                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:overflow-x-clip max-md:h-9 max-md:w-full max-md:gap-4 max-md:overflow-y-hidden">
                     {navItems.map((item, index) => (
                       <li
                         key={item.href}
                         className={
                           item.label === "AMBASSADOR"
-                            ? "relative grid place-items-center"
+                            ? "relative grid shrink-0 place-items-center"
                             : "group relative inline-block leading-20 max-md:leading-9"
                         }
                       >
@@ -271,8 +271,8 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                           href={item.href}
                           className={
                             item.label === "AMBASSADOR"
-                              ? "flex h-7 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-white max-md:mx-1.5"
-                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full max-md:mx-1.5 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
+                              ? "flex h-7 shrink-0 items-center gap-1 rounded-[30px_30px_30px_0] bg-point-500 pl-2.5 pr-1.25 text-base font-semibold whitespace-nowrap text-white max-md:ml-2.5 max-md:mr-6 max-md:text-[15px]"
+                              : "relative mx-3 pb-1 text-base font-semibold leading-[22px] text-ink transition-colors duration-500 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-point-500 after:transition-all after:duration-500 hover:text-point-500 hover:after:w-full lg:mx-2.5 max-md:mx-0 max-md:pb-0 max-md:text-[15px] max-md:leading-9"
                           }
                         >
                           {item.label}
@@ -325,12 +325,12 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
           </div>
 
           {/* Right icons + search */}
-          <div className="order-3 grid place-items-center max-md:order-2 max-md:h-[50px]">
+          <div className="order-3 grid shrink-0 place-items-center max-md:order-2 max-md:h-[50px]">
             <div className="relative flex items-center">
               {/* User / log state (desktop-only; drawer covers mobile) */}
-              <ul className="inline-flex">
+              <ul className="inline-flex items-center">
                 {/* Store switcher (leftmost) */}
-                <li className="relative flex items-center px-1">
+                <li className="relative flex items-center px-1 max-md:pl-0 max-md:pr-2">
                   <VersionSwitcher content={siteContent.switcher} />
                 </li>
                 <li className="group relative min-w-6 px-1 max-md:hidden">
@@ -402,7 +402,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                   )}
                 </li>
                 {/* Basket */}
-                <li className="relative min-w-6 px-1">
+                <li className="relative flex items-center min-w-6 px-1 max-md:px-0">
                   <Link
                     href="/cart"
                     className="block text-center text-[13px] font-medium text-[#555]"
@@ -419,7 +419,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                         width={32}
                         height={32}
                         unoptimized
-                        className="w-8 max-md:w-7"
+                        className="w-8"
                       />
                     </div>
                   </Link>
@@ -427,7 +427,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
               </ul>
 
               {/* Search */}
-              <div className="relative min-w-6 cursor-pointer pl-1">
+              <div className="relative min-w-6 cursor-pointer pl-1 max-md:pl-2">
                 <button
                   type="button"
                   aria-label="Search"
@@ -440,7 +440,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                     width={32}
                     height={32}
                     unoptimized
-                    className="mx-auto block w-8 max-md:w-7"
+                    className="mx-auto block w-8"
                   />
                 </button>
               </div>
@@ -456,10 +456,10 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                   <Image
                     src="/upload/goodymall1/icon/option.svg"
                     alt="menu"
-                    width={28}
-                    height={28}
+                    width={32}
+                    height={32}
                     unoptimized
-                    className="h-7 w-7"
+                    className="h-8 w-8"
                   />
                 </button>
               </div>

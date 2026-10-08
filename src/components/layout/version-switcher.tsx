@@ -27,6 +27,10 @@ export function VersionSwitcher({
   const { version, setVersion } = useSiteVersion();
   const [open, setOpen] = useState(false);
   const [pendingTo, setPendingTo] = useState<SiteVersion | null>(null);
+  // On phones the panel is pinned to the viewport edge instead of the chip's
+  // right edge (the chip sits at the right of the header, so a right-aligned
+  // panel would run off the left side of the screen).
+  const [panelLeft, setPanelLeft] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const isDev = process.env.NODE_ENV !== "production";
 
@@ -74,7 +78,15 @@ export function VersionSwitcher({
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open && ref.current) {
+            const phone = window.innerWidth < 768;
+            setPanelLeft(
+              phone ? 12 - ref.current.getBoundingClientRect().left : null,
+            );
+          }
+          setOpen((v) => !v);
+        }}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
@@ -89,8 +101,12 @@ export function VersionSwitcher({
         ) : (
           <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
         )}
-        <span className="text-zinc-900">{activeBlock?.title ?? version}</span>
-        <span className="text-zinc-400">{activeBlock?.currency}</span>
+        <span className="text-zinc-900 max-[374px]:hidden">
+          {activeBlock?.title ?? version}
+        </span>
+        <span className="text-zinc-400 max-md:hidden">
+          {activeBlock?.currency}
+        </span>
       </button>
 
       {open && (
@@ -98,6 +114,11 @@ export function VersionSwitcher({
           role="menu"
           aria-label="Choose store"
           className={`absolute right-0 top-full z-50 mt-2 ${STORE_PICKER_PANEL_CLASS}`}
+          style={
+            panelLeft == null
+              ? undefined
+              : { left: panelLeft, right: "auto", width: "calc(100vw - 24px)" }
+          }
         >
           <div className="mb-3 px-1 text-center">
             <p className="text-sm font-semibold text-ink">{content.title}</p>
