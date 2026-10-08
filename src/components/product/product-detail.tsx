@@ -11,6 +11,7 @@ import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
 import { computeShippingCents } from "@/lib/shipping";
 import { listCouponsForProduct } from "@/app/actions/coupons";
 import { FreeShippingBox } from "./free-shipping-box";
+import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { PreorderDialog } from "./preorder-dialog";
@@ -375,6 +376,16 @@ export function ProductDetail({
                 </button>
               ))}
           </div>
+
+          {/* Delivery block for this line — the same dispatch cut-off and
+              free-delivery bar the cart and the quick-buy sheet show, so the
+              shipping terms are visible as soon as the page loads. */}
+          <ShippingProgressBar
+            subtotalCents={thisLineCents}
+            settings={shipping}
+            currency={product.currency}
+            className="mt-4"
+          />
 
           {/* Free-delivery terms for this store */}
           <FreeShippingBox
