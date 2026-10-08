@@ -517,13 +517,13 @@ export function ProductDetail({
 
       {/* ── Tabs ── */}
       <div id="product-tabs" className="mt-12">
-        <ul className="flex w-full border-b border-[#e9e9e9] text-sm">
+        <ul className="flex w-full overflow-x-auto border-b border-[#e9e9e9] text-sm whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {(["DETAIL", "INFO", "Q&A", "REVIEW"] as const).map((t) => (
             <li key={t} className="flex-1">
               <button
                 type="button"
                 onClick={() => setTab(t)}
-                className={`w-full cursor-pointer px-6 py-3 font-semibold transition-colors ${
+                className={`w-full cursor-pointer px-3 py-3 font-semibold transition-colors md:px-6 ${
                   tab === t
                     ? "border-b-2 border-point-500 text-point-500"
                     : "text-[#888] hover:text-[#222]"
