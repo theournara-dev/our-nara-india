@@ -131,8 +131,12 @@ export function PopupCard({
 
   return (
     <div
-      className={`relative overflow-hidden bg-white shadow-2xl ${
-        full ? "h-full w-full" : "w-full rounded-2xl"
+      className={`relative flex flex-col overflow-hidden bg-white shadow-2xl ${
+        full
+          ? "h-full w-full"
+          : // Never taller than the viewport: a tall image used to push the
+            // close button and the footer off-screen with no way to scroll.
+            "max-h-[calc(100dvh-2rem)] w-full rounded-2xl"
       }`}
       style={
         full
@@ -148,49 +152,53 @@ export function PopupCard({
             }
       }
     >
-      {showImage &&
-        (full ? (
-          // Full screen: the artwork covers the card.
-          <Image
-            src={data.image!}
-            alt={data.title ?? "Popup"}
-            fill
-            unoptimized
-            sizes="100vw"
-            className="object-cover"
-          />
-        ) : mediaHeight ? (
-          // Fixed media height: crop the image to fill it.
-          <div className="relative w-full" style={{ height: mediaHeight }}>
+      {/* Scrolls when the content is taller than the capped card, keeping the
+          close button and the footer in reach. */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        {showImage &&
+          (full ? (
+            // Full screen: the artwork covers the card.
             <Image
               src={data.image!}
               alt={data.title ?? "Popup"}
               fill
               unoptimized
-              sizes="720px"
+              sizes="100vw"
               className="object-cover"
             />
-          </div>
-        ) : (
-          <Image
-            src={data.image!}
-            alt={data.title ?? "Popup"}
-            width={640}
-            height={400}
-            unoptimized
-            className="h-auto w-full object-cover"
+          ) : mediaHeight ? (
+            // Fixed media height: crop the image to fill it.
+            <div className="relative w-full" style={{ height: mediaHeight }}>
+              <Image
+                src={data.image!}
+                alt={data.title ?? "Popup"}
+                fill
+                unoptimized
+                sizes="720px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <Image
+              src={data.image!}
+              alt={data.title ?? "Popup"}
+              width={640}
+              height={400}
+              unoptimized
+              className="h-auto w-full object-cover"
+            />
+          ))}
+
+        {overArtwork && (
+          // Soft scrim so centred text stays readable over any artwork.
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/20 to-black/25"
           />
-        ))}
+        )}
 
-      {overArtwork && (
-        // Soft scrim so centred text stays readable over any artwork.
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-black/20 to-black/25"
-        />
-      )}
-
-      {text}
+        {text}
+      </div>
 
       <button
         type="button"
@@ -240,7 +248,9 @@ export function PopupCard({
 
 /**
  * The storefront surface: pins a centred modal (with its overlay), a bottom
- * banner, or a full-screen card over the page and hosts the card.
+ * banner, or a full-screen card over the page and hosts the card. Sits above
+ * the site header (z-99) so a tall card is never covered at the top, and
+ * carries `data-overlay` so the phone tab bar steps aside (see globals.css).
  */
 export function PopupSurface({
   data,
@@ -253,7 +263,7 @@ export function PopupSurface({
 }) {
   if (isFullScreenSize(data.size)) {
     return (
-      <div className="fixed inset-0 z-50">
+      <div className="fixed inset-0 z-[100]" data-overlay>
         {data.overlay !== false && (
           <div
             className="absolute inset-0"
@@ -273,7 +283,7 @@ export function PopupSurface({
 
   if (data.placement === "bottom") {
     return (
-      <div className="fixed inset-x-0 bottom-0 z-50 p-4">
+      <div className="fixed inset-x-0 bottom-0 z-[100] p-4" data-overlay>
         <div
           className="mx-auto w-full"
           style={{ maxWidth: popupWidthPx(data.size, data.widthPx) }}
@@ -285,7 +295,10 @@ export function PopupSurface({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      data-overlay
+    >
       {data.overlay !== false && (
         <div
           className="absolute inset-0"

@@ -157,7 +157,7 @@ export function CategoryProductList({
         ) : null}
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3">
             <span className="text-sm text-[#555]">
               <strong className="font-semibold text-[#222]">
                 {visible.length}
@@ -165,7 +165,7 @@ export function CategoryProductList({
               item{visible.length !== 1 ? "s" : ""}{" "}
               {visible.length === 1 ? "was" : "were"} found.
             </span>
-            <div className="flex items-center gap-2">
+            <div className="ml-auto flex items-center gap-2">
               {/* Phones get the same controls in a sheet */}
               <button
                 type="button"
@@ -205,7 +205,7 @@ export function CategoryProductList({
 
       {/* Filter sheet (phones) */}
       {sheetOpen && (
-        <div className="fixed inset-0 z-[120] lg:hidden">
+        <div className="fixed inset-0 z-[120] lg:hidden" data-overlay>
           <button
             type="button"
             aria-label="Close filters"

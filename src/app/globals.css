@@ -972,3 +972,12 @@ body {
     width: 100%;
   }
 }
+
+/*
+ * The phone bottom tab bar steps aside while a modal, sheet or popup is open,
+ * so it never collides with a bottom banner, a quick-purchase sheet or the
+ * translucent footer of a full-screen popup.
+ */
+body:has([data-overlay]) nav[aria-label="Quick navigation"] {
+  display: none;
+}
