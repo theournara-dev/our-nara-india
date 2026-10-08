@@ -192,7 +192,7 @@ export default function CartPage() {
                           href={`/products/${item.slug}`}
                           className="block truncate font-medium text-zinc-900 hover:text-point-500"
                         >
-                          <KDropMark className="mr-1.5 h-[12px] align-middle" />
+                          <KDropMark className="mr-1 h-[12px] align-middle" />
                           {item.name}
                         </Link>
                         {item.option && (

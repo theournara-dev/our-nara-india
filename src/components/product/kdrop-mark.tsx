@@ -21,13 +21,17 @@ export const KDROP_LOGO_SRC = "/upload/kdrop-logo.png";
  * the logo's aspect ratio.
  */
 export function KDropMark({ className = "h-5" }: { className?: string }) {
-  const { version } = useSiteVersion();
+  const { version, brandLogo } = useSiteVersion();
   const [failed, setFailed] = useState(false);
+  // Prefer the logo uploaded in the admin; fall back to the bundled artwork,
+  // then to the drawn stand-in, so the mark is never a broken image.
+  const src = brandLogo || KDROP_LOGO_SRC;
   if (version !== "global") return null;
   if (failed) return <KDropStandInMark className={className} />;
   return (
     <Image
-      src={KDROP_LOGO_SRC}
+      key={src}
+      src={src}
       alt="K-Drop"
       width={1034}
       height={196}

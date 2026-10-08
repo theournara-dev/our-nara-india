@@ -143,10 +143,11 @@ export function ThemeProductCard({
         <span className="my-[2px] block text-[12px] font-normal leading-[16.8px] text-black md:text-[14px] md:leading-[19.6px]">
           [{product.brand.name}]
         </span>
-        {/* International storefront: the K-Drop mark sits before the name,
-            matched to the name's own size. */}
-        <KDropMark className="mb-1 block h-[14px] md:h-[15px]" />
+        {/* International storefront: the K-Drop mark leads the name on the
+            same line, matched to the name's own size; the name wraps beside
+            it. */}
         <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
+          <KDropMark className="mr-1 h-[14px] align-middle md:h-[15px]" />
           <Link href={`/products/${product.slug}`} className="text-black">
             {product.name}
           </Link>

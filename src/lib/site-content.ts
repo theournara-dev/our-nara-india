@@ -50,6 +50,12 @@ export type SwitcherBlock = {
 export type SwitcherContent = {
   title: string;
   subtitle?: string;
+  /**
+   * Long store logo shown before product titles/names on the International
+   * storefront (uploaded in the admin). Empty = use the bundled K-Drop file,
+   * then the drawn stand-in.
+   */
+  brandLogo: string;
   blocks: SwitcherBlock[];
   nudge: SwitcherNudge;
 };
@@ -125,6 +131,7 @@ const DEFAULT_BANNER: TopBannerBlock[] = [
 const DEFAULT_SWITCHER: SwitcherContent = {
   title: "Choose your store",
   subtitle: "Shipping and pricing depend on where you are.",
+  brandLogo: "",
   nudge: {
     enabled: true,
     icon: "chevron",
@@ -306,6 +313,7 @@ export function normalizeSwitcher(
   return {
     title: str(value.title, fallback.title),
     subtitle: str(value.subtitle) || undefined,
+    brandLogo: str(value.brandLogo, fallback.brandLogo),
     blocks: blocks.length > 0 ? blocks : fallback.blocks,
     nudge,
   };

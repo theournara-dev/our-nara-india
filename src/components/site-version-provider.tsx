@@ -33,6 +33,11 @@ interface SiteVersionContextValue {
    * all show the same fee and the same free-shipping progress.
    */
   shipping: ShippingSettings;
+  /**
+   * Long store logo (uploaded in /admin/site) shown before product names on
+   * the International storefront. Empty = the bundled K-Drop artwork.
+   */
+  brandLogo: string;
 }
 
 const SiteVersionContext = createContext<SiteVersionContextValue | null>(null);
@@ -51,6 +56,7 @@ export function SiteVersionProvider({
   children,
   initialVersion = SITE_VERSION,
   shippingByVersion,
+  brandLogo = "",
 }: {
   children: React.ReactNode;
   /**
@@ -66,6 +72,8 @@ export function SiteVersionProvider({
    * exactly like prices already do.
    */
   shippingByVersion?: Record<SiteVersion, ShippingSettings>;
+  /** Store logo uploaded in the admin (see SwitcherContent.brandLogo). */
+  brandLogo?: string;
 }) {
   const [version, setVersionState] = useState<SiteVersion>(initialVersion);
 
@@ -100,8 +108,9 @@ export function SiteVersionProvider({
       setVersion,
       config: getVersionConfig(version),
       shipping: shippingByVersion?.[version] ?? FREE_SHIPPING,
+      brandLogo,
     }),
-    [version, setVersion, shippingByVersion],
+    [version, setVersion, shippingByVersion, brandLogo],
   );
 
   return (

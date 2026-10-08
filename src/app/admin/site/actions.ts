@@ -124,6 +124,8 @@ const nudgeInput = z.object({
 const switcherInput = z.object({
   title: safeText(120, { min: 1, message: "Title is required" }),
   subtitle: safeText(200).optional(),
+  /** Long store logo shown before product titles on the International store. */
+  brandLogo: safeText(500).optional(),
   blocks: z.array(z.unknown()).min(1, "At least one store card is required"),
   nudge: nudgeInput.optional(),
 });

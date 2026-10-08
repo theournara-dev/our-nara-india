@@ -731,6 +731,13 @@ function StorePickerEditor({
       </div>
 
       <div className="mt-4 space-y-3">
+        {/* The long logo that leads product titles on the International store. */}
+        <ImageField
+          label="Product-title logo (International store)"
+          value={content.brandLogo}
+          onChange={(brandLogo) => onChange({ ...content, brandLogo })}
+          hint="Shown before product names on the K-Drop storefront. Upload the wide K-Drop logo (1034×196). Empty falls back to the bundled file."
+        />
         {content.blocks.map((block, i) => (
           <div
             key={block.id}

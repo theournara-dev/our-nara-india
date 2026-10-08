@@ -275,7 +275,7 @@ export function ProductDetail({
           <h1 className="mt-1 font-display text-3xl font-semibold leading-tight text-ink">
             {/* International storefront: the K-Drop mark prefixes the title,
                 sized to the title itself. */}
-            <KDropMark className="mr-2 align-middle h-[30px] md:h-[34px]" />
+            <KDropMark className="mr-1.5 align-middle h-[30px] md:h-[34px]" />
             {product.name}
           </h1>
 

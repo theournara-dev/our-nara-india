@@ -106,6 +106,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <SiteVersionProvider
           initialVersion={initialVersion}
           shippingByVersion={shippingByVersion}
+          brandLogo={siteContent.switcher.brandLogo}
         >
           <CartProvider>
             <Header siteContent={siteContent} />

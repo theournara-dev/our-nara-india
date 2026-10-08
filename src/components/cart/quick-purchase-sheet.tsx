@@ -298,7 +298,7 @@ export function QuickPurchaseSheet({
                           onClick={onClose}
                           className="block truncate text-sm font-medium text-zinc-900 hover:text-point-500"
                         >
-                          <KDropMark className="mr-1.5 h-[12px] align-middle" />
+                          <KDropMark className="mr-1 h-[12px] align-middle" />
                           {item.name}
                         </Link>
                         {item.option && (

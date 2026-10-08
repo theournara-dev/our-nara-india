@@ -128,7 +128,7 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
       <div className="desc">
         <span className="brand">[{product.brand.name}]</span>
         <strong className="name">
-          <KDropMark className="mr-1.5 h-[12px] align-middle" />
+          <KDropMark className="mr-1 h-[12px] align-middle" />
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
         <span className="tags">{product.shortTags.join(" · ")}</span>
