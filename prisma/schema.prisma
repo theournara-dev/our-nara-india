@@ -209,6 +209,9 @@ model Product {
   // INFO tab: optional per-product override of the storewide
   // ProductInfoTemplate blocks. Null = use the global default.
   infoRows       Json?    @map("info_rows")
+  // "Product Info" card under Buy Now: an independent two-column list of
+  // { heading, body } rows, edited per product. Empty = the card is hidden.
+  buyInfoRows    Json?    @map("buy_info_rows")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

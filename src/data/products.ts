@@ -36,6 +36,11 @@ export interface ProductDetail extends ProductCardView {
   seoDescription?: string;
   /** Per-product INFO override; empty means "use the global template". */
   infoRows: InfoRow[];
+  /**
+   * Rows of the "Product Info" card under Buy Now (label | value). Edited per
+   * product and independent of the INFO tab; empty hides the card.
+   */
+  buyInfoRows: InfoRow[];
   /** Ordered, active DETAIL blocks. */
   blocks: ProductBlockView[];
   /** Effective Buy Now flag: product override OR its brand's flag. */
@@ -81,6 +86,7 @@ type ProductRow = {
   seoTitle: string | null;
   seoDescription: string | null;
   infoRows: unknown;
+  buyInfoRows: unknown;
   buyNowEnabled: boolean;
   brand: {
     slug: string;
@@ -160,6 +166,7 @@ function toDetail(p: ProductRow): ProductDetail {
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
     infoRows: parseInfoRows(p.infoRows),
+    buyInfoRows: parseInfoRows(p.buyInfoRows),
     blocks: (p.blocks ?? []).map((b) => ({
       id: b.id,
       type: b.type,

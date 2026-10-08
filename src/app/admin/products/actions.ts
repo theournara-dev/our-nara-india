@@ -76,6 +76,16 @@ const productInput = z.object({
       }),
     )
     .default([]),
+  /** Rows of the "Product Info" card under Buy Now (label | value). */
+  buyInfoRows: z
+    .array(
+      z.object({
+        heading: safeText(120).optional(),
+        body: safeMultiline(4000).optional(),
+        visible: z.boolean().default(true),
+      }),
+    )
+    .default([]),
 });
 
 export type ProductInput = z.infer<typeof productInput>;
@@ -169,6 +179,7 @@ export async function createProduct(input: ProductInput) {
       seoTitle: data.seoTitle || null,
       seoDescription: data.seoDescription || null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
+      buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
       variants: {
         create: data.variants.map((v, i) => ({
           optionLabel: v.optionLabel || null,
@@ -257,6 +268,7 @@ export async function updateProduct(id: string, input: ProductInput) {
           seoTitle: data.seoTitle || null,
           seoDescription: data.seoDescription || null,
           infoRows: data.infoRows as Prisma.InputJsonValue,
+          buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
         },
       }),
       // Blocks carry no external references, so replacing them wholesale is fine.

@@ -24,11 +24,17 @@ export function InfoRowsEditor({
   onChange,
   emptyHint,
   showVisibility = false,
+  headingPlaceholder = "Heading (e.g. SHIPPING)",
+  bodyPlaceholder = "Body text…",
+  addLabel = "+ Add section",
 }: {
   rows: InfoRowDraft[];
   onChange: (rows: InfoRowDraft[]) => void;
   emptyHint?: string;
   showVisibility?: boolean;
+  headingPlaceholder?: string;
+  bodyPlaceholder?: string;
+  addLabel?: string;
 }) {
   const update = (i: number, patch: Partial<InfoRowDraft>) =>
     onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -104,13 +110,13 @@ export function InfoRowsEditor({
           <input
             value={row.heading}
             onChange={(e) => update(i, { heading: e.target.value })}
-            placeholder="Heading (e.g. SHIPPING)"
+            placeholder={headingPlaceholder}
             className={`${inputCls} mb-2`}
           />
           <textarea
             value={row.body}
             onChange={(e) => update(i, { body: e.target.value })}
-            placeholder="Body text…"
+            placeholder={bodyPlaceholder}
             rows={3}
             className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
           />
@@ -124,7 +130,7 @@ export function InfoRowsEditor({
         }
         className="h-8 rounded border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
       >
-        + Add section
+        {addLabel}
       </button>
     </div>
   );

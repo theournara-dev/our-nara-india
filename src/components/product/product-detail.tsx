@@ -24,6 +24,8 @@ interface ProductDetailProps {
   product: ProductDetail;
   /** Effective INFO rows (product override or the storewide default). */
   infoRows: InfoRow[];
+  /** Rows of the "Product Info" card under Buy Now (edited per product). */
+  buyInfoRows: InfoRow[];
   reviews: ProductReviewView[];
   reviewSummary: ReviewSummary;
   questions: QAView[];
@@ -42,6 +44,7 @@ interface ProductDetailProps {
 export function ProductDetail({
   product,
   infoRows,
+  buyInfoRows,
   reviews,
   reviewSummary,
   questions,
@@ -100,8 +103,6 @@ export function ProductDetail({
   const compareAtCents =
     compareAt != null && compareAt > displayPrice ? compareAt : undefined;
   const needsOption = product.variants.length > 0 && !option;
-  // The INFO rows the storefront shows (per-product overrides can hide rows).
-  const visibleInfoRows = infoRows.filter((row) => row.visible !== false);
 
   // Coupons whose scope covers this product — a hint, since the real discount
   // depends on the cart and the shopper's history (resolved at checkout).
@@ -357,13 +358,13 @@ export function ProductDetail({
             className="mt-4"
           />
 
-          {/* Product Info — the admin's INFO rows in two columns (label |
-              value); More opens the tab with the full content. */}
-          {visibleInfoRows.length > 0 && (
+          {/* Product Info — the card's own rows (edited per product), shown
+              in two columns: label | value. Independent of the INFO tab. */}
+          {buyInfoRows.length > 0 && (
             <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
               <p className="text-[15px] font-bold text-ink">Product Info</p>
               <dl className="mt-2">
-                {visibleInfoRows.map((row, i) => (
+                {buyInfoRows.map((row, i) => (
                   <div
                     key={`${row.heading}-${i}`}
                     className="grid grid-cols-[85px_minmax(0,1fr)] gap-x-3 border-b border-[#f2f2f2] py-2.5 last:border-b-0 md:grid-cols-[130px_minmax(0,1fr)]"
@@ -377,18 +378,6 @@ export function ProductDetail({
                   </div>
                 ))}
               </dl>
-              <button
-                type="button"
-                onClick={() => {
-                  setTab("INFO");
-                  document
-                    .getElementById("product-tabs")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="mt-3 cursor-pointer text-[13px] font-medium text-point-600 underline underline-offset-2"
-              >
-                More
-              </button>
             </div>
           )}
 

@@ -96,6 +96,8 @@ type Props = {
     }[];
     /** Per-product INFO override (JSON); empty = use the global template. */
     infoRows: unknown;
+    /** Rows of the "Product Info" card under Buy Now (JSON). */
+    buyInfoRows: unknown;
   } | null;
   brands: BrandOption[];
   categories: CategoryOption[];
@@ -232,6 +234,11 @@ function ProductFormInner({
     if (own.length) return own;
     return globalInfoRows.map((r) => ({ ...r, visible: true }));
   });
+  // The "Product Info" card under Buy Now is its own list, so it never starts
+  // from the storewide INFO template.
+  const [buyInfoRows, setBuyInfoRows] = useState<InfoRowDraft[]>(() =>
+    parseInfoRowDrafts(product?.buyInfoRows),
+  );
 
   const [showNewBrand, setShowNewBrand] = useState(false);
   const [newBrandName, setNewBrandName] = useState("");
@@ -382,6 +389,11 @@ function ProductFormInner({
         heading: r.heading,
         body: r.body,
         visible: r.visible,
+      })),
+      buyInfoRows: buyInfoRows.map((r) => ({
+        heading: r.heading,
+        body: r.body,
+        visible: true,
       })),
     };
 
@@ -1007,22 +1019,42 @@ function ProductFormInner({
 
       {formTab === "info" && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-          <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-            <h2 className="mb-1 text-sm font-semibold text-zinc-900">
-              INFO tab
-            </h2>
-            <p className="mb-4 text-xs text-zinc-500">
-              These sections start from the storewide INFO content. Uncheck one
-              to hide it on this product, or add your own. Leaving the list
-              empty falls back to the storewide content.
-            </p>
-            <InfoRowsEditor
-              rows={infoRows}
-              onChange={setInfoRows}
-              showVisibility
-              emptyHint="No sections yet — add one, or leave empty to use the storewide content."
-            />
-          </section>
+          <div className="space-y-6">
+            <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+              <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+                INFO tab
+              </h2>
+              <p className="mb-4 text-xs text-zinc-500">
+                These sections start from the storewide INFO content. Uncheck
+                one to hide it on this product, or add your own. Leaving the
+                list empty falls back to the storewide content.
+              </p>
+              <InfoRowsEditor
+                rows={infoRows}
+                onChange={setInfoRows}
+                showVisibility
+                emptyHint="No sections yet — add one, or leave empty to use the storewide content."
+              />
+            </section>
+            <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+              <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+                Product Info (under Buy Now)
+              </h2>
+              <p className="mb-4 text-xs text-zinc-500">
+                A two-column card under the Buy Now button on this product only
+                — one row per label and value. It is separate from the INFO tab
+                above and is hidden while the list is empty.
+              </p>
+              <InfoRowsEditor
+                rows={buyInfoRows}
+                onChange={setBuyInfoRows}
+                headingPlaceholder="Label (e.g. PAYMENT & BILLING)"
+                bodyPlaceholder="Value text…"
+                addLabel="+ Add row"
+                emptyHint="No rows yet — add one, or leave empty to hide the card."
+              />
+            </section>
+          </div>
           <section className="lg:sticky lg:top-6 lg:self-start">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
               Preview
@@ -1049,6 +1081,36 @@ function ProductFormInner({
                 </p>
               )}
             </div>
+
+            {buyInfoRows.filter((r) => r.heading || r.body).length > 0 && (
+              <>
+                <p className="mt-5 mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  Buy Now card
+                </p>
+                <div className="rounded-2xl border border-zinc-100 bg-white p-5">
+                  <p className="text-sm font-semibold text-zinc-900">
+                    Product Info
+                  </p>
+                  <dl className="mt-2">
+                    {buyInfoRows
+                      .filter((r) => r.heading || r.body)
+                      .map((row, i) => (
+                        <div
+                          key={i}
+                          className="grid grid-cols-[85px_minmax(0,1fr)] gap-x-3 border-b border-[#f2f2f2] py-2.5 last:border-b-0"
+                        >
+                          <dt className="text-sm leading-6 text-[#aaa]">
+                            {row.heading}
+                          </dt>
+                          <dd className="text-sm leading-6 whitespace-pre-line text-[#333]">
+                            {row.body}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
+                </div>
+              </>
+            )}
           </section>
         </div>
       )}

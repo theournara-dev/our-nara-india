@@ -174,6 +174,7 @@ export default async function ProductPage({
         <ProductDetail
           product={product}
           infoRows={infoRows}
+          buyInfoRows={product.buyInfoRows}
           reviews={reviews}
           reviewSummary={reviewSummary}
           questions={questions}
