@@ -145,7 +145,7 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
         data-site-header
         className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]"
       >
-        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-[1200px]:min-h-0 max-[1200px]:px-[7px]">
+        <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-[1200px]:min-h-0 max-[1200px]:px-[7px] max-md:pt-2">
           {/* Logo (row 1, left) */}
           <h1 className="relative order-1 pl-[18px] pr-10 max-[1200px]:flex max-[1200px]:w-[160px] max-[1200px]:shrink-0 max-[1200px]:items-center max-[1200px]:p-0">
             <Link href="/">
