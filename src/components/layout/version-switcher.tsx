@@ -14,23 +14,30 @@ import { notify } from "@/lib/toast";
 import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
 
-/** The two sides of the Local / Global toggle, in display order. */
+/**
+ * The two sides of the switch, in display order. Each side is named by the
+ * label beside it — the K-Drop mark on the left stands for the International
+ * store, the local store's name on the right stands for the India store — so
+ * the blocks keep that order: left is the mark's store, right is the name's.
+ */
 const TOGGLE_OPTIONS: { store: SiteVersion; label: string }[] = [
-  { store: "local", label: "Local store" },
   { store: "global", label: "Global store" },
+  { store: "local", label: "Local store" },
 ];
 
 /** Width of one toggle block and of the highlight that slides under it. */
 const TOGGLE_BLOCK_PX = 28;
 
 /**
- * Store picker: the K-Drop mark, a plain Local / Global switch and the store
- * chip. The switch is a two-block control — the filled block shows which store
- * is active — and the chip names the current store and opens the panel of store
- * cards (content is admin-editable per store in /admin/site). A bobbing hint
- * above the control draws the eye to the choice. Choosing the other store
- * toggles the runtime version in development and navigates to the other domain
- * in production.
+ * Store picker: the store switch and, to its right, the store chip.
+ *
+ * The switch names its two sides: the K-Drop mark (the International store) on
+ * the left and the local store's name on the right, with the two plain blocks
+ * between them — the filled block shows which store is active. The chip names
+ * the store the visitor is on and opens the panel of store cards (content is
+ * admin-editable per store in /admin/site), with a bobbing hint above it.
+ * Choosing a store toggles the runtime version in development and navigates to
+ * the other domain in production.
  */
 export function VersionSwitcher({
   content,
@@ -74,6 +81,10 @@ export function VersionSwitcher({
   }, [open]);
 
   const activeBlock = content.blocks.find((b) => b.store === version);
+  // The switch's right-hand side is the India store, so its label is that
+  // store's name — fixed, it names a side of the switch, not the current store.
+  const localTitle =
+    content.blocks.find((b) => b.store === "local")?.title ?? "India";
 
   function choose(next: SiteVersion) {
     setOpen(false);
@@ -99,7 +110,8 @@ export function VersionSwitcher({
     <div ref={ref} className={`relative ${className}`}>
       <div data-store-control className="flex items-center gap-2">
         {/* Store switch — its own component, to the left of the popup button:
-            the K-Drop mark, the two blocks and the current store's name. */}
+            the K-Drop mark (International) on the left, the two blocks, and the
+            India store's name on the right. */}
         <div
           role="group"
           aria-label="Store switch"
@@ -114,8 +126,7 @@ export function VersionSwitcher({
             className={logoClassName}
           />
 
-          {/* Local / Global switch: two plain blocks, the active one filled and
-              sliding across on change. */}
+          {/* Two plain blocks, the active one filled and sliding across. */}
           <div
             className="relative flex h-7 shrink-0 items-center rounded-full border border-zinc-200 bg-zinc-100/60 p-0.5 transition-colors hover:border-zinc-300"
             style={{ width: TOGGLE_BLOCK_PX * 2 + 4 }}
@@ -124,11 +135,11 @@ export function VersionSwitcher({
             <span
               aria-hidden
               className={`pointer-events-none absolute top-0.5 left-0.5 h-[22px] rounded-full shadow-sm transition-transform duration-200 ease-out ${
-                version === "local" ? "bg-blue-600" : "bg-point-500"
+                version === "global" ? "bg-point-500" : "bg-blue-600"
               }`}
               style={{
                 width: TOGGLE_BLOCK_PX,
-                transform: `translateX(${version === "local" ? 0 : TOGGLE_BLOCK_PX}px)`,
+                transform: `translateX(${version === "global" ? 0 : TOGGLE_BLOCK_PX}px)`,
               }}
             />
             {TOGGLE_OPTIONS.map(({ store, label }) => {
@@ -148,12 +159,12 @@ export function VersionSwitcher({
             })}
           </div>
 
-          {/* The store the switch is currently on. */}
+          {/* The India store, naming the switch's right-hand side. */}
           <span
             data-store-switch-label
             className="text-[12px] font-semibold whitespace-nowrap text-zinc-900 max-[374px]:hidden"
           >
-            {activeBlock?.title ?? version}
+            {localTitle}
           </span>
         </div>
 
