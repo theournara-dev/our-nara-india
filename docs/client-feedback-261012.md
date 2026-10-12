@@ -189,5 +189,34 @@ ambassador texts + sticky layout + full form (D4), brands page grouping with
 images, three banner slots for the three brand sections, gray #E2E2E2 button on
 the non-current store card, and everything content-side admin-uploadable.
 
-Waiting on the client's final "go" before starting W1 (category tree +
-migration + admin screens), which is the piece that unblocks the Daiso launch.
+### Shipped (review slide by slide)
+
+| Slide                | What to look at                                                                                                                                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 (links)            | Banners, tiles, reviews, shorts, Instagram posts, cart thumbnails and the triple-banner panels all navigate. Header targets all resolve.                                                                                               |
+| 2 (store picker)     | Non-current store button is `#E2E2E2`; the popup matches the mock; "Don't show again today" suppresses the popup in every frequency, including a new session.                                                                          |
+| 3–4 (product detail) | Title block + K-Drop placement; consecutive DETAIL images run gapless, with a per-image "join above" toggle.                                                                                                                           |
+| 5 (home tabs)        | Triple banner became the tabbed showcase (Brightening / Firm & Glow / Lifting); the banner links to its brand; the panel fades in.                                                                                                     |
+| 6 (brand banners)    | Up to three admin-built banners above NOWATER / SKIN APPLE / HYGEE (and any other section).                                                                                                                                            |
+| 7 (category pages)   | Mid-level image tiles, then the top banner pair, then the long carousel, over the listing.                                                                                                                                             |
+| 8 (brands)           | Title → banners → All / Only At Ournara / New Launch tabs → brand image grid → A–Z index. Groups and images are set per brand in the admin.                                                                                            |
+| 9 (reviews)          | "REAL REVIEWS" eyebrow removed; heading and cards untouched.                                                                                                                                                                           |
+| 10 (events)          | Title + image cards with the text bottom-left; events are admin-managed (`/admin/events`). No artwork yet, so cards render as brand panels until images are uploaded.                                                                  |
+| 11 (stores)          | Heading font/margins match the other listing pages; the map/cards are untouched.                                                                                                                                                       |
+| 12 (ambassador)      | Eyebrow and subtitle gone; long images left, the form pinned right until the section ends (one column on phones); form is the full superset (gender, product, address included). Upload artwork under Site settings → Ambassador page. |
+
+### Deliberate choices worth knowing
+
+- The old `triple-banner` section type still exists in the page builder (it is
+  just no longer used by the home page) so any page that already used it keeps
+  working; its panels now take an optional link.
+- `Brand.group` stores `ONLY_AT_OURNARA` / `NEW_LAUNCH` (null = All only).
+  NOWATER and DR.PEPTI are seeded into Only At Ournara as the house brands;
+  the rest are unassigned until the client sorts them.
+- Event card images are optional: cards without one render on the brand
+  gradient so the page never looks broken.
+- The ambassador image list is per storefront (it sits in the version-tabbed
+  Site settings); say the word if it should be shared like the store picker.
+- What remains is content, not code: uploaded artwork (banners, brand
+  images, event images, ambassador images, category tiles) through the
+  dashboard.
