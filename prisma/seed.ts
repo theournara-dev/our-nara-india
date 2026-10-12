@@ -470,12 +470,49 @@ async function main() {
   await db.popup.deleteMany({});
   await db.popup.createMany({ data: popups });
 
+  console.log("Seeding events…");
+  await seedEvents();
+
   console.log("Seeding home page…");
   await seedHomePage();
 
   console.log(
     `Done. ${brands.length} brands, ${categories.length} categories, ${products.length} products, ${banners.length} banners, ${popups.length} popups.`,
   );
+}
+
+/**
+ * Seed the /event cards with the two placeholders the old hardcoded page
+ * showed (no artwork — the client uploads campaign images in /admin/events).
+ * Unlike the banner fixtures, this only fills an empty table so a re-seed
+ * never wipes events the client has created.
+ */
+async function seedEvents() {
+  const existing = await db.event.count();
+  if (existing > 0) {
+    console.log(`  ${existing} events already exist — skipped`);
+    return;
+  }
+  await db.event.createMany({
+    data: [
+      {
+        title: "Welcome Gift — +3,000P",
+        text: "Join OUR:NARA and receive mileage points to spend on your first order.",
+        dateLabel: "Ongoing",
+        href: "/join",
+        sortOrder: 0,
+        isActive: true,
+      },
+      {
+        title: "Pre-Order Early Bird",
+        text: "Order now, ships later. Lock in launch pricing on new arrivals.",
+        dateLabel: "Ongoing",
+        href: "/category/pre-order",
+        sortOrder: 1,
+        isActive: true,
+      },
+    ],
+  });
 }
 
 /**

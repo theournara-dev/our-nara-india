@@ -24,6 +24,7 @@ const nav: NavItem[] = [
   { label: "Ambassadors", href: "/admin/ambassadors" },
   { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },
+  { label: "Events", href: "/admin/events" },
   { label: "Stores", href: "/admin/stores" },
   { label: "Site settings", href: "/admin/site" },
 ];

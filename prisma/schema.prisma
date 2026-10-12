@@ -140,6 +140,12 @@ model Address {
 // Catalog
 // ---------------------------------------------------------------------------
 
+/** The /brands page's curated tabs beyond "All". */
+enum BrandGroup {
+  ONLY_AT_OURNARA
+  NEW_LAUNCH
+}
+
 model Brand {
   id          String   @id @default(cuid())
   slug        String   @unique
@@ -147,6 +153,9 @@ model Brand {
   logoUrl     String?  @map("logo_url")
   coverUrl    String?  @map("cover_url")
   description String?
+  // The /brands page's curated tabs (client slide 8): "Only At Ournara" or
+  // "New Launch". Null = listed under "All" only.
+  group       BrandGroup?
   isActive    Boolean  @default(true) @map("is_active")
   // Feature rollout: enable Buy Now for every product of this brand.
   buyNowEnabled Boolean @default(false) @map("buy_now_enabled")
@@ -771,6 +780,28 @@ model Banner {
   @@index([isActive, placement, sortOrder])
   @@index([categoryId, placement])
   @@map("banners")
+}
+
+// A campaign card on /event (client slide 10): an image with its text in the
+// bottom-left corner, admin-managed with an optional link and display window.
+model Event {
+  id        String    @id @default(cuid())
+  title     String
+  // Supporting line under the title (the old page's description).
+  text      String?
+  // Free-text date shown with the card, e.g. "Ongoing" or "Dec 1 – 31".
+  dateLabel String?   @map("date_label")
+  image     String?
+  href      String?
+  sortOrder Int       @default(0) @map("sort_order")
+  isActive  Boolean   @default(true) @map("is_active")
+  startsAt  DateTime? @map("starts_at")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([isActive, sortOrder])
+  @@map("events")
 }
 
 // A promotional overlay shown to visitors (e.g. a sale announcement or

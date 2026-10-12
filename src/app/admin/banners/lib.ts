@@ -29,6 +29,7 @@ export const BANNER_PLACEMENTS = [
   "triple",
   "category-top",
   "category-long",
+  "brand-top",
 ] as const;
 export type BannerPlacement = (typeof BANNER_PLACEMENTS)[number];
 
@@ -38,6 +39,7 @@ export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
   triple: "Triple banner",
   "category-top": "Category page — top pair",
   "category-long": "Category page — long carousel",
+  "brand-top": "Brands page — top pair",
 };
 
 /** Placements that need a category to attach to. */

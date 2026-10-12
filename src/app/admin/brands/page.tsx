@@ -12,6 +12,8 @@ export default async function AdminBrandsPage() {
       slug: true,
       name: true,
       isActive: true,
+      logoUrl: true,
+      group: true,
       _count: { select: { products: true } },
     },
   });
@@ -33,6 +35,8 @@ export default async function AdminBrandsPage() {
           name: b.name,
           isActive: b.isActive,
           productCount: b._count.products,
+          logoUrl: b.logoUrl,
+          group: b.group,
         }))}
       />
     </div>

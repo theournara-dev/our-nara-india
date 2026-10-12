@@ -1,9 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { BrandSummary } from "@/data/brands";
 import { brandIndexAnchor, type BrandIndexGroup } from "@/lib/brand-index";
 
 // The original sets a 100px scroll-margin-top on each brand section; keeping it
-// makes jumps from the letter row land at the same offset.
+// makes jumps from the letter index land at the same offset.
 export function BrandDirectory({
   groups,
 }: {
@@ -15,19 +16,37 @@ export function BrandDirectory({
         <section
           key={group.key}
           id={brandIndexAnchor(group.key)}
-          className="mb-[72px] scroll-mt-[100px]"
+          className="mb-[60px] scroll-mt-[100px]"
         >
-          <h2 className="mb-[28px] text-[24px] leading-[1] font-bold text-[#111]">
+          <h2 className="mb-[24px] text-[24px] leading-[1] font-bold text-[#111]">
             {group.key}
           </h2>
-          <ul className="grid grid-cols-3 gap-x-[30px] gap-y-[22px] md:grid-cols-4 md:gap-x-[70px]">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
             {group.brands.map((brand) => (
               <li key={brand.slug}>
+                {/* The client's slide 8: a brand image; brands without one show
+                    their name instead. */}
                 <Link
                   href={`/brand/${brand.slug}`}
-                  className="block font-normal break-words text-[13px] leading-[1.5] text-[#222] no-underline transition-[color] duration-200 [transition-timing-function:ease] hover:text-[#6f2dbd] md:text-[15px]"
+                  className="group flex min-h-[150px] flex-col items-center justify-center gap-3 rounded-2xl border border-[#eee] bg-white p-5 text-center transition-[border-color,box-shadow] duration-200 hover:border-point-200 hover:shadow-[0_8px_24px_rgba(111,45,189,0.08)]"
                 >
-                  {brand.name}
+                  {brand.logoUrl && (
+                    <Image
+                      src={brand.logoUrl}
+                      alt=""
+                      width={180}
+                      height={90}
+                      unoptimized
+                      className="max-h-[70px] w-auto object-contain"
+                    />
+                  )}
+                  <span
+                    className={`break-words font-medium text-[#222] transition-colors group-hover:text-point-500 ${
+                      brand.logoUrl ? "text-[13px]" : "text-[15px]"
+                    }`}
+                  >
+                    {brand.name}
+                  </span>
                 </Link>
               </li>
             ))}

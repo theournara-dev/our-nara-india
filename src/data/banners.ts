@@ -102,3 +102,28 @@ export async function getCategoryBanners(
     long: rows.filter((b) => b.placement === "category-long").map(toBanner),
   };
 }
+
+/**
+ * The /brands page's top row: up to two "brand-top" banners, side by side.
+ * Managed in /admin/banners by choosing the placement.
+ */
+export async function getBrandTopBanners(): Promise<LongBanner[]> {
+  const now = new Date();
+  const rows = await db.banner.findMany({
+    where: {
+      isActive: true,
+      placement: "brand-top",
+      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
+    },
+    orderBy: { sortOrder: "asc" },
+    take: 2,
+  });
+  return rows.map((b) => ({
+    id: b.id,
+    image: b.image,
+    mobileImage: b.mobileImage || b.image,
+    alt: b.alt || b.title,
+    href: b.href ?? undefined,
+  }));
+}

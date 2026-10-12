@@ -18,9 +18,10 @@ const LINK =
 const DISABLED = `${CIRCLE} relative cursor-default`;
 
 // Mobile: a full-bleed strip that scrolls sideways with its scrollbar hidden.
-// Desktop: one line spread across the full brand width.
+// Desktop: one line spread across the full brand width. The row now sits under
+// the brand grid (client slide 8), so it carries a top margin instead.
 const ROW =
-  "-mx-5 mb-[65px] flex w-[calc(100%+40px)] items-center justify-start overflow-x-auto overflow-y-hidden border-b border-[#eee] py-[14px] max-md:gap-[14px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:w-full md:justify-between md:px-[10px] md:py-4";
+  "-mx-5 mt-[35px] flex w-[calc(100%+40px)] items-center justify-start overflow-x-auto overflow-y-hidden border-t border-[#eee] py-[14px] max-md:gap-[14px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:w-full md:justify-between md:px-[10px] md:py-4";
 
 function spokenName(key: BrandIndexKey) {
   return key === "#" ? "a number or symbol" : key;

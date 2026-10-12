@@ -27,8 +27,8 @@ export default async function StoresPage() {
   const stores = await getStores(version);
 
   return (
-    <div className="mx-auto w-[98%] max-w-[1360px] px-[16px] pt-[50px] pb-[70px] leading-[normal] md:px-[20px] md:max-[1025px]:pt-[70px] md:max-[1025px]:pb-[90px] min-[1025px]:pt-[41px] min-[1025px]:pb-[120px]">
-      <h1 className="mb-[35px] text-center text-[32px] leading-[normal] font-bold text-[#222] md:mb-[50px]">
+    <div className="mx-auto w-[98%] max-w-[1360px] px-[16px] pt-8 pb-16 leading-[normal] md:px-[20px]">
+      <h1 className="mb-6 text-center font-display text-3xl font-semibold text-ink">
         STORES
       </h1>
       <StoreDirectory stores={stores} />

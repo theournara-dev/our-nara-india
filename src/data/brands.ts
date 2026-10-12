@@ -5,12 +5,16 @@ import { db } from "@/lib/db";
  * so the storefront reads them from the database like the rest of the catalog.
  */
 
+/** Which curated tab of /brands a brand belongs to (null = "All" only). */
+export type BrandGroupKey = "ONLY_AT_OURNARA" | "NEW_LAUNCH";
+
 export interface BrandSummary {
   slug: string;
   name: string;
   logoUrl?: string | null;
   coverUrl?: string | null;
   description?: string | null;
+  group?: BrandGroupKey | null;
 }
 
 export async function getBrands(): Promise<BrandSummary[]> {
@@ -23,6 +27,7 @@ export async function getBrands(): Promise<BrandSummary[]> {
       logoUrl: true,
       coverUrl: true,
       description: true,
+      group: true,
     },
   });
   return rows;

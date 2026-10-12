@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import { BrandDirectory } from "@/components/brands/brand-directory";
-import { BrandLetterNav } from "@/components/brands/brand-letter-nav";
+import Image from "next/image";
+import Link from "next/link";
+import { BrandBrowser } from "@/components/brands/brand-browser";
+import { Container } from "@/components/ui/container";
+import { getBrandTopBanners } from "@/data/banners";
 import { getBrands } from "@/data/brands";
-import { groupBrandsByLetter } from "@/lib/brand-index";
 
 export const metadata: Metadata = { title: "Shop by Brand" };
 
@@ -10,22 +12,61 @@ export const metadata: Metadata = { title: "Shop by Brand" };
 // every request instead of being cached from the first render.
 export const dynamic = "force-dynamic";
 
+/**
+ * /brands (client slide 8): title → up to two banners in one row → group tabs
+ * → brand image grid → A–Z index. The heading and page margins match the
+ * category pages.
+ */
 export default async function BrandsPage() {
-  const groups = groupBrandsByLetter(await getBrands());
-  const activeKeys = new Set(groups.map((group) => group.key));
+  const [brands, banners] = await Promise.all([
+    getBrands(),
+    getBrandTopBanners(),
+  ]);
 
   return (
-    <div className="mx-auto w-[98%]">
-      <div className="mx-auto box-content max-w-[1280px] px-5 pt-[41px] pb-[120px] text-[#111]">
-        <div className="mb-[15px] text-center md:mb-[50px]">
-          {/* The mobile title sits 23px higher than its box, as on the original. */}
-          <h1 className="mt-[-23px] text-[1.3rem] leading-[normal] font-bold text-[#222] md:mt-0 md:text-[2rem]">
-            BRAND
-          </h1>
+    <Container wide className="py-8">
+      <h1 className="mb-6 text-center font-display text-3xl font-semibold text-ink">
+        BRAND
+      </h1>
+
+      {banners.length > 0 && (
+        <div
+          className={`mb-8 grid gap-3 ${
+            banners.length > 1 ? "sm:grid-cols-2" : ""
+          }`}
+        >
+          {banners.map((banner) =>
+            banner.href ? (
+              <Link
+                key={banner.id}
+                href={banner.href}
+                className="block overflow-hidden rounded-xl"
+              >
+                <Image
+                  src={banner.image}
+                  alt={banner.alt}
+                  width={1200}
+                  height={480}
+                  unoptimized
+                  className="h-auto w-full"
+                />
+              </Link>
+            ) : (
+              <Image
+                key={banner.id}
+                src={banner.image}
+                alt={banner.alt}
+                width={1200}
+                height={480}
+                unoptimized
+                className="h-auto w-full rounded-xl"
+              />
+            ),
+          )}
         </div>
-        <BrandLetterNav activeKeys={activeKeys} />
-        <BrandDirectory groups={groups} />
-      </div>
-    </div>
+      )}
+
+      <BrandBrowser brands={brands} />
+    </Container>
   );
 }

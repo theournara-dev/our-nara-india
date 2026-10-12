@@ -47,6 +47,8 @@ function revalidateCatalog() {
   revalidatePath("/");
   // Category-page banners show up on every category listing.
   revalidatePath("/category", "layout");
+  // The brands page's top pair.
+  revalidatePath("/brands");
 }
 
 /**
