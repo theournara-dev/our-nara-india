@@ -877,6 +877,11 @@ model AmbassadorApplication {
   phone       String?
   country     String?
   city        String?
+  // Details the client's mock adds: gender, the product they would promote,
+  // and a street address (country/city stay separate).
+  gender      String?
+  product     String?
+  address     String?
   instagram   String?
   tiktok      String?
   youtube     String?
@@ -952,6 +957,8 @@ model SiteConfig {
   topBanner Json?
   // The store-picker popup: heading, note and one block per store.
   switcher  Json?
+  // /ambassador: the ordered long-form images beside the application form.
+  ambassadorImages Json? @map("ambassador_images")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

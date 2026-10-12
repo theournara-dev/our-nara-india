@@ -31,6 +31,10 @@ const ambassadorApplicationSchema = z
     phone: safeText(40, { min: 7, message: "Please add a phone number." }),
     country: safeText(80, { min: 2, message: "Please select your country." }),
     city: safeText(80).optional(),
+    gender: safeText(40).optional(),
+    /** The product the applicant would promote (picked from the catalog). */
+    product: safeText(200).optional(),
+    address: safeText(200).optional(),
     instagram: safeText(200).optional(),
     tiktok: safeText(200).optional(),
     youtube: safeText(200).optional(),
@@ -65,8 +69,7 @@ export type AmbassadorApplicationInput = z.infer<
 >;
 
 export type AmbassadorApplicationResult =
-  | { ok: true }
-  | { ok: false; error: string };
+  { ok: true } | { ok: false; error: string };
 
 /**
  * Per-IP rate limit: 3 applications per 10 minutes. Best-effort per instance
@@ -131,6 +134,9 @@ export async function submitAmbassadorApplication(
         phone: orNull(data.phone),
         country: orNull(data.country),
         city: orNull(data.city),
+        gender: orNull(data.gender),
+        product: orNull(data.product),
+        address: orNull(data.address),
         instagram: orNull(data.instagram),
         tiktok: orNull(data.tiktok),
         youtube: orNull(data.youtube),
@@ -155,6 +161,9 @@ export async function submitAmbassadorApplication(
     `Email: ${data.email}`,
     `Phone: ${data.phone || "—"}`,
     `Location: ${[data.country, data.city].filter(Boolean).join(", ") || "—"}`,
+    `Address: ${data.address || "—"}`,
+    `Gender: ${data.gender || "—"}`,
+    `Product: ${data.product || "—"}`,
     `Instagram: ${data.instagram || "—"}`,
     `TikTok: ${data.tiktok || "—"}`,
     `YouTube: ${data.youtube || "—"}`,

@@ -14,6 +14,7 @@ import {
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
+  AmbassadorImage,
   SiteContent,
   SwitcherBlock,
   SwitcherContent,
@@ -117,6 +118,7 @@ function SiteSettingsInner({
         phone: current.phone,
         address: current.address,
         topBanner: current.topBanner,
+        ambassador: current.ambassador,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
         dispatchCutoffHour: current.dispatchCutoffHour,
@@ -127,6 +129,7 @@ function SiteSettingsInner({
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
     gate.registerHandler("banner", () => saveStore("banner"));
+    gate.registerHandler("ambassador", () => saveStore("ambassador"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
     gate.registerHandler("switcher", () =>
@@ -384,6 +387,15 @@ function SiteSettingsInner({
         onChange={(topBanner) => patch({ topBanner })}
         onSave={() => void gate.save("banner")}
         saving={saving === "banner"}
+        disabled={saving !== null}
+      />
+
+      {/* ── Ambassador page ─────────────────────────────────────────────── */}
+      <AmbassadorEditor
+        images={current.ambassador.images}
+        onChange={(images) => patch({ ambassador: { images } })}
+        onSave={() => void gate.save("ambassador")}
+        saving={saving === "ambassador"}
         disabled={saving !== null}
       />
 
@@ -672,6 +684,141 @@ function TopBannerEditor({
           className={saveBtnCls}
         >
           {saving ? "Saving…" : "Save top banner"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/** Editor for the /ambassador page's long image column (per store). */
+function AmbassadorEditor({
+  images,
+  onChange,
+  onSave,
+  saving,
+  disabled,
+}: {
+  images: AmbassadorImage[];
+  onChange: (images: AmbassadorImage[]) => void;
+  onSave: () => void;
+  saving: boolean;
+  disabled: boolean;
+}) {
+  function update(index: number, patchImage: Partial<AmbassadorImage>) {
+    onChange(
+      images.map((img, i) => (i === index ? { ...img, ...patchImage } : img)),
+    );
+  }
+
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  }
+
+  return (
+    <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+      <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+        Ambassador page
+      </h2>
+      <p className="mb-4 text-xs text-zinc-400">
+        The long images that scroll beside the application form on this
+        store&apos;s /ambassador page, in order. One image runs full width;
+        stack the whole program story as several images. Empty shows the
+        built-in perks list instead.
+      </p>
+
+      <div className="space-y-3">
+        {images.map((img, i) => (
+          <div
+            key={img.id}
+            className="space-y-3 rounded-lg border border-zinc-100 bg-zinc-50/60 p-3"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="rounded bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600">
+                Image {i + 1}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => move(i, -1)}
+                  disabled={disabled || i === 0}
+                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
+                  aria-label={`Move image ${i + 1} up`}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(i, 1)}
+                  disabled={disabled || i === images.length - 1}
+                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
+                  aria-label={`Move image ${i + 1} down`}
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange(images.filter((_, j) => j !== i))}
+                  disabled={disabled}
+                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-rose-500 hover:bg-rose-50 disabled:opacity-40"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+            <ImageField
+              label="Image"
+              value={img.image}
+              onChange={(image) => update(i, { image })}
+              hint="Full-width long-form artwork."
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className={labelCls}>Alt text (optional)</span>
+                <input
+                  value={img.alt ?? ""}
+                  onChange={(e) =>
+                    update(i, { alt: e.target.value || undefined })
+                  }
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Link (optional)</span>
+                <input
+                  value={img.href ?? ""}
+                  onChange={(e) =>
+                    update(i, { href: e.target.value || undefined })
+                  }
+                  placeholder="/products/… or https://…"
+                  className={inputCls}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onChange([...images, { id: newId("amb"), image: "" }])}
+        disabled={disabled}
+        className="mt-3 rounded border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-point-300 hover:text-point-600 disabled:opacity-60"
+      >
+        + Add image
+      </button>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled}
+          className={saveBtnCls}
+        >
+          {saving ? "Saving…" : "Save ambassador images"}
         </button>
       </div>
     </section>

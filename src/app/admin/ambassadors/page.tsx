@@ -202,6 +202,18 @@ export default async function AdminAmbassadorsPage({
                         : ""}
                     </p>
 
+                    {(a.gender || a.product || a.address) && (
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {[
+                          a.gender ? `Gender: ${a.gender}` : null,
+                          a.product ? `Product: ${a.product}` : null,
+                          a.address ? `Address: ${a.address}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+
                     <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <SocialChip
                         label="Instagram"

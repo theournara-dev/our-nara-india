@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   DEFAULT_SWITCHER_CONTENT,
+  normalizeAmbassadorImages,
   normalizeSwitcher,
   normalizeTopBanner,
   SWITCHER_NUDGE_ICONS,
@@ -41,6 +42,10 @@ const contentInput = z.object({
     .nullable()
     .optional(),
   dispatchCutoffHour: z.coerce.number().int().min(0).max(23).optional(),
+  // ── /ambassador left column ────────────────────────────────────────────
+  ambassador: z
+    .object({ images: z.array(z.unknown()).max(20, "At most 20 images") })
+    .optional(),
   // ── Invoice "from" block ────────────────────────────────────────────────
   invoice: z
     .object({
@@ -92,6 +97,13 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
       : {}),
     ...(data.dispatchCutoffHour !== undefined
       ? { dispatchCutoffHour: data.dispatchCutoffHour }
+      : {}),
+    ...(data.ambassador
+      ? {
+          ambassadorImages: normalizeAmbassadorImages(data.ambassador.images, {
+            allowEmpty: true,
+          }),
+        }
       : {}),
     ...(data.invoice
       ? {

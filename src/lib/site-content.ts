@@ -84,6 +84,15 @@ export type SwitcherNudge = {
   text: string;
 };
 
+/** One of the long-form images beside the /ambassador application form. */
+export type AmbassadorImage = {
+  id: string;
+  image: string;
+  alt?: string;
+  /** Optional link the image opens. */
+  href?: string;
+};
+
 export type SiteContent = {
   version: SiteVersion;
   /** Support address shown in the footer and the order emails. */
@@ -107,6 +116,8 @@ export type SiteContent = {
   };
   topBanner: TopBannerBlock[];
   switcher: SwitcherContent;
+  /** /ambassador: the ordered long-form images (left column). */
+  ambassador: { images: AmbassadorImage[] };
 };
 
 const DEFAULT_BANNER: TopBannerBlock[] = [
@@ -188,6 +199,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
+    ambassador: { images: [] },
   },
   global: {
     version: "global",
@@ -208,6 +220,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
+    ambassador: { images: [] },
   },
 };
 
@@ -220,6 +233,31 @@ function str(value: unknown, fallback = ""): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Parse the /ambassador image list. Images without artwork are dropped on the
+ * storefront read, but the admin save path passes `allowEmpty` so a row the
+ * admin is still filling in survives a reload.
+ */
+export function normalizeAmbassadorImages(
+  value: unknown,
+  options: { allowEmpty?: boolean } = {},
+): AmbassadorImage[] {
+  if (!Array.isArray(value)) return [];
+  const images: AmbassadorImage[] = [];
+  value.forEach((raw, i) => {
+    if (!isRecord(raw)) return;
+    const image = str(raw.image);
+    if (!image && !options.allowEmpty) return;
+    images.push({
+      id: str(raw.id) || `a${i + 1}`,
+      image,
+      alt: str(raw.alt) || undefined,
+      href: str(raw.href) || undefined,
+    });
+  });
+  return images;
 }
 
 /**
@@ -340,6 +378,7 @@ export function siteContentFromRow(
     invoiceNote: string | null;
     topBanner: unknown;
     switcher: unknown;
+    ambassadorImages: unknown;
   } | null,
 ): SiteContent {
   const base = DEFAULT_SITE_CONTENT[version];
@@ -367,5 +406,11 @@ export function siteContentFromRow(
         ? base.topBanner
         : normalizeTopBanner(row.topBanner, []),
     switcher: normalizeSwitcher(row.switcher, base.switcher),
+    // A stored (even empty) list wins: clearing every image in the admin
+    // removes the left column instead of bringing the defaults back.
+    ambassador:
+      row.ambassadorImages == null
+        ? base.ambassador
+        : { images: normalizeAmbassadorImages(row.ambassadorImages) },
   };
 }
