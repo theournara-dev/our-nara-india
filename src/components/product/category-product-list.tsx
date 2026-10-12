@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { ProductGrid } from "@/components/product/product-grid";
@@ -15,19 +16,27 @@ import {
   type CategoryFilters,
   type FilterableProduct,
 } from "@/lib/category-filters";
-import {
-  getSubcategoryForProduct,
-  type Subcategory,
-} from "@/data/subcategories";
 import type { ProductCard } from "@/data/products";
 import { useSiteVersion } from "@/components/site-version-provider";
+
+/**
+ * A mid-level category of the listing. Structurally the data layer's
+ * `CategoryTab` — kept structural so this client component never imports the
+ * server data module.
+ */
+export interface ListingTab {
+  slug: string;
+  name: string;
+  /** Tile artwork; empty renders the name alone. */
+  image: string | null;
+}
 
 interface CategoryProductListProps {
   products: ProductCard[];
   /** Columns on large screens (default 5 for category pages). */
   columns?: 3 | 4 | 5;
-  /** Sub-categories of the listing, when the page has any. */
-  subcategories?: Subcategory[];
+  /** Mid-level categories of the listing, already filtered to non-empty. */
+  subcategories?: ListingTab[];
   /** Filters parsed from the URL, so a shared link opens pre-filtered. */
   initialFilters?: CategoryFilters;
 }
@@ -72,11 +81,6 @@ export function CategoryProductList({
     window.history.replaceState(null, "", url);
   }, [filters]);
 
-  const subOf = (slug: string) => getSubcategoryForProduct(slug) ?? undefined;
-
-  // Every facet works off the browsing store's view of the product: its own
-  // price and its own sale state (a product that is a pre-order in India can be
-  // a ready-to-ship buy-now internationally).
   const rows = useMemo(
     () =>
       products.map((card) => ({
@@ -92,26 +96,14 @@ export function CategoryProductList({
   );
 
   // Facet counts ignore their own facet, the usual listing behaviour.
-  const brands = useMemo(
-    () => brandCounts(views, filters, subOf),
-    [views, filters],
-  );
+  const brands = useMemo(() => brandCounts(views, filters), [views, filters]);
   const availability = useMemo(
-    () => availabilityCounts(views, filters, subOf),
+    () => availabilityCounts(views, filters),
     [views, filters],
   );
-  const subCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    const withoutSub = { ...filters, sub: undefined };
-    for (const view of filterCategoryProducts(views, withoutSub, subOf)) {
-      const slug = subOf(view.slug);
-      if (slug) counts.set(slug, (counts.get(slug) ?? 0) + 1);
-    }
-    return counts;
-  }, [views, filters]);
 
   const visible = useMemo(
-    () => filterCategoryProducts(views, filters, subOf),
+    () => filterCategoryProducts(views, filters),
     [views, filters],
   );
 
@@ -163,19 +155,20 @@ export function CategoryProductList({
 
   return (
     <div>
-      {/* Sub-categories stay on top, centred, exactly like the original. */}
+      {/* Mid-level categories stay on top, centred, as image tiles (the
+          original shows icons here); empty ones never reach this list. */}
       {subcategories.length > 0 && (
-        <div className="mb-2 flex flex-wrap justify-center gap-2">
-          <SubChip
+        <div className="mb-4 flex justify-center gap-2 overflow-x-auto pb-1 md:gap-5 max-md:justify-start">
+          <SubTile
             label="All"
             active={filters.sub == null}
             onClick={() => setFilters({ ...filters, sub: undefined })}
           />
           {subcategories.map((s) => (
-            <SubChip
+            <SubTile
               key={s.slug}
               label={s.name}
-              count={subCounts.get(s.slug) ?? 0}
+              image={s.image ?? undefined}
               active={filters.sub === s.slug}
               onClick={() => setFilters({ ...filters, sub: s.slug })}
             />
@@ -443,15 +436,18 @@ function FilterGroup({
   );
 }
 
-/** A sub-category pill, styled like the original category page's chips. */
-function SubChip({
+/**
+ * A mid-level category tile: artwork (name alone when no image is uploaded)
+ * over the label, tinted while the listing is filtered by it.
+ */
+function SubTile({
   label,
-  count,
+  image,
   active,
   onClick,
 }: {
   label: string;
-  count?: number;
+  image?: string;
   active: boolean;
   onClick: () => void;
 }) {
@@ -460,14 +456,42 @@ function SubChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm transition-colors ${
-        active
-          ? "border-point-500 bg-point-500 text-white"
-          : "border-[#e9e9e9] text-[#555] hover:border-point-500 hover:text-point-500"
-      }`}
+      className="group flex w-[76px] shrink-0 cursor-pointer flex-col items-center gap-1.5 md:w-[92px]"
     >
-      {label}
-      {count != null ? ` (${count})` : ""}
+      <span
+        className={`grid h-[62px] w-[62px] place-items-center overflow-hidden rounded-full border-2 bg-white transition-colors md:h-[76px] md:w-[76px] ${
+          active
+            ? "border-point-500"
+            : "border-transparent group-hover:border-[#e9e9e9]"
+        }`}
+      >
+        {image ? (
+          <Image
+            src={image}
+            alt=""
+            width={160}
+            height={160}
+            unoptimized
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span
+            className={`text-[11px] font-semibold md:text-xs ${
+              active ? "text-point-500" : "text-[#999]"
+            }`}
+            aria-hidden
+          >
+            {label.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+      </span>
+      <span
+        className={`line-clamp-2 text-center text-[12px] leading-4 md:text-[13px] ${
+          active ? "font-semibold text-point-500" : "text-[#555]"
+        }`}
+      >
+        {label}
+      </span>
     </button>
   );
 }

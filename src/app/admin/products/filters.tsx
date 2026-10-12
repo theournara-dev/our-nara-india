@@ -7,16 +7,20 @@ export function ProductFilters({
   search,
   brand,
   category,
+  sub,
   active,
   brands,
   categories,
+  subcategories,
 }: {
   search: string;
   brand: string;
   category: string;
+  sub: string;
   active: string;
   brands: { id: string; name: string }[];
   categories: { id: string; name: string }[];
+  subcategories: { id: string; name: string; parentName: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -32,10 +36,12 @@ export function ProductFilters({
     const s = String(fd.get("search") ?? "").trim();
     const b = String(fd.get("brand") ?? "");
     const c = String(fd.get("category") ?? "");
+    const sub = String(fd.get("sub") ?? "");
     const a = String(fd.get("active") ?? "");
     if (s) sp.set("search", s);
     if (b) sp.set("brand", b);
     if (c) sp.set("category", c);
+    if (sub) sp.set("sub", sub);
     if (a) sp.set("active", a);
     const qs = sp.toString();
     setAction("apply");
@@ -52,7 +58,7 @@ export function ProductFilters({
 
   return (
     <form
-      key={`${search}|${brand}|${category}|${active}`}
+      key={`${search}|${brand}|${category}|${sub}|${active}`}
       ref={formRef}
       onSubmit={apply}
       className="mb-4 flex flex-wrap items-end gap-3"
@@ -91,6 +97,19 @@ export function ProductFilters({
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-zinc-500">
+          Subcategory
+        </span>
+        <select name="sub" defaultValue={sub} className={fieldCls}>
+          <option value="">All subcategories</option>
+          {subcategories.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.parentName ? `${s.parentName} · ${s.name}` : s.name}
             </option>
           ))}
         </select>

@@ -9,6 +9,7 @@ import { PopupHost } from "@/components/layout/popup-host";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
 import { SiteVersionProvider } from "@/components/site-version-provider";
+import { getCategoryNav } from "@/data/categories";
 import { SITE } from "@/lib/constants";
 import { getSiteConfig } from "@/lib/site-config";
 import { getSiteUrl, resolveRequestSiteVersion } from "@/lib/site-version";
@@ -70,11 +71,15 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // admin saves them. Both versions are read because the store switcher is
   // client-side: the cart and product page must re-price delivery on switch
   // without waiting for a server round trip.
-  const [siteContent, localSite, globalSite] = await Promise.all([
-    getSiteConfig(initialVersion),
-    getSiteConfig("local"),
-    getSiteConfig("global"),
-  ]);
+  const [siteContent, localSite, globalSite, navCategories] = await Promise.all(
+    [
+      getSiteConfig(initialVersion),
+      getSiteConfig("local"),
+      getSiteConfig("global"),
+      // The header menu mirrors the admin's category tree.
+      getCategoryNav(),
+    ],
+  );
   const shippingByVersion = {
     local: {
       shippingCents: localSite.shippingCents,
@@ -109,7 +114,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           brandLogo={siteContent.switcher.brandLogo}
         >
           <CartProvider>
-            <Header siteContent={siteContent} />
+            <Header siteContent={siteContent} navCategories={navCategories} />
             <main className="flex-1">{children}</main>
             <Footer />
           </CartProvider>

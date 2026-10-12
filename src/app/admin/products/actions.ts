@@ -48,6 +48,12 @@ const productInput = z.object({
   ),
   brandId: z.string().min(1, "Brand is required"),
   categoryId: z.string().min(1, "Category is required"),
+  /**
+   * Mid-level categories this product sits in (0..n). They belong under
+   * `categoryId`; a product may be in several (a cleansing tissue is both
+   * Cleansing and Masks & Patches).
+   */
+  subcategoryIds: z.array(z.string()).default([]),
   summary: safeMultiline(500).optional(),
   shortTags: z.array(safeText(60)).default([]),
   description: safeMultiline(50000).optional(),
@@ -97,6 +103,23 @@ const productInput = z.object({
 
 export type ProductInput = z.infer<typeof productInput>;
 type VariantInput = z.infer<typeof variantInput>;
+
+/**
+ * Resolve the mid-level category ids for a product: only rows that exist and
+ * sit under the chosen top-level category are kept, so a stale form never
+ * files a product under another root.
+ */
+async function resolveSubcategoryIds(
+  categoryId: string,
+  subcategoryIds: string[],
+): Promise<string[]> {
+  if (subcategoryIds.length === 0) return [];
+  const rows = await db.category.findMany({
+    where: { id: { in: subcategoryIds }, parentId: categoryId },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
 
@@ -163,6 +186,10 @@ export async function createProduct(input: ProductInput) {
     name: data.name,
     slug,
   });
+  const subcategoryIds = await resolveSubcategoryIds(
+    data.categoryId,
+    data.subcategoryIds,
+  );
 
   const product = await db.product.create({
     data: {
@@ -191,6 +218,9 @@ export async function createProduct(input: ProductInput) {
       seoDescription: data.seoDescription || null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
       buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
+      subcategories: {
+        create: subcategoryIds.map((categoryId) => ({ categoryId })),
+      },
       variants: {
         create: data.variants.map((v, i) => ({
           optionLabel: v.optionLabel || null,
@@ -253,6 +283,10 @@ export async function updateProduct(id: string, input: ProductInput) {
     { name: data.name, slug },
     currentSkuById,
   );
+  const subcategoryIds = await resolveSubcategoryIds(
+    data.categoryId,
+    data.subcategoryIds,
+  );
 
   await db.$transaction(
     [
@@ -288,6 +322,15 @@ export async function updateProduct(id: string, input: ProductInput) {
       }),
       // Blocks carry no external references, so replacing them wholesale is fine.
       db.productBlock.deleteMany({ where: { productId: id } }),
+      // Mid-level assignments are replaced with exactly what the form sent.
+      db.productSubcategory.deleteMany({ where: { productId: id } }),
+      db.productSubcategory.createMany({
+        data: subcategoryIds.map((categoryId) => ({
+          productId: id,
+          categoryId,
+        })),
+        skipDuplicates: true,
+      }),
       ...(removedIds.length
         ? [db.productVariant.deleteMany({ where: { id: { in: removedIds } } })]
         : []),
@@ -427,8 +470,12 @@ export async function createBrand(name: string) {
   return brand;
 }
 
-/** Create a category (used inline in the product form). Returns the new category. */
-export async function createCategory(name: string) {
+/**
+ * Create a category (used inline in the product form). Returns the new
+ * category. `parentId` files it as a mid-level category under that top-level
+ * category; without it the new row is top-level.
+ */
+export async function createCategory(name: string, parentId?: string) {
   await requireAdmin();
   const base = slugify(name) || "category";
   let candidate = base;
@@ -443,9 +490,14 @@ export async function createCategory(name: string) {
     i++;
   }
   const category = await db.category.create({
-    data: { slug: candidate, name: name.trim() },
-    select: { id: true, name: true },
+    data: {
+      slug: candidate,
+      name: name.trim(),
+      parentId: parentId || null,
+    },
+    select: { id: true, name: true, parentId: true },
   });
   revalidateCatalog();
+  revalidatePath("/admin/categories");
   return category;
 }

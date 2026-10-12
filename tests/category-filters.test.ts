@@ -17,6 +17,7 @@ type P = {
   slug: string;
   priceCents: number;
   saleState: "preorder" | "buynow" | "unavailable";
+  subcategorySlugs: string[];
   brand: { slug: string; name: string };
 };
 
@@ -25,35 +26,31 @@ const products: P[] = [
     slug: "a",
     priceCents: 29_900,
     saleState: "buynow",
+    subcategorySlugs: ["masks"],
     brand: { slug: "acnes", name: "ACNES" },
   },
   {
     slug: "b",
     priceCents: 50_000,
     saleState: "preorder",
+    subcategorySlugs: ["masks"],
     brand: { slug: "hyggee", name: "HYGGEE" },
   },
   {
     slug: "c",
     priceCents: 190_000,
     saleState: "preorder",
+    subcategorySlugs: ["cleansing"],
     brand: { slug: "hyggee", name: "HYGGEE" },
   },
   {
     slug: "d",
     priceCents: 153_000,
     saleState: "buynow",
+    subcategorySlugs: ["cleansing"],
     brand: { slug: "la-theorie", name: "LA THEORIE" },
   },
 ];
-
-const subs: Record<string, string> = {
-  a: "masks",
-  b: "masks",
-  c: "cleansing",
-  d: "cleansing",
-};
-const subOf = (slug: string) => subs[slug];
 
 test("parseCategoryFilters reads the URL params and drops nonsense", () => {
   const f = parseCategoryFilters({
@@ -93,7 +90,7 @@ test("filters combine across facets", () => {
     min: "1000",
     avail: "preorder",
   });
-  const out = filterCategoryProducts(products, f, subOf);
+  const out = filterCategoryProducts(products, f);
   assert.deepEqual(
     out.map((p) => p.slug),
     ["c"],
@@ -101,14 +98,35 @@ test("filters combine across facets", () => {
   const none = filterCategoryProducts(
     products,
     parseCategoryFilters({ brand: "acnes", avail: "preorder" }),
-    subOf,
   );
   assert.deepEqual(none, []);
 });
 
+test("a product in several mid-level categories matches each of them", () => {
+  const both: P = {
+    slug: "tissue",
+    priceCents: 10_000,
+    saleState: "buynow",
+    subcategorySlugs: ["cleansing", "masks-patches"],
+    brand: { slug: "daiso", name: "DAISO" },
+  };
+  const masks = parseCategoryFilters({ sub: "masks-patches" });
+  const cleansing = parseCategoryFilters({ sub: "cleansing" });
+  const makeUp = parseCategoryFilters({ sub: "lip-makeup" });
+  assert.deepEqual(
+    filterCategoryProducts([both], masks).map((p) => p.slug),
+    ["tissue"],
+  );
+  assert.deepEqual(
+    filterCategoryProducts([both], cleansing).map((p) => p.slug),
+    ["tissue"],
+  );
+  assert.deepEqual(filterCategoryProducts([both], makeUp), []);
+});
+
 test("brandCounts ignores the brand facet but honours the others", () => {
   const f = parseCategoryFilters({ sub: "masks", brand: "acnes" });
-  const counts = brandCounts(products, f, subOf);
+  const counts = brandCounts(products, f);
   assert.deepEqual(counts, [
     { slug: "acnes", name: "ACNES", count: 1 },
     { slug: "hyggee", name: "HYGGEE", count: 1 },
@@ -144,6 +162,7 @@ const dualStore = {
   globalIsActive: true,
   globalIsPreOrder: false,
   globalBuyNowEnabled: true,
+  subcategorySlugs: ["masks"],
   brand: { slug: "moolda", name: "MOOLDA" },
 };
 
@@ -157,6 +176,16 @@ test("resolveForStore prices and buckets per store", () => {
   assert.equal(global.saleState, "buynow");
 });
 
+test("resolveForStore carries the subcategory assignments", () => {
+  const local = resolveForStore(dualStore, "local");
+  assert.deepEqual(local.subcategorySlugs, ["masks"]);
+  const none = resolveForStore(
+    { slug: "y", priceCents: 1, brand: { slug: "acnes" } },
+    "local",
+  );
+  assert.deepEqual(none.subcategorySlugs, []);
+});
+
 test("a pre-order locally is ready-to-ship internationally", () => {
   // The exact confusion the facet used to have: the shared pre-order flag put
   // this product in the pre-order bucket on both storefronts.
@@ -166,24 +195,24 @@ test("a pre-order locally is ready-to-ship internationally", () => {
   const preorder = parseCategoryFilters({ avail: "preorder" });
 
   assert.deepEqual(
-    filterCategoryProducts([global], ready, subOf).map((p) => p.slug),
+    filterCategoryProducts([global], ready).map((p) => p.slug),
     ["x"],
   );
-  assert.deepEqual(filterCategoryProducts([global], preorder, subOf), []);
+  assert.deepEqual(filterCategoryProducts([global], preorder), []);
   assert.deepEqual(
-    filterCategoryProducts([local], preorder, subOf).map((p) => p.slug),
+    filterCategoryProducts([local], preorder).map((p) => p.slug),
     ["x"],
   );
-  assert.deepEqual(filterCategoryProducts([local], ready, subOf), []);
+  assert.deepEqual(filterCategoryProducts([local], ready), []);
 });
 
 test("the price facet follows the store's price", () => {
   const global = resolveForStore(dualStore, "global");
   const under1500 = parseCategoryFilters({ max: "1500" });
-  assert.deepEqual(filterCategoryProducts([global], under1500, subOf), []);
+  assert.deepEqual(filterCategoryProducts([global], under1500), []);
   const local = resolveForStore(dualStore, "local");
   assert.deepEqual(
-    filterCategoryProducts([local], under1500, subOf).map((p) => p.slug),
+    filterCategoryProducts([local], under1500).map((p) => p.slug),
     ["x"],
   );
 });
@@ -207,14 +236,13 @@ test("a not-yet-sellable product sits in no availability bucket", () => {
   const counts = availabilityCounts(
     [comingSoon] as FilterableProduct[],
     EMPTY_CATEGORY_FILTERS,
-    subOf,
   );
   assert.deepEqual(counts, { preorder: 0, ready: 0 });
   const ready = parseCategoryFilters({ avail: "ready" });
-  assert.deepEqual(filterCategoryProducts([comingSoon], ready, subOf), []);
+  assert.deepEqual(filterCategoryProducts([comingSoon], ready), []);
   // With no availability facet it still shows.
   assert.equal(
-    filterCategoryProducts([comingSoon], EMPTY_CATEGORY_FILTERS, subOf).length,
+    filterCategoryProducts([comingSoon], EMPTY_CATEGORY_FILTERS).length,
     1,
   );
 });
@@ -224,12 +252,12 @@ test("availabilityCounts counts each store's buckets", () => {
     slug: p.slug,
     priceCents: p.priceCents,
     saleState: p.saleState,
+    subcategorySlugs: p.subcategorySlugs,
     brand: p.brand,
   }));
   const counts = availabilityCounts(
     store as FilterableProduct[],
     EMPTY_CATEGORY_FILTERS,
-    subOf,
   );
   assert.deepEqual(counts, { preorder: 2, ready: 2 });
 });

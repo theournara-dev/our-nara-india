@@ -27,8 +27,8 @@ export default async function NewProductPage({
       select: { id: true, name: true },
     }),
     db.category.findMany({
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, parentId: true },
     }),
     getProductInfoTemplate(),
   ]);

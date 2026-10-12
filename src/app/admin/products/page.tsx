@@ -1,19 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
 import { db } from "@/lib/db";
-import { formatMoney } from "@/lib/money";
-import {
-  toggleProductActive,
-  softDeleteProduct,
-  hardDeleteProduct,
-  setProductStoreFlag,
-  toggleBrandBuyNow,
-} from "./actions";
-import { ProductRowActions } from "./row-actions";
+import { toggleBrandBuyNow } from "./actions";
 import { ProductFilters } from "./filters";
 import { FeatureToggle } from "@/components/admin/feature-toggle";
-import { StoreFlagToggles } from "@/components/admin/store-flag-toggles";
 import { ProductsTabs } from "@/components/admin/products-tabs";
+import { ProductsTable } from "@/components/admin/products-table";
 import { currentQuery } from "./lib";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +32,7 @@ type SearchParams = Promise<{
   search?: string;
   brand?: string;
   category?: string;
+  sub?: string;
   active?: string;
 }>;
 
@@ -54,6 +46,7 @@ export default async function AdminProductsPage({
   const search = params.search?.trim() ?? "";
   const brand = params.brand ?? "";
   const category = params.category ?? "";
+  const sub = params.sub ?? "";
   const active = params.active ?? "";
 
   const where = {
@@ -67,6 +60,8 @@ export default async function AdminProductsPage({
       : {}),
     ...(brand ? { brandId: brand } : {}),
     ...(category ? { categoryId: category } : {}),
+    // A mid-level category filter asks for the products filed under it.
+    ...(sub ? { subcategories: { some: { categoryId: sub } } } : {}),
     ...(active === "active"
       ? { isActive: true }
       : active === "inactive"
@@ -74,22 +69,31 @@ export default async function AdminProductsPage({
         : {}),
   };
 
-  const [products, total, brands, categories] = await Promise.all([
-    db.product.findMany({
-      where,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      orderBy: { createdAt: "desc" },
-      include: {
-        brand: true,
-        category: true,
-        variants: true,
-      },
-    }),
-    db.product.count({ where }),
-    db.brand.findMany({ orderBy: { name: "asc" } }),
-    db.category.findMany({ orderBy: { sortOrder: "asc" } }),
-  ]);
+  const [products, total, brands, categories, subcategories] =
+    await Promise.all([
+      db.product.findMany({
+        where,
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+        orderBy: { createdAt: "desc" },
+        include: {
+          brand: true,
+          category: true,
+          variants: true,
+          subcategories: {
+            include: { category: { select: { id: true, name: true } } },
+          },
+        },
+      }),
+      db.product.count({ where }),
+      db.brand.findMany({ orderBy: { name: "asc" } }),
+      db.category.findMany({ orderBy: { sortOrder: "asc" } }),
+      db.category.findMany({
+        where: { parentId: { not: null } },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, parent: { select: { name: true } } },
+      }),
+    ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const selectedBrand = brands.find((b) => b.id === brand);
@@ -100,6 +104,7 @@ export default async function AdminProductsPage({
     search,
     brand,
     category,
+    sub,
     active,
     page: String(page),
   });
@@ -109,6 +114,7 @@ export default async function AdminProductsPage({
     if (search) sp.set("search", search);
     if (brand) sp.set("brand", brand);
     if (category) sp.set("category", category);
+    if (sub) sp.set("sub", sub);
     if (active) sp.set("active", active);
     for (const [k, v] of Object.entries(overrides)) {
       if (v) sp.set(k, v);
@@ -146,9 +152,15 @@ export default async function AdminProductsPage({
         search={search}
         brand={brand}
         category={category}
+        sub={sub}
         active={active}
         brands={brands}
         categories={categories}
+        subcategories={subcategories.map((s) => ({
+          id: s.id,
+          name: s.name,
+          parentName: s.parent?.name ?? "",
+        }))}
       />
 
       {/* Brand-level feature rollout (shown when a brand is filtered) */}
@@ -182,132 +194,36 @@ export default async function AdminProductsPage({
         <span className="font-medium text-zinc-500">buy now</span>. Click a
         button to toggle it; hover for the full label.
       </p>
-      <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead>
-            <tr className="border-b border-zinc-100 text-[11px] uppercase tracking-wide text-zinc-400">
-              <th className="px-2 py-2 font-medium">Product</th>
-              <th className="px-2 py-2 font-medium">Brand</th>
-              <th className="px-2 py-2 font-medium">Category</th>
-              <th className="px-2 py-2 font-medium">Price</th>
-              <th className="px-2 py-2 font-medium">Stock</th>
-              <th className="px-2 py-2 font-medium">
-                Stores
-                <span className="ml-1 font-normal normal-case text-zinc-300">
-                  IN · GL
-                </span>
-              </th>
-              <th className="px-2 py-2 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-2 py-8 text-center text-sm text-zinc-500"
-                >
-                  No products found.
-                </td>
-              </tr>
-            ) : (
-              products.map((p) => {
-                const stock = p.variants.reduce((s, v) => s + v.stock, 0);
-                return (
-                  <tr
-                    key={p.id}
-                    className="border-b border-zinc-50 last:border-0"
-                  >
-                    <td className="px-2 py-1.5">
-                      <div className="flex items-center gap-2">
-                        {p.images[0] ? (
-                          <Image
-                            src={p.images[0]}
-                            alt={p.name}
-                            width={32}
-                            height={32}
-                            unoptimized
-                            loading="lazy"
-                            className="h-8 w-8 shrink-0 rounded object-cover"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 shrink-0 rounded bg-zinc-100" />
-                        )}
-                        <div className="min-w-0">
-                          <Link
-                            href={`/admin/products/${p.id}/edit${filterQuery}`}
-                            className="block max-w-[200px] truncate text-sm font-medium text-zinc-900 hover:text-point-500"
-                          >
-                            {p.name}
-                          </Link>
-                          <span className="text-[11px] text-zinc-400">
-                            {p.slug}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-2 py-1.5 text-sm text-zinc-600">
-                      {p.brand.name}
-                    </td>
-                    <td className="px-2 py-1.5 text-sm text-zinc-600">
-                      {p.category.name}
-                    </td>
-                    <td className="px-2 py-1.5 text-sm text-zinc-900">
-                      <div>
-                        {formatMoney(p.priceCents, p.currency, {
-                          convert: false,
-                        })}
-                      </div>
-                      {/* Second line so admins can spot products without a
-                          dedicated international price at a glance. */}
-                      <div className="text-[11px] text-zinc-400">
-                        {p.globalPriceCents != null
-                          ? `Intl ${formatMoney(p.globalPriceCents, p.currency, { convert: false })}`
-                          : "Intl —"}
-                      </div>
-                    </td>
-                    <td className="px-2 py-1.5 text-sm text-zinc-600">
-                      {stock}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {/* One compact block per store instead of a column per
-                          flag: two rows (IN / GL) × show · pre-order · buy now,
-                          each button toggles its own flag. */}
-                      <StoreFlagToggles
-                        id={p.id}
-                        name={p.name}
-                        onChange={setProductStoreFlag}
-                        flags={{
-                          local: {
-                            show: p.isActive,
-                            preorder: p.isPreOrder,
-                            buynow: p.buyNowEnabled,
-                          },
-                          global: {
-                            show: p.globalIsActive,
-                            preorder: p.globalIsPreOrder,
-                            buynow: p.globalBuyNowEnabled,
-                          },
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5 text-right">
-                      <ProductRowActions
-                        id={p.id}
-                        isActive={p.isActive}
-                        editHref={`/admin/products/${p.id}/edit${filterQuery}`}
-                        toggle={toggleProductActive}
-                        remove={softDeleteProduct}
-                        hardDelete={hardDeleteProduct}
-                      />
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      <ProductsTable
+        filterQuery={filterQuery}
+        subcategoryOptions={subcategories.map((s) => ({
+          id: s.id,
+          name: s.name,
+          parentName: s.parent?.name ?? "",
+        }))}
+        rows={products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          image: p.images[0] ?? null,
+          brandName: p.brand.name,
+          categoryName: p.category.name,
+          priceCents: p.priceCents,
+          globalPriceCents: p.globalPriceCents,
+          currency: p.currency,
+          stock: p.variants.reduce((sum, v) => sum + v.stock, 0),
+          isActive: p.isActive,
+          isPreOrder: p.isPreOrder,
+          buyNowEnabled: p.buyNowEnabled,
+          globalIsActive: p.globalIsActive,
+          globalIsPreOrder: p.globalIsPreOrder,
+          globalBuyNowEnabled: p.globalBuyNowEnabled,
+          subcategories: p.subcategories.map((s) => ({
+            id: s.category.id,
+            name: s.category.name,
+          })),
+        }))}
+      />
 
       {/* Pagination */}
       {totalPages > 1 && (

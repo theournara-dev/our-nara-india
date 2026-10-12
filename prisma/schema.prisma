@@ -161,15 +161,40 @@ model Category {
   id        String     @id @default(cuid())
   slug      String     @unique
   name      String
+  // Tile artwork for a mid-level category, shown in the image row on listing
+  // pages. Empty falls back to the name alone.
+  image     String?
   sortOrder Int        @default(0) @map("sort_order")
+  // Hidden categories stay assigned to their products but drop out of the
+  // storefront nav / tile rows.
+  isActive  Boolean    @default(true) @map("is_active")
   parentId  String?    @map("parent_id")
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")
 
-  products Product[]
+  products         Product[]
+  subcategoryLinks ProductSubcategory[]
 
   @@index([parentId])
   @@map("categories")
+}
+
+// Mid-level category assignment for a product. A product may sit in several
+// (a cleansing tissue is both Cleansing and Masks & Patches), while
+// `Product.categoryId` stays its primary top-level category (breadcrumb,
+// admin list). Category pages resolve their products through this table.
+model ProductSubcategory {
+  id         String   @id @default(cuid())
+  productId  String   @map("product_id")
+  categoryId String   @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_subcategories")
 }
 
 model Product {
@@ -228,6 +253,7 @@ model Product {
 
   brand       Brand            @relation(fields: [brandId], references: [id])
   category    Category         @relation(fields: [categoryId], references: [id])
+  subcategories ProductSubcategory[]
   variants    ProductVariant[]
   blocks      ProductBlock[]
   questions   ProductQA[]

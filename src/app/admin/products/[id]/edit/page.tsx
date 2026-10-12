@@ -33,6 +33,7 @@ export default async function EditProductPage({
         include: {
           variants: { orderBy: { sortOrder: "asc" } },
           blocks: { orderBy: { sortOrder: "asc" } },
+          subcategories: { select: { categoryId: true } },
         },
       }),
       db.brand.findMany({
@@ -40,8 +41,8 @@ export default async function EditProductPage({
         select: { id: true, name: true },
       }),
       db.category.findMany({
-        orderBy: { sortOrder: "asc" },
-        select: { id: true, name: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, parentId: true },
       }),
       getProductInfoTemplate(),
       db.review.findMany({
@@ -76,7 +77,10 @@ export default async function EditProductPage({
         </Link>
       </div>
       <ProductForm
-        product={product}
+        product={{
+          ...product,
+          subcategoryIds: product.subcategories.map((s) => s.categoryId),
+        }}
         brands={brands}
         categories={categories}
         backHref={backHref}

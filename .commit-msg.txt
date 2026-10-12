@@ -1,0 +1,30 @@
+Back the mid-level categories with the database, not static code
+
+Category tabs were code: a static list per root plus a hardcoded product →
+subcategory map, so the 42 Daiso products (and everything imported since)
+had no mid-level categories, and the tabs counted only the legacy samples —
+including subcategories that belong to another root ("Hair Care" under
+Makeup).
+
+Categories are now the admin's tree: the Category model gains an image and
+an active flag, and ProductSubcategory lets a product sit in any number of
+mid-level categories while Product.categoryId stays its primary top-level
+category (a cleansing tissue is both Cleansing and Masks & Patches).
+
+- /admin/categories: create, rename, reorder, hide and delete roots and
+  children, with the tile image the listing pages show; deleting a category
+  that products still use is refused.
+- The product form picks a top-level category, then its children (several
+  allowed), and can add a child inline.
+- The products list filters by subcategory, shows each product's chips and
+  assigns one to many products at once; /admin/products/import maps a whole
+  sheet (product slug, category, subcategory) with a dry-run preview that
+  flags unknown slugs without dropping a product's other rows.
+- The storefront reads the tree: header menu, listing tabs as image tiles,
+  and only a category's own tabs — hidden when they have no products.
+  Pseudo-categories (PRE-ORDER) derive their tabs from what their products
+  carry; mid-level URLs redirect to the root with ?sub=.
+
+scripts/migrate-subcategories.ts creates the children and moves the legacy
+map (dry run first, then --apply); scripts/test-category-admin.ts exercises
+the bulk assign and CSV paths end to end.

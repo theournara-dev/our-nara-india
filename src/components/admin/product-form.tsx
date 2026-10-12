@@ -33,7 +33,7 @@ import {
 } from "@/components/upload/upload-queue";
 
 type BrandOption = { id: string; name: string };
-type CategoryOption = { id: string; name: string };
+type CategoryOption = { id: string; name: string; parentId?: string | null };
 
 type VariantDraft = {
   id?: string;
@@ -58,6 +58,8 @@ type Props = {
     slug: string;
     brandId: string;
     categoryId: string;
+    /** Mid-level category ids this product already sits in. */
+    subcategoryIds?: string[];
     summary: string | null;
     shortTags: string[];
     description: string | null;
@@ -173,6 +175,9 @@ function ProductFormInner({
   const [slugTouched, setSlugTouched] = useState(Boolean(product));
   const [brandId, setBrandId] = useState(product?.brandId ?? "");
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
+  const [subcategoryIds, setSubcategoryIds] = useState<string[]>(
+    product?.subcategoryIds ?? [],
+  );
   const [summary, setSummary] = useState(product?.summary ?? "");
   const [shortTags, setShortTags] = useState(
     (product?.shortTags ?? []).join(", "),
@@ -265,6 +270,13 @@ function ProductFormInner({
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState("");
+  const [creatingSubcategory, setCreatingSubcategory] = useState(false);
+  // Two-level tree: the picker offers top-level categories, the checkbox list
+  // under it the chosen category's children.
+  const rootCategories = categories.filter((c) => !c.parentId);
+  const childCategories = categories.filter((c) => c.parentId === categoryId);
   const gate = useUploadGate();
 
   function onNameChange(value: string) {
@@ -300,6 +312,7 @@ function ProductFormInner({
     try {
       const category = await createCategory(name);
       setCategoryId(category.id);
+      setSubcategoryIds([]);
       setCategories((prev) => [...prev, category]);
       setShowNewCategory(false);
       setNewCategoryName("");
@@ -311,6 +324,28 @@ function ProductFormInner({
       );
     } finally {
       setCreatingCategory(false);
+    }
+  }
+
+  /** Create a mid-level category under the selected top-level one. */
+  async function onCreateSubcategory() {
+    const name = newSubcategoryName.trim();
+    if (!name || !categoryId) return;
+    setCreatingSubcategory(true);
+    try {
+      const category = await createCategory(name, categoryId);
+      setCategories((prev) => [...prev, category]);
+      setSubcategoryIds((prev) => [...prev, category.id]);
+      setShowNewSubcategory(false);
+      setNewSubcategoryName("");
+      notify.success("Subcategory created", category.name);
+    } catch (err) {
+      notify.error(
+        "Create failed",
+        err instanceof Error ? err.message : "Try again.",
+      );
+    } finally {
+      setCreatingSubcategory(false);
     }
   }
 
@@ -354,6 +389,7 @@ function ProductFormInner({
       slug: slug.trim() || slugify(name),
       brandId,
       categoryId,
+      subcategoryIds,
       summary: summary.trim() || undefined,
       shortTags: shortTags
         .split(",")
@@ -611,12 +647,17 @@ function ProductFormInner({
                 <div className="flex gap-2">
                   <select
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                    onChange={(e) => {
+                      setCategoryId(e.target.value);
+                      // Subcategories belong to one top-level category; a new
+                      // pick clears assignments that no longer apply.
+                      setSubcategoryIds([]);
+                    }}
                     required
                     className={inputCls}
                   >
                     <option value="">Select category…</option>
-                    {categories.map((c) => (
+                    {rootCategories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
@@ -668,6 +709,95 @@ function ProductFormInner({
                   </div>
                 )}
               </div>
+
+              {/* Mid-level categories of the chosen top-level category. A
+                  product can sit in several (a cleansing tissue is both
+                  Cleansing and Masks & Patches). */}
+              {categoryId && (
+                <div>
+                  <span className={labelCls}>
+                    Subcategories ({subcategoryIds.length} selected)
+                  </span>
+                  <div className="rounded border border-zinc-200 bg-white p-2.5">
+                    {childCategories.length === 0 ? (
+                      <p className="text-xs text-zinc-400">
+                        This category has no subcategories yet — add one below.
+                      </p>
+                    ) : (
+                      <ul className="grid gap-1.5 sm:grid-cols-2">
+                        {childCategories.map((child) => (
+                          <li key={child.id}>
+                            <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
+                              <input
+                                type="checkbox"
+                                checked={subcategoryIds.includes(child.id)}
+                                onChange={(e) =>
+                                  setSubcategoryIds((prev) =>
+                                    e.target.checked
+                                      ? [...prev, child.id]
+                                      : prev.filter((id) => id !== child.id),
+                                  )
+                                }
+                                className="h-4 w-4 accent-point-500"
+                              />
+                              <span className="truncate">{child.name}</span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="mt-2 border-t border-zinc-100 pt-2">
+                      {showNewSubcategory ? (
+                        <div className="flex gap-2">
+                          <input
+                            value={newSubcategoryName}
+                            onChange={(e) =>
+                              setNewSubcategoryName(e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                void onCreateSubcategory();
+                              }
+                            }}
+                            placeholder="New subcategory name"
+                            autoFocus
+                            className={inputCls}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => void onCreateSubcategory()}
+                            disabled={
+                              creatingSubcategory || !newSubcategoryName.trim()
+                            }
+                            className="h-9 shrink-0 rounded bg-point-500 px-3 text-xs font-semibold text-white disabled:opacity-60"
+                          >
+                            {creatingSubcategory ? "…" : "Create"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewSubcategory(false);
+                              setNewSubcategoryName("");
+                            }}
+                            className="h-9 shrink-0 rounded border border-zinc-200 px-3 text-xs text-zinc-600 hover:bg-zinc-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewSubcategory(true)}
+                          className="text-xs font-medium text-point-600 hover:text-point-700"
+                        >
+                          + New subcategory under this category
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               <label className="block">
                 <span className={labelCls}>Summary</span>
                 <input

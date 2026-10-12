@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
-import { getCategoryBySlug } from "@/data/categories";
+import {
+  getCategoryById,
+  getCategoryBySlug,
+  getCategoryTabs,
+} from "@/data/categories";
 import { getProductsByCategorySlug } from "@/data/products";
-import { getSubcategories } from "@/data/subcategories";
 import { parseCategoryFilters } from "@/lib/category-filters";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
@@ -39,16 +42,25 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
   const { sub, brand, min, max, avail } = await searchParams;
-  const [category, products] = await Promise.all([
+  const [category, version] = await Promise.all([
     getCategoryBySlug(slug),
-    getRequestSiteVersion().then((version) =>
-      getProductsByCategorySlug(slug, 60, version),
-    ),
+    getRequestSiteVersion(),
   ]);
 
   if (!category) notFound();
 
-  const subcategories = getSubcategories(slug);
+  // A mid-level category is a filter of its root's listing, not a page of its
+  // own — keep one canonical URL per listing state.
+  if (category.parentId) {
+    const parent = await getCategoryById(category.parentId);
+    if (parent) redirect(`/category/${parent.slug}?sub=${category.slug}`);
+  }
+
+  const [products, subcategories] = await Promise.all([
+    getProductsByCategorySlug(slug, 300, version),
+    getCategoryTabs(slug, version),
+  ]);
+
   const filters = parseCategoryFilters({ sub, brand, min, max, avail });
   // A stale ?sub= from another category is ignored, so the chips stay honest.
   const initialFilters = subcategories.some((s) => s.slug === filters.sub)

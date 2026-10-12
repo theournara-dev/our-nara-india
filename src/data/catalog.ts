@@ -73,6 +73,11 @@ export interface ProductCardView {
   globalIsActive?: boolean;
   globalIsPreOrder?: boolean;
   globalBuyNowEnabled?: boolean;
+  /**
+   * Mid-level categories this product sits in (0..n), by slug. Empty for
+   * products that are only filed under their top-level category.
+   */
+  subcategorySlugs?: string[];
   preOrderNotice?: string;
   images: string[];
   hoverImage?: string;
@@ -704,6 +709,9 @@ export function toCardView(p: StaticProduct): ProductCardView {
     globalIsActive: true,
     globalIsPreOrder: p.isPreOrder,
     globalBuyNowEnabled: true,
+    // The static catalogue has no mid-level categories yet; the DB-backed
+    // layer carries them (see src/data/products.ts).
+    subcategorySlugs: [],
     preOrderNotice: p.preOrderNotice,
     images: p.images,
     hoverImage: p.hoverImage,

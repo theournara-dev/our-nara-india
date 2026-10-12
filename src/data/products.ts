@@ -97,6 +97,9 @@ type ProductRow = {
     name: string;
     buyNowEnabled: boolean;
   };
+  subcategories: {
+    category: { slug: string; parentId: string | null };
+  }[];
   variants: {
     id: string;
     optionLabel: string | null;
@@ -123,6 +126,11 @@ type ProductRow = {
 const listInclude = {
   brand: {
     select: { slug: true, name: true, buyNowEnabled: true },
+  },
+  // Mid-level category assignments; the slug is what the listing chips filter
+  // by, `parentId` distinguishes them from a root assignment.
+  subcategories: {
+    select: { category: { select: { slug: true, parentId: true } } },
   },
   variants: true,
 } as const;
@@ -160,6 +168,9 @@ function toCard(p: ProductRow): ProductCard {
     globalIsActive: p.globalIsActive,
     globalIsPreOrder: p.globalIsPreOrder,
     globalBuyNowEnabled: p.globalBuyNowEnabled,
+    subcategorySlugs: p.subcategories
+      .filter((link) => link.category.parentId != null)
+      .map((link) => link.category.slug),
     preOrderNotice: p.preOrderNotice ?? undefined,
     images: p.images,
     hoverImage: p.images[1] ?? p.images[0],
@@ -300,8 +311,17 @@ export async function getProductsByCategorySlug(
   take: number,
   version: SiteVersion,
 ): Promise<ProductCard[]> {
+  // A top-level page carries its mid-level categories' products too: either the
+  // product's primary category is this one, or one of its subcategory
+  // assignments lives under it.
   const rows = (await db.product.findMany({
-    where: { ...shownWhere(version), category: { slug } },
+    where: {
+      ...shownWhere(version),
+      OR: [
+        { category: { slug } },
+        { subcategories: { some: { category: { parent: { slug } } } } },
+      ],
+    },
     take,
     orderBy: { createdAt: "desc" },
     include,

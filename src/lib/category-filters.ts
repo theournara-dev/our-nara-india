@@ -107,6 +107,8 @@ export interface FilterableProduct {
   priceCents: number;
   /** How the browsing store sells it (buy-now / pre-order / not yet). */
   saleState: ProductSaleState;
+  /** Mid-level categories this product sits in (0..n). */
+  subcategorySlugs: string[];
   brand: { slug: string; name?: string };
 }
 
@@ -115,6 +117,7 @@ export interface StoreResolvableProduct extends ProductStoreFlags {
   slug: string;
   priceCents: number;
   globalPriceCents?: number | null;
+  subcategorySlugs?: string[];
   brand: { slug: string; name?: string };
 }
 
@@ -137,16 +140,21 @@ export function resolveForStore(
       version,
     ),
     saleState: saleStateForVersion(product, version),
+    subcategorySlugs: product.subcategorySlugs ?? [],
     brand: product.brand,
   };
 }
 
+/**
+ * Whether a product passes every active filter. A product sits in each of its
+ * mid-level categories, so the `sub` facet matches any of them.
+ */
 export function matchesFilters(
   product: FilterableProduct,
   filters: CategoryFilters,
-  subcategoryOf: (slug: string) => string | undefined,
 ): boolean {
-  if (filters.sub && subcategoryOf(product.slug) !== filters.sub) return false;
+  if (filters.sub && !product.subcategorySlugs.includes(filters.sub))
+    return false;
   if (
     filters.brands.length > 0 &&
     !filters.brands.includes(product.brand.slug)
@@ -175,16 +183,14 @@ export function matchesFilters(
 export function filterCategoryProducts<T extends FilterableProduct>(
   products: readonly T[],
   filters: CategoryFilters,
-  subcategoryOf: (slug: string) => string | undefined,
 ): T[] {
-  return products.filter((p) => matchesFilters(p, filters, subcategoryOf));
+  return products.filter((p) => matchesFilters(p, filters));
 }
 
 /** How many products each brand has, ignoring the brand facet itself. */
 export function brandCounts<T extends FilterableProduct>(
   products: readonly T[],
   filters: CategoryFilters,
-  subcategoryOf: (slug: string) => string | undefined,
 ): { slug: string; name: string; count: number }[] {
   const withoutBrand = { ...filters, brands: [] };
   const counts = new Map<
@@ -192,7 +198,7 @@ export function brandCounts<T extends FilterableProduct>(
     { slug: string; name: string; count: number }
   >();
   for (const product of products) {
-    if (!matchesFilters(product, withoutBrand, subcategoryOf)) continue;
+    if (!matchesFilters(product, withoutBrand)) continue;
     const existing = counts.get(product.brand.slug);
     if (existing) existing.count += 1;
     else
@@ -209,12 +215,11 @@ export function brandCounts<T extends FilterableProduct>(
 export function availabilityCounts<T extends FilterableProduct>(
   products: readonly T[],
   filters: CategoryFilters,
-  subcategoryOf: (slug: string) => string | undefined,
 ): Record<AvailabilityFilter, number> {
   const withoutAvail = { ...filters, availability: [] };
   const counts: Record<AvailabilityFilter, number> = { preorder: 0, ready: 0 };
   for (const product of products) {
-    if (!matchesFilters(product, withoutAvail, subcategoryOf)) continue;
+    if (!matchesFilters(product, withoutAvail)) continue;
     if (product.saleState === "preorder") counts.preorder += 1;
     else if (product.saleState === "buynow") counts.ready += 1;
   }

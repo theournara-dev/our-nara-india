@@ -3,10 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
-import { getSubcategorySlugByName } from "@/data/subcategories";
+import type { NavCategory } from "@/data/categories";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
 import { useSiteVersion } from "@/components/site-version-provider";
@@ -18,42 +18,14 @@ import type { SiteContent } from "@/lib/site-content";
  * with the menu/search interactions driven by React state.
  */
 
-const categoryNav = [
-  {
-    label: "Skin Care",
-    href: "/category/skin-care",
-    children: [
-      "Masks & Patches",
-      "Facial Care",
-      "Cleansing",
-      "Sun Care",
-      "Set",
-    ],
-  },
-  {
-    label: "Makeup",
-    href: "/category/makeup",
-    children: ["Base Makeup", "Eye Makeup", "Lip Makeup"],
-  },
-  {
-    label: "Hair Care",
-    href: "/category/hair-care",
-    children: ["Hair Care"],
-  },
-  {
-    label: "PRE-ORDER",
-    href: "/category/pre-order",
-    children: [
-      "Masks & Patches",
-      "Facial Care",
-      "Cleansing",
-      "Sun Care",
-      "Hair Care",
-      "Base Makeup",
-      "Eye Makeup",
-      "Lip Makeup",
-    ],
-  },
+interface NavItem {
+  label: string;
+  href: string;
+  children: { slug: string; name: string }[];
+}
+
+/** Storefront pages that sit after the category menu, unchanged per request. */
+const staticNavItems: NavItem[] = [
   { label: "BRAND", href: "/brands", children: [] },
   { label: "REVIEW", href: "/review", children: [] },
   { label: "EVENT", href: "/event", children: [] },
@@ -61,6 +33,22 @@ const categoryNav = [
   { label: "B2B", href: "/b2b", children: [] },
   { label: "AMBASSADOR", href: "/ambassador", children: [] },
 ];
+
+/**
+ * The category menu is the admin's category tree: roots in their own order,
+ * each linking to its listing and listing its mid-level categories in the
+ * dropdown (as ?sub= filters, exactly what the old hardcoded menu produced).
+ */
+function buildNav(navCategories: NavCategory[]): NavItem[] {
+  return [
+    ...navCategories.map((category) => ({
+      label: category.name,
+      href: `/category/${category.slug}`,
+      children: category.children,
+    })),
+    ...staticNavItems,
+  ];
+}
 
 const communityLinks = [
   { label: "Notice", href: "/community/notice" },
@@ -93,7 +81,14 @@ const loggedInLinks = [
   { label: "Logout", href: "/api/auth/sign-out", className: "log" },
 ];
 
-export function Header({ siteContent }: { siteContent: SiteContent }) {
+export function Header({
+  siteContent,
+  navCategories = [],
+}: {
+  siteContent: SiteContent;
+  /** The admin's category tree; the menu follows it without a deploy. */
+  navCategories?: NavCategory[];
+}) {
   const router = useRouter();
   const { config } = useSiteVersion();
   const [allCateOpen, setAllCateOpen] = useState(false);
@@ -124,9 +119,12 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
   const cartCount = useCart().reduce((sum, item) => sum + item.qty, 0);
   // In global mode pre-orders are disabled, so drop PRE-ORDER from the nav
   // (everywhere it's listed: top bar, all-categories panel and mobile drawer).
-  const navItems = config.preOrderEnabled
-    ? categoryNav
-    : categoryNav.filter((item) => item.label !== "PRE-ORDER");
+  const navItems = useMemo(() => {
+    const all = buildNav(navCategories);
+    return config.preOrderEnabled
+      ? all
+      : all.filter((item) => item.label !== "PRE-ORDER");
+  }, [navCategories, config.preOrderEnabled]);
   // While the session is still loading, don't flash the logged-out dropdown —
   // show no menu until we know the real auth state.
   const links = user
@@ -211,12 +209,12 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                               {item.children.length > 0 && (
                                 <ul className="relative left-0 mx-2.5 transition-all duration-500 group-hover:left-[10px]">
                                   {item.children.map((child) => (
-                                    <li key={child}>
+                                    <li key={child.slug}>
                                       <Link
-                                        href={item.href}
+                                        href={`${item.href}?sub=${child.slug}`}
                                         className="block text-sm font-light leading-[25px] text-[#777] transition-all duration-300 group-hover:text-black hover:pl-[5px]"
                                       >
-                                        {child}
+                                        {child.name}
                                       </Link>
                                     </li>
                                   ))}
@@ -315,25 +313,16 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                                 : "left-1/2 -translate-x-1/2"
                             }`}
                           >
-                            {item.children.map((child) => {
-                              const subSlug = getSubcategorySlugByName(
-                                item.href.split("/").pop() ?? "",
-                                child,
-                              );
-                              const childHref = subSlug
-                                ? `${item.href}?sub=${subSlug}`
-                                : item.href;
-                              return (
-                                <li key={child}>
-                                  <Link
-                                    href={childHref}
-                                    className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
-                                  >
-                                    {child}
-                                  </Link>
-                                </li>
-                              );
-                            })}
+                            {item.children.map((child) => (
+                              <li key={child.slug}>
+                                <Link
+                                  href={`${item.href}?sub=${child.slug}`}
+                                  className="block px-2 py-0.5 text-[13px] leading-5 text-[#787878] transition-all duration-300 hover:pl-[13px] hover:text-ink"
+                                >
+                                  {child.name}
+                                </Link>
+                              </li>
+                            ))}
                           </ul>
                         )}
                       </li>
@@ -699,26 +688,17 @@ export function Header({ siteContent }: { siteContent: SiteContent }) {
                             </div>
                             {hasChildren && open && (
                               <ul className="pb-1.5">
-                                {item.children.map((child) => {
-                                  const subSlug = getSubcategorySlugByName(
-                                    item.href.split("/").pop() ?? "",
-                                    child,
-                                  );
-                                  const childHref = subSlug
-                                    ? `${item.href}?sub=${subSlug}`
-                                    : item.href;
-                                  return (
-                                    <li key={child}>
-                                      <Link
-                                        href={childHref}
-                                        onClick={() => setMobileOpen(false)}
-                                        className="block py-[7px] pl-5 pr-5 text-sm font-normal text-[#555]"
-                                      >
-                                        {child}
-                                      </Link>
-                                    </li>
-                                  );
-                                })}
+                                {item.children.map((child) => (
+                                  <li key={child.slug}>
+                                    <Link
+                                      href={`${item.href}?sub=${child.slug}`}
+                                      onClick={() => setMobileOpen(false)}
+                                      className="block py-[7px] pl-5 pr-5 text-sm font-normal text-[#555]"
+                                    >
+                                      {child.name}
+                                    </Link>
+                                  </li>
+                                ))}
                               </ul>
                             )}
                           </li>
