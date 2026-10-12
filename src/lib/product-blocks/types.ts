@@ -30,6 +30,12 @@ export const blockConfigSchemas = {
     rounded: z.boolean().default(false),
     href: z.string().default(""),
     caption: z.string().default(""),
+    /**
+     * Draw flush against the block above, with no gap between them. Consecutive
+     * images already join by default (detail pages are built from stacked
+     * slices); this forces the join after any block type.
+     */
+    joinAbove: z.boolean().default(false),
   }),
   "image-text": z.object({
     src: z.string().default(""),

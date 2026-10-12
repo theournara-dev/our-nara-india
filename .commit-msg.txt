@@ -1,16 +1,10 @@
-Honour "don't show again today" on every popup, and match the picker mock
+Give the product title the deck's layout and join the detail images
 
-Two things from the client's deck: the footer checkbox did nothing for most
-popups, and the store-picker card look was off.
-
-- `isPopupDue` only read the suppression timestamp for "once a day" popups,
-  so the store prompt (frequency "every") came straight back after a reload
-  or in a new session even after the visitor ticked "Don't show again
-  today". The visitor's explicit choice now wins for 24 h on every
-  frequency (covered by a new test).
-- The picker cards follow the mock: an optional flag/logo beside the store
-  name (uploaded per store in /admin/site), the visitor's own store tinted
-  with its accent and marked Current / "You are here", and the other
-  store's button quiet gray (#E2E2E2) instead of a second purple CTA.
-- The popup footer is the mock's checkbox + Close pair instead of two text
-  buttons.
+- The title drops to a compact size and the K-Drop mark moves out of it: it
+  now sits on its own line under the name beside the PRE-ORDER badge, as in
+  the client's mock (slide 3).
+- Detail images run edge to edge: consecutive image blocks draw with no gap
+  (slide 4, "remove the spacing between pages"). Any image block can also
+  join the block above it through a new "Join to the block above" toggle in
+  the block editor, and a spacer block still brings a gap back when a layout
+  wants one.

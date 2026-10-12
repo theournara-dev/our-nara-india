@@ -41,7 +41,8 @@ export function toEmbedUrl(url: string): string | null {
   try {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\./, "");
-    if (host === "youtu.be") return `https://www.youtube.com/embed${u.pathname}`;
+    if (host === "youtu.be")
+      return `https://www.youtube.com/embed${u.pathname}`;
     if (host.endsWith("youtube.com")) {
       const id = u.searchParams.get("v");
       if (id) return `https://www.youtube.com/embed/${id}`;
@@ -60,10 +61,24 @@ export function toEmbedUrl(url: string): string | null {
 export function ProductBlocks({ blocks }: { blocks: RenderBlock[] }) {
   if (!blocks.length) return null;
   return (
-    <div className="space-y-8">
-      {blocks.map((block) => (
-        <BlockView key={block.id} block={block} />
-      ))}
+    <div>
+      {blocks.map((block, index) => {
+        const previous = blocks[index - 1];
+        // Detail pages are built from stacked image slices, so two images in a
+        // row run edge to edge (the client asked for exactly that); an image
+        // can also join under any block with `joinAbove`. Everything else keeps
+        // the standard gap — a spacer block brings the gap back between two
+        // images when a layout needs it.
+        const joined =
+          index > 0 &&
+          (block.config?.joinAbove === true ||
+            (block.type === "image" && previous?.type === "image"));
+        return (
+          <div key={block.id} className={joined ? "" : index > 0 ? "mt-8" : ""}>
+            <BlockView block={block} />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -79,7 +94,12 @@ export function BlockView({ block }: { block: RenderBlock }) {
         <div
           className="text-[15px] leading-relaxed text-[#555] [&_a]:text-point-500 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-[#e9e9e9] [&_blockquote]:pl-4 [&_h2]:mt-4 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-ink [&_h3]:mt-3 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-ink [&_li]:ml-5 [&_li]:list-disc [&_ol]:ml-1 [&_ol_li]:list-decimal [&_p]:mb-3 [&_strong]:font-semibold [&_strong]:text-ink"
           style={{
-            textAlign: c.align === "center" ? "center" : c.align === "right" ? "right" : "left",
+            textAlign:
+              c.align === "center"
+                ? "center"
+                : c.align === "right"
+                  ? "right"
+                  : "left",
             fontSize: FONT_SIZE[str(c.fontSize, "base")] ?? "1rem",
             maxWidth: `${num(c.maxWidth, 100)}%`,
             margin: "0 auto",
@@ -99,7 +119,14 @@ export function BlockView({ block }: { block: RenderBlock }) {
           : level === "h3"
             ? "text-xl font-semibold text-ink"
             : "font-display text-2xl font-semibold text-ink";
-      const style = { textAlign: c.align === "center" ? "center" : c.align === "right" ? "right" : "left" } as const;
+      const style = {
+        textAlign:
+          c.align === "center"
+            ? "center"
+            : c.align === "right"
+              ? "right"
+              : "left",
+      } as const;
       return (
         <div style={style}>
           {level === "h4" ? (
@@ -126,7 +153,12 @@ export function BlockView({ block }: { block: RenderBlock }) {
         />
       );
       return (
-        <div style={{ display: "flex", justifyContent: justify(str(c.align, "left")) }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: justify(str(c.align, "left")),
+          }}
+        >
           <figure style={{ width: `${num(c.widthPct, 100)}%` }}>
             {str(c.href) ? <Link href={str(c.href)}>{img}</Link> : img}
             {str(c.caption) && (
@@ -206,7 +238,12 @@ export function BlockView({ block }: { block: RenderBlock }) {
       const embed = toEmbedUrl(str(c.url));
       if (!embed) return null;
       return (
-        <div style={{ display: "flex", justifyContent: justify(str(c.align, "left")) }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: justify(str(c.align, "left")),
+          }}
+        >
           <div
             className="aspect-video overflow-hidden rounded-xl"
             style={{ width: `${num(c.widthPct, 100)}%` }}
@@ -231,7 +268,11 @@ export function BlockView({ block }: { block: RenderBlock }) {
         <div
           style={{
             textAlign:
-              c.align === "center" ? "center" : c.align === "right" ? "right" : "left",
+              c.align === "center"
+                ? "center"
+                : c.align === "right"
+                  ? "right"
+                  : "left",
           }}
         >
           <Link

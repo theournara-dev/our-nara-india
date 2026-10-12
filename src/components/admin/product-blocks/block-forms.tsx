@@ -67,7 +67,10 @@ export function BlockConfigForm({
           />
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Align">
-              <AlignSelect value={s("align", "left")} onChange={(v) => set({ align: v })} />
+              <AlignSelect
+                value={s("align", "left")}
+                onChange={(v) => set({ align: v })}
+              />
             </Field>
             <Field label="Font size">
               <select
@@ -102,10 +105,18 @@ export function BlockConfigForm({
           <ImageUrlInput value={s("src")} onChange={(src) => set({ src })} />
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Alt text">
-              <input value={s("alt")} onChange={(e) => set({ alt: e.target.value })} className={inputCls} />
+              <input
+                value={s("alt")}
+                onChange={(e) => set({ alt: e.target.value })}
+                className={inputCls}
+              />
             </Field>
             <Field label="Link (optional)">
-              <input value={s("href")} onChange={(e) => set({ href: e.target.value })} className={inputCls} />
+              <input
+                value={s("href")}
+                onChange={(e) => set({ href: e.target.value })}
+                className={inputCls}
+              />
             </Field>
             <Field label="Width (%)">
               <input
@@ -118,10 +129,17 @@ export function BlockConfigForm({
               />
             </Field>
             <Field label="Align">
-              <AlignSelect value={s("align", "left")} onChange={(v) => set({ align: v })} />
+              <AlignSelect
+                value={s("align", "left")}
+                onChange={(v) => set({ align: v })}
+              />
             </Field>
             <Field label="Caption">
-              <input value={s("caption")} onChange={(e) => set({ caption: e.target.value })} className={inputCls} />
+              <input
+                value={s("caption")}
+                onChange={(e) => set({ caption: e.target.value })}
+                className={inputCls}
+              />
             </Field>
             <label className="mt-5 flex items-center gap-2 text-sm text-zinc-700">
               <input
@@ -130,6 +148,14 @@ export function BlockConfigForm({
                 onChange={(e) => set({ rounded: e.target.checked })}
               />
               Rounded corners
+            </label>
+            <label className="mt-5 flex items-center gap-2 text-sm text-zinc-700">
+              <input
+                type="checkbox"
+                checked={bool("joinAbove")}
+                onChange={(e) => set({ joinAbove: e.target.checked })}
+              />
+              Join to the block above (no gap)
             </label>
           </div>
         </div>
@@ -141,7 +167,11 @@ export function BlockConfigForm({
           <ImageUrlInput value={s("src")} onChange={(src) => set({ src })} />
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Alt text">
-              <input value={s("alt")} onChange={(e) => set({ alt: e.target.value })} className={inputCls} />
+              <input
+                value={s("alt")}
+                onChange={(e) => set({ alt: e.target.value })}
+                className={inputCls}
+              />
             </Field>
             <Field label="Image side">
               <select
@@ -180,7 +210,11 @@ export function BlockConfigForm({
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="sm:col-span-3">
             <Field label="Text">
-              <input value={s("text")} onChange={(e) => set({ text: e.target.value })} className={inputCls} />
+              <input
+                value={s("text")}
+                onChange={(e) => set({ text: e.target.value })}
+                className={inputCls}
+              />
             </Field>
           </div>
           <Field label="Level">
@@ -195,14 +229,19 @@ export function BlockConfigForm({
             </select>
           </Field>
           <Field label="Align">
-            <AlignSelect value={s("align", "left")} onChange={(v) => set({ align: v })} />
+            <AlignSelect
+              value={s("align", "left")}
+              onChange={(v) => set({ align: v })}
+            />
           </Field>
         </div>
       );
 
     case "gallery": {
       const images = Array.isArray(config.images)
-        ? (config.images as unknown[]).map((i) => (typeof i === "string" ? i : ""))
+        ? (config.images as unknown[]).map((i) =>
+            typeof i === "string" ? i : "",
+          )
         : [];
       return (
         <div className="space-y-3">
@@ -242,7 +281,9 @@ export function BlockConfigForm({
                 </div>
                 <button
                   type="button"
-                  onClick={() => set({ images: images.filter((_, j) => j !== i) })}
+                  onClick={() =>
+                    set({ images: images.filter((_, j) => j !== i) })
+                  }
                   className="mb-1 h-9 rounded border border-zinc-200 px-3 text-xs text-zinc-600 hover:bg-zinc-100"
                 >
                   Remove
@@ -285,7 +326,10 @@ export function BlockConfigForm({
             />
           </Field>
           <Field label="Align">
-            <AlignSelect value={s("align", "left")} onChange={(v) => set({ align: v })} />
+            <AlignSelect
+              value={s("align", "left")}
+              onChange={(v) => set({ align: v })}
+            />
           </Field>
         </div>
       );
@@ -294,10 +338,18 @@ export function BlockConfigForm({
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Label">
-            <input value={s("label")} onChange={(e) => set({ label: e.target.value })} className={inputCls} />
+            <input
+              value={s("label")}
+              onChange={(e) => set({ label: e.target.value })}
+              className={inputCls}
+            />
           </Field>
           <Field label="Link">
-            <input value={s("href")} onChange={(e) => set({ href: e.target.value })} className={inputCls} />
+            <input
+              value={s("href")}
+              onChange={(e) => set({ href: e.target.value })}
+              className={inputCls}
+            />
           </Field>
           <Field label="Style">
             <select
@@ -310,7 +362,10 @@ export function BlockConfigForm({
             </select>
           </Field>
           <Field label="Align">
-            <AlignSelect value={s("align", "left")} onChange={(v) => set({ align: v })} />
+            <AlignSelect
+              value={s("align", "left")}
+              onChange={(v) => set({ align: v })}
+            />
           </Field>
         </div>
       );
@@ -349,7 +404,9 @@ export function BlockConfigForm({
         ? (config.items as Record<string, unknown>[])
         : [];
       const upd = (i: number, patch: Record<string, string>) =>
-        set({ items: items.map((it, j) => (j === i ? { ...it, ...patch } : it)) });
+        set({
+          items: items.map((it, j) => (j === i ? { ...it, ...patch } : it)),
+        });
       return (
         <div className="space-y-3">
           {items.map((it, i) => (
@@ -360,7 +417,9 @@ export function BlockConfigForm({
                 </span>
                 <button
                   type="button"
-                  onClick={() => set({ items: items.filter((_, j) => j !== i) })}
+                  onClick={() =>
+                    set({ items: items.filter((_, j) => j !== i) })
+                  }
                   className="text-xs text-zinc-500 hover:text-red-600"
                 >
                   Remove

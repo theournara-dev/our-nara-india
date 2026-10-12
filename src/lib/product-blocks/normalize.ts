@@ -40,6 +40,7 @@ function sanitizeConfig(
         alt: sanitizeText(str(c.alt)),
         caption: sanitizeText(str(c.caption)),
         href: sanitizeText(str(c.href)),
+        joinAbove: c.joinAbove === true,
       };
     case "image-text":
       return {

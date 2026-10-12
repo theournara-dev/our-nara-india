@@ -170,6 +170,9 @@ export function ProductDetail({
   const showPreOrder = saleState === "preorder";
   const showBuyNow = saleState === "buynow";
   const notSellable = saleState === "unavailable";
+  // The K-Drop mark follows the product (also sold on the International
+  // store), not the storefront the visitor is browsing.
+  const availableGlobally = visibleForVersion(product, "global");
 
   function handleBuyNow() {
     // The chosen option's label travels with the line so the cart can show it.
@@ -272,15 +275,25 @@ export function ProductDetail({
           >
             {product.brand.name}
           </Link>
-          <h1 className="mt-1 font-display text-3xl font-semibold leading-tight text-ink">
-            {/* K-Drop mark prefixes the title for products that also ship from
-                the International store, sized to the title itself. */}
-            <KDropMark
-              availableGlobally={visibleForVersion(product, "global")}
-              className="mr-1.5 align-middle h-[30px] md:h-[34px]"
-            />
+          <h1 className="mt-1 font-display text-2xl font-semibold leading-snug text-ink">
             {product.name}
           </h1>
+
+          {/* The K-Drop mark and the pre-order badge sit on their own line under
+              the name (the client's mock), so the title stays compact. */}
+          {(availableGlobally || showPreOrder) && (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <KDropMark
+                availableGlobally={availableGlobally}
+                className="h-[22px] md:h-[24px]"
+              />
+              {showPreOrder && (
+                <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                  PRE-ORDER
+                </span>
+              )}
+            </div>
+          )}
 
           {product.summary && (
             <p className="mt-2 text-sm leading-relaxed text-[#777]">
@@ -302,9 +315,6 @@ export function ProductDetail({
 
           {showPreOrder && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
-                PRE-ORDER
-              </span>
               <span className="text-sm text-zinc-500">
                 {product.preOrderNotice ??
                   "Order now, ships when stock arrives."}
