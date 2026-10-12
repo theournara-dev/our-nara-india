@@ -828,6 +828,7 @@ export function TripleBannerBoxesField({
         alt: "",
         title: "",
         sub: "",
+        href: "",
         productSlugs: [],
       },
     ]);
@@ -872,6 +873,12 @@ export function TripleBannerBoxesField({
               label="Alt text"
               value={box.alt}
               onChange={(v) => updateBox(box.id, { alt: v })}
+            />
+            <TextField
+              label="Link (optional)"
+              value={box.href ?? ""}
+              onChange={(v) => updateBox(box.id, { href: v })}
+              placeholder="e.g. /brand/nowater"
             />
             <SlugsField
               value={box.productSlugs}

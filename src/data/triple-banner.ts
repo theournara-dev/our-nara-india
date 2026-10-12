@@ -14,6 +14,8 @@ export interface TripleBannerBox {
   alt: string;
   title: string;
   sub: string;
+  /** Optional link the banner image opens. */
+  href?: string;
   /** Product slugs shown under the banner, in display order. */
   productSlugs: string[];
 }
@@ -30,6 +32,7 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     alt: "Brightening glow care",
     title: "BRIGHTENING GLOW CARE",
     sub: "For brighter, even-toned, radiant-looking skin.",
+    href: "/brand/nowater",
     productSlugs: ["brightening-vitamin-serum", "prestige-collagen-eye-cream"],
   },
   {
@@ -38,6 +41,7 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     alt: "Firm, plump and glow",
     title: "FIRM, PLUMP & GLOW",
     sub: "Collagen care for smoother, more elastic-looking skin.",
+    href: "/brand/nowater",
     productSlugs: ["return-collagen-cream", "skin-booster-collagen-mask-50g"],
   },
   {
@@ -46,6 +50,7 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     alt: "Lifting and anti-aging",
     title: "LIFTING · ANTI-AGING",
     sub: "Helps firm and smooth skin for a lifted, youthful look.",
+    href: "/brand/dr-pepti",
     productSlugs: [
       "peptide-volume-lifting-pro-essence-30ml",
       "peptide-volume-lifting-pro-essence-100ml",
@@ -83,7 +88,7 @@ export const tripleBannerTabs: TripleBannerTab[] = tripleBannerBoxes.map(
     alt: box.alt,
     title: box.title,
     sub: box.sub,
-    href: TAB_META[box.id]?.href ?? "",
+    href: box.href ?? TAB_META[box.id]?.href ?? "",
     productSlugs: box.productSlugs,
   }),
 );

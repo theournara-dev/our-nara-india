@@ -113,6 +113,8 @@ export const tripleBannerBoxSchema = z.object({
   alt: z.string(),
   title: z.string(),
   sub: z.string(),
+  /** Optional link the banner image opens. */
+  href: z.string().default(""),
   productSlugs: z.array(z.string()),
 });
 export type TripleBannerBox = z.infer<typeof tripleBannerBoxSchema>;

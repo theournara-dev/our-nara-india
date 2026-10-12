@@ -176,18 +176,26 @@ export default function CartPage() {
                       key={`${item.productId}-${item.option ?? ""}`}
                       className="flex items-center gap-4 p-4"
                     >
-                      {item.image ? (
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          width={64}
-                          height={64}
-                          unoptimized
-                          className="h-16 w-16 shrink-0 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 shrink-0 rounded bg-zinc-100" />
-                      )}
+                      {/* The thumbnail opens the product, like the name below
+                          (the client's link audit). */}
+                      <Link
+                        href={`/products/${item.slug}`}
+                        className="shrink-0"
+                        aria-label={item.name}
+                      >
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            width={64}
+                            height={64}
+                            unoptimized
+                            className="h-16 w-16 rounded object-cover"
+                          />
+                        ) : (
+                          <span className="block h-16 w-16 rounded bg-zinc-100" />
+                        )}
+                      </Link>
                       <div className="min-w-0 flex-1">
                         <Link
                           href={`/products/${item.slug}`}

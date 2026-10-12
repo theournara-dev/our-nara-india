@@ -88,6 +88,16 @@ export function TripleBanner({ boxes }: TripleBannerProps) {
                   <h2>{box.title}</h2>
                   <span className="sub">{box.sub}</span>
                 </div>
+                {/* Stretched link so the whole banner (title included)
+                    navigates when the box sets an href — the client's link
+                    audit. The overlay keeps the original CSS intact. */}
+                {box.href && (
+                  <Link
+                    href={box.href}
+                    aria-label={box.title}
+                    className="absolute inset-0 z-[1]"
+                  />
+                )}
               </div>
               <ul className="prd-list">
                 {box.products.map((product) => (
