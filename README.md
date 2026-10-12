@@ -26,9 +26,10 @@ Done
 - Homepage header + product/hero sliders matched closely to the original
   theme: nav arrows + progressbars extracted into a shared `SliderNav`
   component, category dropdown hover/typography, and no layout flash on load.
-- Responsive header (desktop single row → mobile two-row: logo/icons on row 1,
-  scrollable category nav on row 2) and a mobile slide-out drawer with an
-  accordion category menu; header icons use the original SVG/PNG files.
+- Responsive header (desktop single row; tablet: logo + icons on row 1,
+  scrollable category nav on row 2; phones: centred logo, icons row flush
+  right, then the nav) and a mobile slide-out drawer with an accordion
+  category menu; header icons use the original SVG/PNG files.
 - Product cards show a 2-image hover crossfade plus wishlist/add-to-cart quick
   actions; images serve any format (jpg/png/gif) via an unoptimized `Image`.
 - Top Picks shows 4 items, each with an on-hover image (`hoverImage`).
