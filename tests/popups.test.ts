@@ -110,6 +110,35 @@ test("isPopupDue respects session, day and every frequencies", () => {
   );
 });
 
+test('a "don\'t show again today" click silences every frequency for 24h', () => {
+  // The store-picker popup is "once per session" by default, and visitors who
+  // clicked the footer checkbox still saw it after a reload — the suppression
+  // used to be read for "once a day" popups only.
+  const suppressed = { picker: NOW - 60_000 };
+  for (const frequency of ["once", "day", "every"]) {
+    assert.equal(
+      isPopupDue(pending("picker", frequency), new Set(), suppressed, NOW),
+      false,
+      `${frequency} stays suppressed`,
+    );
+    assert.equal(
+      isPopupDue(
+        pending("picker", frequency),
+        new Set(),
+        suppressed,
+        NOW + POPUP_DAY_MS,
+      ),
+      true,
+      `${frequency} returns after 24h`,
+    );
+  }
+  // An unrelated popup is untouched.
+  assert.equal(
+    isPopupDue(pending("other", "every"), new Set(), suppressed, NOW),
+    true,
+  );
+});
+
 test("nextDuePopup walks a stack one by one, skipping what was shown", () => {
   const queue = [
     pending("a", "once"),

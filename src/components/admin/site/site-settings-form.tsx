@@ -805,6 +805,12 @@ function StorePickerEditor({
               />
             </div>
             <ImageField
+              label="Store flag / logo (optional)"
+              value={block.icon ?? ""}
+              onChange={(icon) => updateBlock(i, { icon: icon || undefined })}
+              hint="Small flag or brand mark shown beside the store name (e.g. the India flag)."
+            />
+            <ImageField
               label="Card image (optional)"
               value={block.image ?? ""}
               onChange={(image) =>

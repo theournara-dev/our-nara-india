@@ -40,6 +40,8 @@ export type SwitcherBlock = {
   currency: string;
   /** Optional ribbon above the title, e.g. "Fastest". */
   badge?: string;
+  /** Optional flag / logo shown beside the store name. */
+  icon?: string;
   image?: string;
   /** Button label, e.g. "Shop India". */
   ctaLabel: string;
@@ -287,6 +289,7 @@ export function normalizeSwitcher(
       description: str(raw.description, def?.description ?? ""),
       currency: str(raw.currency, def?.currency ?? "₹ INR"),
       badge: str(raw.badge) || undefined,
+      icon: str(raw.icon) || undefined,
       image: str(raw.image) || undefined,
       ctaLabel: str(raw.ctaLabel, def?.ctaLabel ?? "Shop"),
       accent: str(raw.accent, def?.accent ?? "#6f2dbd"),

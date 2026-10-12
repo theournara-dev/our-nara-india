@@ -263,31 +263,36 @@ export function PopupCard({
         ✕
       </button>
 
-      {/* Footer: the classic "don't show again today" + close pair. */}
+      {/* Footer: the mock's checkbox "Don't show again today" + close pair. */}
       {data.hideToday && (
         <div
-          className={`flex items-stretch border-t text-xs ${
+          className={`flex items-center gap-3 border-t px-4 py-3 text-xs ${
             full
               ? "absolute inset-x-0 bottom-0 border-white/20 bg-black/35 text-white backdrop-blur-sm"
               : "border-zinc-100"
           }`}
         >
-          <button
-            type="button"
-            onClick={preview ? undefined : onHideToday}
-            className={`flex-1 px-4 py-3 text-left hover:bg-zinc-500/10 ${
-              full ? "text-white/80" : "text-zinc-500 hover:bg-zinc-50"
-            } ${preview ? "pointer-events-none" : ""}`}
+          <label
+            className={`flex flex-1 items-center gap-2 ${
+              preview ? "pointer-events-none" : "cursor-pointer"
+            } ${full ? "text-white/80" : "text-zinc-500"}`}
           >
+            <input
+              type="checkbox"
+              checked={false}
+              onChange={() => onHideToday?.()}
+              className="h-4 w-4 accent-point-500"
+              aria-label="Don't show again today"
+            />
             Don&apos;t show again today
-          </button>
+          </label>
           <button
             type="button"
             onClick={preview ? undefined : onClose}
-            className={`border-l px-5 py-3 font-semibold ${
+            className={`px-1 font-semibold ${
               full
-                ? "border-white/20 text-white hover:bg-zinc-500/10"
-                : "border-zinc-100 text-zinc-700 hover:bg-zinc-50"
+                ? "text-white hover:opacity-80"
+                : "text-zinc-700 hover:text-zinc-900"
             } ${preview ? "pointer-events-none" : ""}`}
           >
             Close

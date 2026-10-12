@@ -15,8 +15,13 @@ export const STORE_PICKER_PANEL_CLASS =
 
 /**
  * The two store cards inside the store picker. Shared by the storefront
- * dropdown and the admin preview so what an admin sees is exactly what visitors
- * get; without `onChoose` the cards render as a static preview.
+ * dropdown, the store-picker popup and the admin preview so what an admin sees
+ * is exactly what visitors get; without `onChoose` the cards render as a
+ * static preview.
+ *
+ * The card the visitor is already in is tinted with the store's accent and
+ * offers no action ("You are here"); the other store's action button stays
+ * quiet (gray) so the popup leads with where you are, not with a second CTA.
  */
 export function StorePickerCards({
   content,
@@ -31,14 +36,21 @@ export function StorePickerCards({
     <div className="grid gap-3 sm:grid-cols-2">
       {content.blocks.map((block) => {
         const isActive = block.store === activeStore;
-        const cardClass = `group flex h-full flex-col overflow-hidden rounded-lg border-2 bg-white text-left transition-all ${
+        const cardClass = `group flex h-full flex-col overflow-hidden rounded-lg border-2 text-left transition-all ${
           onChoose ? "cursor-pointer" : ""
         } ${
           isActive
             ? "shadow-sm"
-            : "border-[#e9e9e9] " + (onChoose ? "hover:border-zinc-400" : "")
+            : "border-[#e9e9e9] bg-white " +
+              (onChoose ? "hover:border-zinc-400" : "")
         }`;
-        const cardStyle = isActive ? { borderColor: block.accent } : undefined;
+        const cardStyle = isActive
+          ? {
+              borderColor: block.accent,
+              // A soft wash of the store's own colour, like the mock.
+              backgroundColor: `color-mix(in srgb, ${block.accent} 7%, white)`,
+            }
+          : undefined;
 
         const inner = (
           <>
@@ -56,6 +68,16 @@ export function StorePickerCards({
             )}
             <span className="flex flex-1 flex-col gap-1.5 p-3">
               <span className="flex items-center gap-2">
+                {block.icon && (
+                  <Image
+                    src={block.icon}
+                    alt=""
+                    width={48}
+                    height={48}
+                    unoptimized
+                    className="h-8 w-8 shrink-0 rounded object-contain"
+                  />
+                )}
                 <span className="text-base font-bold text-ink">
                   {block.title}
                 </span>
@@ -68,7 +90,7 @@ export function StorePickerCards({
                   </span>
                 )}
                 {isActive && (
-                  <span className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-point-600">
+                  <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold text-point-600">
                     <Check className="h-3 w-3" aria-hidden />
                     Current
                   </span>
@@ -79,14 +101,19 @@ export function StorePickerCards({
                 {block.currency}
               </span>
               <span
-                className={`mt-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold text-white ${
+                className={`mt-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors ${
                   isActive
-                    ? "opacity-60"
-                    : onChoose
-                      ? "group-hover:opacity-90"
-                      : ""
+                    ? "text-ink/70"
+                    : "bg-[#E2E2E2] text-ink " +
+                      (onChoose ? "group-hover:bg-[#d6d6d6]" : "")
                 }`}
-                style={{ backgroundColor: block.accent }}
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: `color-mix(in srgb, ${block.accent} 22%, white)`,
+                      }
+                    : undefined
+                }
               >
                 {isActive ? "You are here" : block.ctaLabel}
                 {!isActive && (

@@ -225,6 +225,10 @@ export const POPUP_DAY_MS = 24 * 60 * 60 * 1000;
  *    set),
  *  - `suppressedAt`: per-id timestamp of the last "don't show again today" click
  *    or last "once a day" display.
+ *
+ * The suppression is the visitor's explicit choice, so it wins over every
+ * frequency: a popup they asked not to see again stays away for 24 h even when
+ * it is set to "once per session" or "every visit".
  */
 export function isPopupDue(
   popup: QueueablePopup,
@@ -232,12 +236,10 @@ export function isPopupDue(
   suppressedAt: Readonly<Record<string, number>>,
   now: number,
 ): boolean {
+  const at = suppressedAt[popup.id];
+  if (at != null && now - at < POPUP_DAY_MS) return false;
   // Shown to this visitor already (this load, or this session for "once").
   if (alreadyShown.has(popup.id)) return false;
-  if (popup.frequency === "day") {
-    const at = suppressedAt[popup.id];
-    return at == null || now - at >= POPUP_DAY_MS;
-  }
   // "once" (per session) and "every" (per page load, filtered above) are due.
   return true;
 }
