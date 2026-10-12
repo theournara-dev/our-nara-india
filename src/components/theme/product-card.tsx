@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
-import { saleStateForVersion } from "@/lib/product-flags";
+import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { notifyAddedToCart } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -145,9 +145,12 @@ export function ThemeProductCard({
         </span>
         {/* International storefront: the K-Drop mark leads the name on the
             same line, matched to the name's own size; the name wraps beside
-            it. */}
+            it. Shown for products that also ship from the global store. */}
         <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
-          <KDropMark className="mr-1 h-[14px] align-middle md:h-[15px]" />
+          <KDropMark
+            availableGlobally={visibleForVersion(product, "global")}
+            className="mr-1 h-[14px] align-middle md:h-[15px]"
+          />
           <Link href={`/products/${product.slug}`} className="text-black">
             {product.name}
           </Link>

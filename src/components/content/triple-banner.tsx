@@ -10,7 +10,7 @@ import type { ResolvedTripleBannerBox } from "@/data/triple-banner";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
-import { saleStateForVersion } from "@/lib/product-flags";
+import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { useSiteVersion } from "@/components/site-version-provider";
 
@@ -128,7 +128,10 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
       <div className="desc">
         <span className="brand">[{product.brand.name}]</span>
         <strong className="name">
-          <KDropMark className="mr-1 h-[12px] align-middle" />
+          <KDropMark
+            availableGlobally={visibleForVersion(product, "global")}
+            className="mr-1 h-[12px] align-middle"
+          />
           <Link href={`/products/${product.slug}`}>{product.name}</Link>
         </strong>
         <span className="tags">{product.shortTags.join(" · ")}</span>

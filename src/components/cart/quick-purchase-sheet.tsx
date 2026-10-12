@@ -26,6 +26,7 @@ import { CouponBox, type AppliedCoupon } from "./coupon-box";
 import { ShippingProgressBar } from "./shipping-progress";
 import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 
 /**
@@ -298,7 +299,13 @@ export function QuickPurchaseSheet({
                           onClick={onClose}
                           className="block truncate text-sm font-medium text-zinc-900 hover:text-point-500"
                         >
-                          <KDropMark className="mr-1 h-[12px] align-middle" />
+                          <KDropMark
+                            availableGlobally={visibleForVersion(
+                              item,
+                              "global",
+                            )}
+                            className="mr-1 h-[12px] align-middle"
+                          />
                           {item.name}
                         </Link>
                         {item.option && (

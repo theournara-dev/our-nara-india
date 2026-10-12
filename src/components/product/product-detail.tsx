@@ -14,7 +14,7 @@ import { FreeShippingBox } from "./free-shipping-box";
 import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
-import { saleStateForVersion } from "@/lib/product-flags";
+import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { PreorderDialog } from "./preorder-dialog";
 import { ProductBlocks } from "./blocks/block-renderer";
@@ -273,9 +273,12 @@ export function ProductDetail({
             {product.brand.name}
           </Link>
           <h1 className="mt-1 font-display text-3xl font-semibold leading-tight text-ink">
-            {/* International storefront: the K-Drop mark prefixes the title,
-                sized to the title itself. */}
-            <KDropMark className="mr-1.5 align-middle h-[30px] md:h-[34px]" />
+            {/* K-Drop mark prefixes the title for products that also ship from
+                the International store, sized to the title itself. */}
+            <KDropMark
+              availableGlobally={visibleForVersion(product, "global")}
+              className="mr-1.5 align-middle h-[30px] md:h-[34px]"
+            />
             {product.name}
           </h1>
 

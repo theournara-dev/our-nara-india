@@ -34,8 +34,9 @@ interface SiteVersionContextValue {
    */
   shipping: ShippingSettings;
   /**
-   * Long store logo (uploaded in /admin/site) shown before product names on
-   * the International storefront. Empty = the bundled K-Drop artwork.
+   * Long store logo (uploaded in /admin/site) shown before the names of
+   * products that are also available on the International (K-Drop) store.
+   * Empty = the bundled K-Drop artwork.
    */
   brandLogo: string;
 }

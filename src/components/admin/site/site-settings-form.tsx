@@ -736,7 +736,7 @@ function StorePickerEditor({
           label="Product-title logo (International store)"
           value={content.brandLogo}
           onChange={(brandLogo) => onChange({ ...content, brandLogo })}
-          hint="Shown before product names on the K-Drop storefront. Upload the wide K-Drop logo (1034×196). Empty falls back to the bundled file."
+          hint="Shown before the names of products also available on the K-Drop store. Upload the wide K-Drop logo (1034×196). Empty falls back to the bundled file."
         />
         {content.blocks.map((block, i) => (
           <div

@@ -51,9 +51,9 @@ export type SwitcherContent = {
   title: string;
   subtitle?: string;
   /**
-   * Long store logo shown before product titles/names on the International
-   * storefront (uploaded in the admin). Empty = use the bundled K-Drop file,
-   * then the drawn stand-in.
+   * Long store logo shown before the names of products available on the
+   * International (K-Drop) store — on either storefront (uploaded in the
+   * admin). Empty = use the bundled K-Drop file.
    */
   brandLogo: string;
   blocks: SwitcherBlock[];

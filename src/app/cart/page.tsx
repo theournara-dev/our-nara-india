@@ -28,6 +28,7 @@ import { CouponBox, type AppliedCoupon } from "@/components/cart/coupon-box";
 import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 
 export default function CartPage() {
@@ -192,7 +193,13 @@ export default function CartPage() {
                           href={`/products/${item.slug}`}
                           className="block truncate font-medium text-zinc-900 hover:text-point-500"
                         >
-                          <KDropMark className="mr-1 h-[12px] align-middle" />
+                          <KDropMark
+                            availableGlobally={visibleForVersion(
+                              item,
+                              "global",
+                            )}
+                            className="mr-1 h-[12px] align-middle"
+                          />
                           {item.name}
                         </Link>
                         {item.option && (

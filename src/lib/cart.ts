@@ -28,6 +28,13 @@ export type CartItem = {
    * `priceCents`. Resolve through `itemPriceForVersion`, never read directly.
    */
   globalPriceCents?: number;
+  /**
+   * Whether the product is listed on the International (K-Drop) store,
+   * captured when the line was added (see `visibleForVersion`). The product
+   * data isn't available where the cart renders, so the K-Drop mark reads
+   * this to tell which lines also ship from the global store.
+   */
+  globalIsActive?: boolean;
   currency: string;
   qty: number;
   /** Selected variant id (checkout maps this to the order line's variant). */
@@ -122,7 +129,8 @@ export function itemPriceForVersion(
  * Both stores' prices are stored on the line (local + optional global) so the
  * cart can re-price itself when the shopper switches store — checkout resolves
  * the line with the same `priceForVersion` chain and must see the same numbers.
- * The currency is the active store's; both stores price in INR.
+ * The currency is the active store's; both stores price in INR. The product's
+ * global-store visibility rides along too, so the K-Drop mark stays correct.
  */
 export function addProductToCart(
   product: {
@@ -132,6 +140,7 @@ export function addProductToCart(
     images: string[];
     priceCents: number;
     globalPriceCents?: number | null;
+    globalIsActive?: boolean | null;
     currency: string;
   },
   qty = 1,
@@ -145,6 +154,7 @@ export function addProductToCart(
     image: product.images[0] ?? "",
     priceCents: product.priceCents,
     globalPriceCents: product.globalPriceCents ?? undefined,
+    globalIsActive: product.globalIsActive ?? undefined,
     currency: getVersionConfig(getActiveVersion()).currency,
     qty,
     option,
