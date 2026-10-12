@@ -39,10 +39,16 @@ interface CategoryProductListProps {
   subcategories?: ListingTab[];
   /** Filters parsed from the URL, so a shared link opens pre-filtered. */
   initialFilters?: CategoryFilters;
+  /** Category-page banners, rendered by the server page above the toolbar. */
+  topBanners?: React.ReactNode;
+  longBanner?: React.ReactNode;
 }
 
 type SortKey =
   "new" | "name" | "lowest" | "highest" | "manufacturer" | "review";
+
+/** Products added per "Show more" click. */
+const PAGE_STEP = 48;
 
 /** Sort options matching the original category/brand toolbar. */
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -65,6 +71,8 @@ export function CategoryProductList({
   columns = 5,
   subcategories = [],
   initialFilters,
+  topBanners,
+  longBanner,
 }: CategoryProductListProps) {
   const [sort, setSort] = useState<SortKey>("new");
   const [filters, setFilters] = useState<CategoryFilters>(
@@ -142,6 +150,16 @@ export function CategoryProductList({
     [sorted, cardOf],
   );
 
+  // The listing shows a page at a time so a large category renders quickly;
+  // "Show more" reveals the next page of the same filtered, sorted list. A
+  // new filter/sort starts over at the first page — reset during render
+  // rather than in an effect, so the stale page never paints.
+  const listingKey = `${sort}:${categoryFilterQuery(filters)}:${products.length}`;
+  const [shown, setShown] = useState({ key: listingKey, count: PAGE_STEP });
+  if (shown.key !== listingKey) setShown({ key: listingKey, count: PAGE_STEP });
+  const shownCards = sortedCards.slice(0, shown.count);
+  const hasMore = sortedCards.length > shownCards.length;
+
   const activeCount = countActiveFilters(filters);
 
   const panel = (
@@ -175,6 +193,11 @@ export function CategoryProductList({
           ))}
         </div>
       )}
+
+      {/* Category banners (admin-managed): the top pair then the long
+          carousel, both under the mid-level tiles. */}
+      {topBanners && <div className="mb-3">{topBanners}</div>}
+      {longBanner && <div className="mb-4">{longBanner}</div>}
 
       <div className="flex items-start gap-8">
         {/* Sidebar (desktop) */}
@@ -229,7 +252,20 @@ export function CategoryProductList({
           </div>
 
           <div className="mt-6">
-            <ProductGrid products={sortedCards} columns={columns} />
+            <ProductGrid products={shownCards} columns={columns} />
+            {hasMore && (
+              <div className="mt-8 text-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShown((s) => ({ ...s, count: s.count + PAGE_STEP }))
+                  }
+                  className="inline-flex h-11 cursor-pointer items-center justify-center rounded-full border border-[#6f2dbd] bg-white px-8 text-sm font-medium text-[#6f2dbd] transition-colors duration-300 hover:bg-[#6f2dbd] hover:text-white"
+                >
+                  Show more ({sortedCards.length - shownCards.length})
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

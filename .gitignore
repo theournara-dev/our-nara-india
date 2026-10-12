@@ -51,3 +51,6 @@ next-env.d.ts
 # Zed agent skills / editor tooling (not part of the app)
 /.agents/
 /skills-lock.json
+
+# commit-message scratch file
+.commit-msg.txt

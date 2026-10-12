@@ -58,6 +58,29 @@ body {
     transform: translateY(5px);
   }
 }
+
+/* Tabbed showcase: the panel under the category tabs fades up when a tab is
+   clicked (the client's slide 5 — "② changes to the corresponding content"). */
+@keyframes showcase-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.showcase-panel {
+  animation: showcase-fade-up 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .showcase-panel {
+    animation: none;
+  }
+}
 .store-switcher-nudge {
   animation: store-nudge 1.4s ease-in-out infinite;
 }

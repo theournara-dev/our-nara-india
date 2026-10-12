@@ -7,6 +7,7 @@ import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductShowcase } from "@/components/theme/product-showcase";
+import { TabbedShowcase } from "@/components/content/tabbed-showcase";
 import { getLongBanners } from "@/data/banners";
 import type { ProductCard } from "@/data/products";
 import {
@@ -25,6 +26,8 @@ import {
   type SectionType,
   type SectionTypeMeta,
   type ShortItem,
+  type ShowcaseBanner,
+  type ShowcaseTab,
 } from "./types";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
@@ -84,6 +87,7 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
         rows?: number;
         moreHref?: string;
         moreLabel?: string;
+        banners?: ShowcaseBanner[];
       };
       const layout = c.layout ?? "grid";
       const columns = c.columns ?? 5;
@@ -100,6 +104,7 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
         columns,
         moreHref: c.moreHref,
         moreLabel: c.moreLabel,
+        banners: c.banners ?? [],
       };
     },
     component: ProductShowcase,
@@ -151,6 +156,30 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
       return { banners: await getLongBanners(ids.length ? ids : undefined) };
     },
     component: LongBanner,
+  },
+  "tabbed-showcase": {
+    meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],
+    load: async (config) => {
+      const c = config as {
+        tabs?: ShowcaseTab[];
+        columns?: number;
+        moreHref?: string;
+        moreLabel?: string;
+      };
+      const version = await getRequestSiteVersion();
+      return {
+        tabs: await Promise.all(
+          (c.tabs ?? []).map(async (tab) => ({
+            ...tab,
+            products: await getProductsBySlugs(tab.productSlugs, version),
+          })),
+        ),
+        columns: c.columns ?? 4,
+        moreHref: c.moreHref,
+        moreLabel: c.moreLabel,
+      };
+    },
+    component: TabbedShowcase,
   },
   reviews: {
     meta: SECTION_TYPE_META_BY_TYPE.reviews,

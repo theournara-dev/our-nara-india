@@ -64,6 +64,47 @@ export const heroSlideSchema = z.object({
 });
 export type HeroSlide = z.infer<typeof heroSlideSchema>;
 
+// ── Showcase banner ─────────────────────────────────────────────────────────
+
+/**
+ * A promo banner above a product section (e.g. a brand's pair of campaign
+ * images). "image" is the uploaded artwork as-is; "custom" adds a title and
+ * subtitle in the lower-left corner over the image, so an admin can build a
+ * banner from any upload.
+ */
+export const showcaseBannerSchema = z.object({
+  id: z.string(),
+  image: z.string().min(1, "Image is required"),
+  href: z.string().optional(),
+  title: z.string().optional(),
+  sub: z.string().optional(),
+  style: z.enum(["image", "custom"]).default("image"),
+});
+export type ShowcaseBanner = z.infer<typeof showcaseBannerSchema>;
+
+// ── Tabbed showcase tab ─────────────────────────────────────────────────────
+
+/**
+ * One tab of the home "tabbed showcase": a category tab that swaps the panel
+ * below it — a banner (linked to the brand or category) plus a curated product
+ * row. The client's slide 5: click ①, ② changes to the corresponding content.
+ */
+export const showcaseTabSchema = z.object({
+  id: z.string(),
+  /** Tab label, e.g. "Brightening". */
+  label: z.string().min(1, "Tab label is required"),
+  image: z.string().default(""),
+  alt: z.string().default(""),
+  /** Banner headline drawn over the artwork. */
+  title: z.string().default(""),
+  /** Banner supporting line. */
+  sub: z.string().default(""),
+  /** Where the banner leads — usually the brand page. */
+  href: z.string().default(""),
+  productSlugs: z.array(z.string()).default([]),
+});
+export type ShowcaseTab = z.infer<typeof showcaseTabSchema>;
+
 // ── Triple banner box ───────────────────────────────────────────────────────
 
 export const tripleBannerBoxSchema = z.object({
@@ -125,12 +166,21 @@ export const sectionConfigSchemas = {
     rows: z.number().int().min(1).max(10).default(2),
     moreHref: z.string().optional(),
     moreLabel: z.string().optional(),
+    // Up to three promo banners shown above the section (the client's brand
+    // sections: two images side by side, or one full-width).
+    banners: z.array(showcaseBannerSchema).max(3).default([]),
   }),
   shorts: z.object({
     items: z.array(shortItemSchema).default([]),
   }),
   "triple-banner": z.object({
     boxes: z.array(tripleBannerBoxSchema).default([]),
+  }),
+  "tabbed-showcase": z.object({
+    tabs: z.array(showcaseTabSchema).default([]),
+    columns: z.number().int().min(2).max(6).default(4),
+    moreHref: z.string().optional(),
+    moreLabel: z.string().optional(),
   }),
   "long-banner": z.object({
     // Specific banners to show (from the Banners admin). Empty = auto: show
@@ -180,6 +230,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
       layout: "grid",
       columns: 5,
       rows: 2,
+      banners: [],
     }),
   },
   {
@@ -195,6 +246,19 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     description: "Banner panels with curated product rows.",
     configSchema: sectionConfigSchemas["triple-banner"],
     defaultConfig: () => ({ boxes: [] }),
+  },
+  {
+    type: "tabbed-showcase",
+    label: "Tabbed showcase",
+    description:
+      "Category tabs over a linked banner and a curated product row.",
+    configSchema: sectionConfigSchemas["tabbed-showcase"],
+    defaultConfig: () => ({
+      tabs: [],
+      columns: 4,
+      moreHref: "",
+      moreLabel: "",
+    }),
   },
   {
     type: "long-banner",

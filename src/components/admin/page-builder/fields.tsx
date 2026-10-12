@@ -15,6 +15,8 @@ import type {
   InstagramItem,
   ProductSource,
   ShortItem,
+  ShowcaseBanner,
+  ShowcaseTab,
   TripleBannerBox,
 } from "@/lib/page-builder/types";
 
@@ -885,6 +887,222 @@ export function TripleBannerBoxesField({
         className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
       >
         + Add panel
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Up to three promo banners above a product section (the brand sections on the
+ * home page). "image" shows the uploaded artwork as-is; "custom" overlays a
+ * title and subtitle in the lower-left corner so a banner can be composed from
+ * any upload.
+ */
+export function ShowcaseBannersField({
+  value,
+  onChange,
+}: {
+  value: ShowcaseBanner[];
+  onChange: (banners: ShowcaseBanner[]) => void;
+}) {
+  const banners = value ?? [];
+
+  function update(id: string, patch: Partial<ShowcaseBanner>) {
+    onChange(banners.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+  }
+  function add() {
+    if (banners.length >= 3) return;
+    onChange([
+      ...banners,
+      {
+        id: crypto.randomUUID(),
+        image: "",
+        href: "",
+        title: "",
+        sub: "",
+        style: "image",
+      },
+    ]);
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs leading-5 text-zinc-400">
+        Banners above this section — one runs full width, two or three share the
+        row (used by the brand sections). Up to three.
+      </p>
+      {banners.map((banner, index) => (
+        <div key={banner.id} className="rounded-lg border border-zinc-200 p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-700">
+              Banner {index + 1}
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                onChange(banners.filter((b) => b.id !== banner.id))
+              }
+              className="text-xs font-medium text-red-500 hover:underline"
+            >
+              Remove
+            </button>
+          </div>
+          <div className="grid gap-3">
+            <ImageField
+              value={banner.image}
+              onChange={(v) => update(banner.id, { image: v })}
+              label="Image"
+            />
+            <SelectField
+              label="Style"
+              value={banner.style ?? "image"}
+              onChange={(v) =>
+                update(banner.id, { style: v as ShowcaseBanner["style"] })
+              }
+              options={[
+                {
+                  value: "image",
+                  label: "Image only — the artwork as uploaded",
+                },
+                {
+                  value: "custom",
+                  label: "Custom — title & subtitle over the image",
+                },
+              ]}
+            />
+            {banner.style === "custom" && (
+              <>
+                <TextField
+                  label="Title"
+                  value={banner.title ?? ""}
+                  onChange={(v) => update(banner.id, { title: v })}
+                />
+                <TextField
+                  label="Subtitle"
+                  value={banner.sub ?? ""}
+                  onChange={(v) => update(banner.id, { sub: v })}
+                />
+              </>
+            )}
+            <TextField
+              label="Link (optional)"
+              value={banner.href ?? ""}
+              onChange={(v) => update(banner.id, { href: v })}
+              placeholder="/brand/nowater"
+            />
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        disabled={banners.length >= 3}
+        className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500 disabled:opacity-50"
+      >
+        + Add banner
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Editor for the tabbed showcase: each tab is a category (label), a banner
+ * (image, optional headline/subtitle and the link it leads to) and a curated
+ * product list.
+ */
+export function ShowcaseTabsField({
+  value,
+  onChange,
+  options,
+}: {
+  value: ShowcaseTab[];
+  onChange: (tabs: ShowcaseTab[]) => void;
+  options: SectionFormOptions;
+}) {
+  const tabs = value ?? [];
+
+  function updateTab(id: string, patch: Partial<ShowcaseTab>) {
+    onChange(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+  function addTab() {
+    onChange([
+      ...tabs,
+      {
+        id: crypto.randomUUID(),
+        label: "",
+        image: "",
+        alt: "",
+        title: "",
+        sub: "",
+        href: "",
+        productSlugs: [],
+      },
+    ]);
+  }
+
+  return (
+    <div className="space-y-4">
+      {tabs.map((tab, index) => (
+        <div key={tab.id} className="rounded-lg border border-zinc-200 p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-700">
+              Tab {index + 1} — {tab.label || "(no label)"}
+            </span>
+            <button
+              type="button"
+              onClick={() => onChange(tabs.filter((t) => t.id !== tab.id))}
+              className="text-xs font-medium text-red-500 hover:underline"
+            >
+              Remove
+            </button>
+          </div>
+          <div className="grid gap-3">
+            <TextField
+              label="Tab label"
+              value={tab.label}
+              onChange={(v) => updateTab(tab.id, { label: v })}
+              placeholder="e.g. Brightening"
+            />
+            <ImageField
+              value={tab.image}
+              onChange={(v) => updateTab(tab.id, { image: v })}
+              label="Banner image"
+            />
+            <TextField
+              label="Banner headline (optional)"
+              value={tab.title}
+              onChange={(v) => updateTab(tab.id, { title: v })}
+            />
+            <TextField
+              label="Banner subtitle (optional)"
+              value={tab.sub}
+              onChange={(v) => updateTab(tab.id, { sub: v })}
+            />
+            <TextField
+              label="Banner link"
+              value={tab.href}
+              onChange={(v) => updateTab(tab.id, { href: v })}
+              placeholder="/brand/nowater"
+            />
+            <TextField
+              label="Alt text"
+              value={tab.alt}
+              onChange={(v) => updateTab(tab.id, { alt: v })}
+            />
+            <SlugsField
+              value={tab.productSlugs}
+              onChange={(v) => updateTab(tab.id, { productSlugs: v })}
+              options={options}
+            />
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={addTab}
+        className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
+      >
+        + Add tab
       </button>
     </div>
   );

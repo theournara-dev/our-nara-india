@@ -6,13 +6,19 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { parseInput, safeText } from "@/lib/validation";
-import { BANNER_PLACEMENTS } from "./lib";
+import {
+  BANNER_PLACEMENTS,
+  CATEGORY_PLACEMENTS,
+  type BannerPlacement,
+} from "./lib";
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
 const bannerInput = z.object({
   title: safeText(200, { min: 1, message: "Title is required" }),
   placement: z.enum(BANNER_PLACEMENTS).default("long"),
+  /** The category page a "category-top"/"category-long" banner belongs to. */
+  categoryId: z.string().optional(),
   image: safeText(2000, { min: 1, message: "Image is required" }),
   mobileImage: safeText(2000).optional(),
   alt: safeText(200).optional(),
@@ -39,6 +45,21 @@ function revalidateCatalog() {
   revalidatePath("/admin/banners");
   revalidatePath("/admin/popups");
   revalidatePath("/");
+  // Category-page banners show up on every category listing.
+  revalidatePath("/category", "layout");
+}
+
+/**
+ * The category a scoped banner belongs to: the picked one for the category
+ * placements, cleared for every other placement.
+ */
+function scopedCategoryId(
+  placement: string,
+  categoryId: string | undefined,
+): string | null {
+  return CATEGORY_PLACEMENTS.includes(placement as BannerPlacement)
+    ? categoryId?.trim() || null
+    : null;
 }
 
 // ── Actions ─────────────────────────────────────────────────────────────────
@@ -50,6 +71,7 @@ export async function createBanner(input: BannerInput, backHref: string) {
     data: {
       title: data.title.trim(),
       placement: data.placement,
+      categoryId: scopedCategoryId(data.placement, data.categoryId),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,
@@ -72,6 +94,7 @@ export async function updateBanner(id: string, input: BannerInput) {
     data: {
       title: data.title.trim(),
       placement: data.placement,
+      categoryId: scopedCategoryId(data.placement, data.categoryId),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,

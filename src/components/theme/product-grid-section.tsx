@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ThemeProductCard } from "@/components/theme/product-card";
+import { ShowcaseBanners } from "@/components/theme/showcase-banners";
 import type { ProductCard as ProductCardType } from "@/data/products";
+import type { ShowcaseBanner } from "@/lib/page-builder/types";
 
 interface ProductGridSectionProps {
   sub?: string;
@@ -11,6 +13,8 @@ interface ProductGridSectionProps {
   /** Optional "more products" link rendered as a pill button below the grid. */
   moreHref?: string;
   moreLabel?: string;
+  /** Promo banners above the section (brand campaigns). */
+  banners?: ShowcaseBanner[];
 }
 
 /** Literal Tailwind classes so the JIT can see every possible grid size. */
@@ -35,13 +39,15 @@ export function ProductGridSection({
   columns = 5,
   moreHref,
   moreLabel = "MORE PRODUCTS →",
+  banners = [],
 }: ProductGridSectionProps) {
-  if (products.length === 0) return null;
+  if (products.length === 0 && banners.length === 0) return null;
   const gridClass = GRID_CLASS[columns] ?? GRID_CLASS[5];
 
   return (
     <div className="mb-[10px] mt-[100px] w-full max-[767px]:mb-5 max-[767px]:mt-[60px]">
       <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2 max-[767px]:w-[96%]">
+        <ShowcaseBanners banners={banners} />
         <div className="mx-auto mb-2">
           <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
             {sub && (

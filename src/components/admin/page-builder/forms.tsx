@@ -13,6 +13,8 @@ import {
   ProductSourceField,
   SelectField,
   ShortsItemsField,
+  ShowcaseBannersField,
+  ShowcaseTabsField,
   TextField,
   TripleBannerBoxesField,
   type SectionFormOptions,
@@ -75,6 +77,41 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
 
 export function ReviewsForm() {
   return <NoSettings />;
+}
+
+/**
+ * The tabbed showcase (the client's slide 5): every tab is a category that
+ * swaps the panel — a linked banner plus curated products.
+ */
+export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
+  return (
+    <div className="space-y-4">
+      <ShowcaseTabsField
+        value={config.tabs ?? []}
+        onChange={(tabs) => onChange({ ...config, tabs })}
+        options={options}
+      />
+      <NumberField
+        label="Columns"
+        value={config.columns ?? 4}
+        min={2}
+        max={6}
+        onChange={(columns) => onChange({ ...config, columns })}
+      />
+      <MoreLinkField
+        value={config.moreHref ?? ""}
+        onChange={(moreHref) => onChange({ ...config, moreHref })}
+        options={options}
+        hint="Optional button under every tab's products."
+      />
+      <TextField
+        label="More label (optional)"
+        value={config.moreLabel ?? ""}
+        onChange={(moreLabel) => onChange({ ...config, moreLabel })}
+        placeholder="VIEW MORE →"
+      />
+    </div>
+  );
 }
 
 export function InstagramForm({ config, onChange }: FormProps) {
@@ -147,6 +184,10 @@ export function ProductShowcaseForm({ config, onChange, options }: FormProps) {
           />
         </>
       )}
+      <ShowcaseBannersField
+        value={config.banners ?? []}
+        onChange={(banners) => onChange({ ...config, banners })}
+      />
     </div>
   );
 }

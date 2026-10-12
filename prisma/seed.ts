@@ -8,7 +8,7 @@ import "dotenv/config";
 import { db } from "../src/lib/db";
 import { Prisma } from "../src/generated/prisma/client";
 import { homeBrandSections } from "../src/data/home-sections";
-import { tripleBannerBoxes } from "../src/data/triple-banner";
+import { tripleBannerTabs } from "../src/data/triple-banner";
 import { defaultHeroSlides } from "../src/data/hero";
 import { defaultShortsItems } from "../src/data/shorts";
 import { defaultInstagramItems } from "../src/data/instagram";
@@ -518,9 +518,9 @@ async function seedHomePage() {
       config: { items: defaultShortsItems },
     },
     {
-      type: "triple-banner",
-      title: "Triple banner",
-      config: { boxes: tripleBannerBoxes },
+      type: "tabbed-showcase",
+      title: "Tabbed showcase",
+      config: { tabs: tripleBannerTabs, columns: 4 },
     },
     {
       type: "product-showcase",

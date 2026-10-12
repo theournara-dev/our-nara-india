@@ -6,7 +6,9 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import { ThemeProductCard } from "@/components/theme/product-card";
+import { ShowcaseBanners } from "@/components/theme/showcase-banners";
 import type { ProductCard as ProductCardType } from "@/data/products";
+import type { ShowcaseBanner } from "@/lib/page-builder/types";
 import { SliderNav } from "@/components/ui/slider-nav";
 
 interface ThemeProductSectionProps {
@@ -15,6 +17,8 @@ interface ThemeProductSectionProps {
   products: ProductCardType[];
   /** Slides visible on large screens (mobile shows ~1.4). Default 4. */
   columns?: number;
+  /** Promo banners above the section (brand campaigns). */
+  banners?: ShowcaseBanner[];
 }
 
 export function ThemeProductSection({
@@ -22,6 +26,7 @@ export function ThemeProductSection({
   title,
   products,
   columns = 4,
+  banners = [],
 }: ThemeProductSectionProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const paginationRef = useRef<HTMLDivElement>(null);
@@ -75,11 +80,12 @@ export function ThemeProductSection({
     };
   }, [columns]);
 
-  if (!products.length) return null;
+  if (!products.length && banners.length === 0) return null;
 
   return (
     <div className="mb-[10px] mt-[100px] w-full max-[767px]:mb-5 max-[767px]:mt-[60px]">
       <div className="relative mx-auto box-border w-[92%] max-w-[1560px] px-2 max-[767px]:w-[96%]">
+        <ShowcaseBanners banners={banners} />
         <div className="mx-auto mb-2">
           <h2 className="text-center text-2xl font-bold leading-8 tracking-tight text-ink">
             {sub && (

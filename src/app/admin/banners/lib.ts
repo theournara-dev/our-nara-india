@@ -1,10 +1,5 @@
 /** Query params that make up the banners list's filter state. */
-export const FILTER_KEYS = [
-  "search",
-  "placement",
-  "active",
-  "page",
-] as const;
+export const FILTER_KEYS = ["search", "placement", "active", "page"] as const;
 
 /**
  * Build a `/admin/banners` URL that preserves the current list filters, so the
@@ -28,11 +23,25 @@ export function currentQuery(params: Record<string, string>): string {
 }
 
 /** The placements a banner can belong to. Kept in sync with the storefront. */
-export const BANNER_PLACEMENTS = ["long", "hero", "triple"] as const;
+export const BANNER_PLACEMENTS = [
+  "long",
+  "hero",
+  "triple",
+  "category-top",
+  "category-long",
+] as const;
 export type BannerPlacement = (typeof BANNER_PLACEMENTS)[number];
 
 export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
-  long: "Long banner",
+  long: "Long banner (home)",
   hero: "Hero carousel",
   triple: "Triple banner",
+  "category-top": "Category page — top pair",
+  "category-long": "Category page — long carousel",
 };
+
+/** Placements that need a category to attach to. */
+export const CATEGORY_PLACEMENTS: BannerPlacement[] = [
+  "category-top",
+  "category-long",
+];

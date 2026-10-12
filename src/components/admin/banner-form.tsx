@@ -14,7 +14,11 @@ import {
   updateBanner,
   type BannerInput,
 } from "@/app/admin/banners/actions";
-import { BANNER_PLACEMENTS, PLACEMENT_LABELS } from "@/app/admin/banners/lib";
+import {
+  BANNER_PLACEMENTS,
+  CATEGORY_PLACEMENTS,
+  PLACEMENT_LABELS,
+} from "@/app/admin/banners/lib";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
@@ -24,6 +28,7 @@ type BannerModel = {
   id: string;
   title: string;
   placement: string;
+  categoryId: string | null;
   image: string;
   mobileImage: string | null;
   alt: string | null;
@@ -37,6 +42,8 @@ type BannerModel = {
 type BannerFormProps = {
   banner: BannerModel | null;
   backHref: string;
+  /** Categories the scoped placements can attach to. */
+  categories?: { id: string; name: string }[];
 };
 
 /** Create/edit form for a banner; images upload when the form is saved. */
@@ -48,12 +55,17 @@ export function BannerForm(props: BannerFormProps) {
   );
 }
 
-function BannerFormInner({ banner, backHref }: BannerFormProps) {
+function BannerFormInner({
+  banner,
+  backHref,
+  categories = [],
+}: BannerFormProps) {
   const isEdit = Boolean(banner);
   const [pending, startTransition] = useTransition();
 
   const [title, setTitle] = useState(banner?.title ?? "");
   const [placement, setPlacement] = useState(banner?.placement ?? "long");
+  const [categoryId, setCategoryId] = useState(banner?.categoryId ?? "");
   const [image, setImage] = useState(banner?.image ?? "");
   const [mobileImage, setMobileImage] = useState(banner?.mobileImage ?? "");
   const [alt, setAlt] = useState(banner?.alt ?? "");
@@ -77,6 +89,7 @@ function BannerFormInner({ banner, backHref }: BannerFormProps) {
     const input: BannerInput = {
       title: title.trim(),
       placement: placement as BannerInput["placement"],
+      categoryId: categoryId || undefined,
       image: image.trim(),
       mobileImage: mobileImage.trim() || undefined,
       alt: alt.trim() || undefined,
@@ -143,9 +156,35 @@ function BannerFormInner({ banner, backHref }: BannerFormProps) {
               ))}
             </select>
             <span className="mt-1 block text-xs text-zinc-400">
-              Long banner is shown on the homepage carousel.
+              {CATEGORY_PLACEMENTS.includes(
+                placement as (typeof CATEGORY_PLACEMENTS)[number],
+              )
+                ? "Shown on the chosen category page, under its mid-level tiles."
+                : "Long banner is shown on the homepage carousel."}
             </span>
           </label>
+          {CATEGORY_PLACEMENTS.includes(
+            placement as (typeof CATEGORY_PLACEMENTS)[number],
+          ) && (
+            <label className="block">
+              <span className={labelCls}>Category page</span>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Choose a category…</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-zinc-400">
+                The top pair renders the first two banners side by side.
+              </span>
+            </label>
+          )}
           <label className="block">
             <span className={labelCls}>Sort order</span>
             <input

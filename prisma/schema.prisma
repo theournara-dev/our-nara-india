@@ -174,6 +174,7 @@ model Category {
 
   products         Product[]
   subcategoryLinks ProductSubcategory[]
+  banners          Banner[]
 
   @@index([parentId])
   @@map("categories")
@@ -749,7 +750,11 @@ model RecentView {
 model Banner {
   id          String    @id @default(cuid())
   title       String // admin label, e.g. "Summer Sale"
-  placement   String    @default("long") // "long" | "hero" | "triple"
+  placement   String    @default("long") // "long" | "hero" | "triple" | "category-top" | "category-long"
+  // The category page a scoped banner belongs to ("category-top" renders the
+  // first two side by side, "category-long" is the carousel under them).
+  // Null on the homepage placements.
+  categoryId  String?   @map("category_id")
   image       String // desktop image URL
   mobileImage String?   @map("mobile_image") // taller mobile variant; falls back to image
   alt         String?
@@ -761,7 +766,10 @@ model Banner {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
   @@index([isActive, placement, sortOrder])
+  @@index([categoryId, placement])
   @@map("banners")
 }
 

@@ -23,13 +23,20 @@ export default async function EditBannerPage({
   const [{ id }, listParams] = await Promise.all([params, searchParams]);
   const backHref = buildBackHref(listParams);
 
-  const banner = await db.banner.findUnique({ where: { id } });
+  const [banner, categories] = await Promise.all([
+    db.banner.findUnique({ where: { id } }),
+    db.category.findMany({
+      where: { parentId: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+  ]);
   if (!banner) notFound();
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Edit banner</h1>
-      <BannerForm banner={banner} backHref={backHref} />
+      <BannerForm banner={banner} categories={categories} backHref={backHref} />
     </div>
   );
 }

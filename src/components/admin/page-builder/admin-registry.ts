@@ -18,6 +18,7 @@ import {
   ProductShowcaseForm,
   ReviewsForm,
   ShortsForm,
+  TabbedShowcaseForm,
   TripleBannerForm,
 } from "./forms";
 
@@ -45,6 +46,10 @@ export const ADMIN_SECTION_TYPES: Record<SectionType, AdminSectionType> = {
   "triple-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["triple-banner"],
     adminForm: TripleBannerForm,
+  },
+  "tabbed-showcase": {
+    meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],
+    adminForm: TabbedShowcaseForm,
   },
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],

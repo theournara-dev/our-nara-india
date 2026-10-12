@@ -77,7 +77,8 @@ export function ReviewsSection() {
     <section className="main-review">
       <div className="inner">
         <div className="sub-title">
-          <span className="sub">REAL REVIEWS</span>
+          {/* The client removed the "REAL REVIEWS" eyebrow (slide 9); the
+              heading and the cards stay. */}
           <h2>What Our Customers Say</h2>
         </div>
 

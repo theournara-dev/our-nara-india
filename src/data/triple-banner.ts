@@ -30,10 +30,7 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     alt: "Brightening glow care",
     title: "BRIGHTENING GLOW CARE",
     sub: "For brighter, even-toned, radiant-looking skin.",
-    productSlugs: [
-      "brightening-vitamin-serum",
-      "prestige-collagen-eye-cream-25ml",
-    ],
+    productSlugs: ["brightening-vitamin-serum", "prestige-collagen-eye-cream"],
   },
   {
     id: "t2",
@@ -41,7 +38,7 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     alt: "Firm, plump and glow",
     title: "FIRM, PLUMP & GLOW",
     sub: "Collagen care for smoother, more elastic-looking skin.",
-    productSlugs: ["return-collagen-cream-50g", "skin-booster-collagen-mask-50g"],
+    productSlugs: ["return-collagen-cream", "skin-booster-collagen-mask-50g"],
   },
   {
     id: "t3",
@@ -55,3 +52,38 @@ export const tripleBannerBoxes: TripleBannerBox[] = [
     ],
   },
 ];
+
+/** Tab label + link for each box of the home "tabbed showcase" (slide 5). */
+const TAB_META: Record<string, { label: string; href: string }> = {
+  t1: { label: "Brightening", href: "/brand/nowater" },
+  t2: { label: "Firm & Glow", href: "/brand/nowater" },
+  t3: { label: "Lifting", href: "/brand/dr-pepti" },
+};
+
+export interface TripleBannerTab {
+  id: string;
+  label: string;
+  image: string;
+  alt: string;
+  title: string;
+  sub: string;
+  href: string;
+  productSlugs: string[];
+}
+
+/**
+ * The three boxes as tabs of the page-builder "tabbed showcase" that replaced
+ * the home triple banner: the tab row swaps the banner + curated product row.
+ */
+export const tripleBannerTabs: TripleBannerTab[] = tripleBannerBoxes.map(
+  (box) => ({
+    id: box.id,
+    label: TAB_META[box.id]?.label ?? box.title,
+    image: box.image,
+    alt: box.alt,
+    title: box.title,
+    sub: box.sub,
+    href: TAB_META[box.id]?.href ?? "",
+    productSlugs: box.productSlugs,
+  }),
+);

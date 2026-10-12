@@ -3,7 +3,7 @@ import { InstagramSection } from "@/components/content/instagram-section";
 import { LongBanner } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
-import { TripleBanner } from "@/components/content/triple-banner";
+import { TabbedShowcase } from "@/components/content/tabbed-showcase";
 import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
@@ -17,7 +17,7 @@ import {
   getProductsBySlugs,
 } from "@/data/products";
 import { getShortsPicks } from "@/data/shorts";
-import { tripleBannerBoxes } from "@/data/triple-banner";
+import { tripleBannerTabs } from "@/data/triple-banner";
 import { getVersionConfig } from "@/lib/site-version";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
@@ -33,10 +33,10 @@ export async function StaticHome() {
   const featured = await getFeaturedProducts(4, version);
   const shorts = await getShortsPicks();
   const longBanners = await getLongBanners();
-  const tripleBoxes = await Promise.all(
-    tripleBannerBoxes.map(async (box) => ({
-      ...box,
-      products: await getProductsBySlugs(box.productSlugs, version),
+  const showcaseTabs = await Promise.all(
+    tripleBannerTabs.map(async (tab) => ({
+      ...tab,
+      products: await getProductsBySlugs(tab.productSlugs, version),
     })),
   );
   const preOrder = preOrderEnabled
@@ -80,9 +80,10 @@ export async function StaticHome() {
         <ShortsCarousel picks={shorts} />
       </Reveal>
 
-      {/* Triple banner (banner + curated products) */}
+      {/* Tabbed showcase (the triple banner's successor: tabs + banner +
+          curated products) */}
       <Reveal>
-        <TripleBanner boxes={tripleBoxes} />
+        <TabbedShowcase tabs={showcaseTabs} columns={4} />
       </Reveal>
 
       {/* Pre-orders */}

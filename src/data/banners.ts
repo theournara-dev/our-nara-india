@@ -64,3 +64,41 @@ export async function getLongBanners(ids?: string[]): Promise<LongBanner[]> {
 }
 
 export { staticLongBanners as longBanners };
+
+/**
+ * The banners of one category page: up to two "category-top" images rendered
+ * side by side under the mid-level tiles, and the "category-long" carousel
+ * below them (any number of images). Managed in /admin/banners by choosing
+ * the placement and the category.
+ */
+export async function getCategoryBanners(
+  categorySlug: string,
+): Promise<{ top: LongBanner[]; long: LongBanner[] }> {
+  const now = new Date();
+  const rows = await db.banner.findMany({
+    where: {
+      isActive: true,
+      placement: { in: ["category-top", "category-long"] },
+      category: { slug: categorySlug },
+      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  const toBanner = (b: (typeof rows)[number]): LongBanner => ({
+    id: b.id,
+    image: b.image,
+    mobileImage: b.mobileImage || b.image,
+    alt: b.alt || b.title,
+    href: b.href ?? undefined,
+  });
+
+  return {
+    top: rows
+      .filter((b) => b.placement === "category-top")
+      .slice(0, 2)
+      .map(toBanner),
+    long: rows.filter((b) => b.placement === "category-long").map(toBanner),
+  };
+}

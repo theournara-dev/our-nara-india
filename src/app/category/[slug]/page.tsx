@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
+import { LongBanner } from "@/components/content/long-banner";
+import { getCategoryBanners } from "@/data/banners";
 import {
   getCategoryById,
   getCategoryBySlug,
@@ -56,9 +59,10 @@ export default async function CategoryPage({
     if (parent) redirect(`/category/${parent.slug}?sub=${category.slug}`);
   }
 
-  const [products, subcategories] = await Promise.all([
+  const [products, subcategories, banners] = await Promise.all([
     getProductsByCategorySlug(slug, 300, version),
     getCategoryTabs(slug, version),
+    getCategoryBanners(slug),
   ]);
 
   const filters = parseCategoryFilters({ sub, brand, min, max, avail });
@@ -92,6 +96,35 @@ export default async function CategoryPage({
         columns={5}
         subcategories={subcategories}
         initialFilters={initialFilters}
+        topBanners={
+          banners.top.length > 0 ? (
+            <div
+              className={`grid gap-3 ${
+                banners.top.length > 1 ? "sm:grid-cols-2" : ""
+              }`}
+            >
+              {banners.top.map((banner) => (
+                <Link
+                  key={banner.id}
+                  href={banner.href ?? "#"}
+                  className="block overflow-hidden rounded-xl"
+                >
+                  <Image
+                    src={banner.image}
+                    alt={banner.alt}
+                    width={1200}
+                    height={480}
+                    unoptimized
+                    className="h-auto w-full"
+                  />
+                </Link>
+              ))}
+            </div>
+          ) : null
+        }
+        longBanner={
+          banners.long.length > 0 ? <LongBanner banners={banners.long} /> : null
+        }
       />
     </Container>
   );

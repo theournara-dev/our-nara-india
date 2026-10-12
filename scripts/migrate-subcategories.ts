@@ -104,11 +104,31 @@ function suggest(name: string, categorySlug: string): string | null {
   return null;
 }
 
+/** The order the storefront's menu should list the known roots in. */
+const ROOT_ORDER = ["skin-care", "makeup", "hair-care", "pre-order", "tools"];
+
 async function main() {
   const apply = process.argv.includes("--apply");
   const withSuggestions = process.argv.includes("--suggestions");
   const reset = process.argv.includes("--reset");
   const dry = !apply;
+
+  // ── 0. menu order ───────────────────────────────────────────────────────────
+  const roots = await db.category.findMany({
+    where: { parentId: null },
+    select: { id: true, slug: true, sortOrder: true },
+  });
+  for (const [index, slug] of ROOT_ORDER.entries()) {
+    const root = roots.find((r) => r.slug === slug);
+    if (!root || root.sortOrder === index) continue;
+    console.log(`  ~ ${slug} menu order ${root.sortOrder} → ${index}`);
+    if (!dry) {
+      await db.category.update({
+        where: { id: root.id },
+        data: { sortOrder: index },
+      });
+    }
+  }
 
   if (reset) {
     const removed = await db.productSubcategory.deleteMany({});
