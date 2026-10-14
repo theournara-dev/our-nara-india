@@ -5,6 +5,11 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
+import { inputCls, labelCls } from "@/components/admin/field-styles";
+import {
+  LinkField,
+  type LinkFieldOptions,
+} from "@/components/admin/link-field";
 import {
   useUploadQueue,
   checkPickedFile,
@@ -40,9 +45,7 @@ export interface SectionFormOptions {
   banners: { id: string; title: string; image: string; placement: string }[];
 }
 
-export const inputCls =
-  "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
-export const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
+export { inputCls, labelCls };
 
 export function TextField({
   label,
@@ -163,49 +166,9 @@ export function SelectField({
 
 // ── Storefront link builder ─────────────────────────────────────────────────
 
-/** Kinds of storefront pages a section link can point at. */
-const LINK_KINDS = [
-  { value: "none", label: "No link" },
-  { value: "brand", label: "Brand page" },
-  { value: "category", label: "Category page" },
-  { value: "product", label: "Product page" },
-  { value: "custom", label: "Custom URL" },
-] as const;
-
-type LinkKind = (typeof LINK_KINDS)[number]["value"];
-
-/** Pull a stored href apart into the dropdown chain that produced it. */
-function parseHref(href: string): { kind: LinkKind; target: string } {
-  const match = /^\/(brand|category|products)\/(.+)$/.exec(href);
-  if (match) {
-    return {
-      kind: match[1] === "products" ? "product" : (match[1] as LinkKind),
-      target: match[2],
-    };
-  }
-  return href ? { kind: "custom", target: href } : { kind: "none", target: "" };
-}
-
-/** Rebuild the href from the chain (a custom URL passes through untouched). */
-function buildHref(kind: LinkKind, target: string): string {
-  switch (kind) {
-    case "brand":
-      return target ? `/brand/${target}` : "";
-    case "category":
-      return target ? `/category/${target}` : "";
-    case "product":
-      return target ? `/products/${target}` : "";
-    case "custom":
-      return target.trim();
-    default:
-      return "";
-  }
-}
-
 /**
- * Builds a storefront link as a chain of dropdowns (page kind → target) and
- * previews the resulting URL. Anything that doesn't match a known storefront
- * route is kept as a custom URL so existing sections don't lose their link.
+ * The page builder's link field: the shared selector (kind → target) with the
+ * section form's options narrowed down to what it needs.
  */
 export function MoreLinkField({
   value,
@@ -220,99 +183,19 @@ export function MoreLinkField({
   label?: string;
   hint?: string;
 }) {
-  const { kind, target } = parseHref(value ?? "");
-  const targets: { value: string; label: string }[] =
-    kind === "brand"
-      ? options.brands.map((b) => ({ value: b.slug, label: b.name }))
-      : kind === "category"
-        ? options.categories.map((c) => ({ value: c.slug, label: c.name }))
-        : kind === "product"
-          ? options.products.map((p) => ({ value: p.slug, label: p.name }))
-          : [];
-  // A saved target that no longer exists (renamed slug, deleted page) is kept
-  // selectable so the admin can see what the section still points at.
-  const unknownTarget = target && !targets.some((t) => t.value === target);
-  const selectedTarget = kind === "custom" ? "" : target;
-
-  function changeKind(next: LinkKind) {
-    if (next === "custom") {
-      onChange(kind === "custom" ? value : "");
-      return;
-    }
-    const first =
-      next === "brand"
-        ? options.brands[0]?.slug
-        : next === "category"
-          ? options.categories[0]?.slug
-          : next === "product"
-            ? options.products[0]?.slug
-            : "";
-    onChange(buildHref(next, first ?? ""));
-  }
-
+  const linkOptions: LinkFieldOptions = {
+    brands: options.brands,
+    categories: options.categories,
+    products: options.products.map((p) => ({ slug: p.slug, name: p.name })),
+  };
   return (
-    <div>
-      <span className={labelCls}>{label}</span>
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          aria-label="Link type"
-          value={kind}
-          onChange={(e) => changeKind(e.target.value as LinkKind)}
-          className={`${inputCls} w-auto`}
-        >
-          {LINK_KINDS.map((k) => (
-            <option key={k.value} value={k.value}>
-              {k.label}
-            </option>
-          ))}
-        </select>
-
-        {kind !== "none" && kind !== "custom" && (
-          <select
-            aria-label="Link target"
-            value={selectedTarget}
-            onChange={(e) => onChange(buildHref(kind, e.target.value))}
-            className={`${inputCls} w-auto`}
-          >
-            <option value="">Choose…</option>
-            {unknownTarget && (
-              <option value={target}>{target} (not found)</option>
-            )}
-            {targets.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {kind === "custom" && (
-          <input
-            value={target}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="/help or https://…"
-            className={`${inputCls} min-w-[220px] flex-1`}
-          />
-        )}
-      </div>
-
-      <div className="mt-1.5 flex items-center gap-2 text-xs">
-        <span className="text-zinc-400">Link:</span>
-        {value ? (
-          <a
-            href={value}
-            target="_blank"
-            rel="noreferrer"
-            className="truncate rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-zinc-600 hover:text-point-600"
-          >
-            {value}
-          </a>
-        ) : (
-          <span className="text-zinc-400">—</span>
-        )}
-      </div>
-      {hint && <span className="mt-1 block text-xs text-zinc-400">{hint}</span>}
-    </div>
+    <LinkField
+      value={value}
+      onChange={onChange}
+      options={linkOptions}
+      label={label}
+      hint={hint}
+    />
   );
 }
 
@@ -767,11 +650,18 @@ export function HeroSlidesField({
                     value={slide.brand ?? ""}
                     onChange={(v) => updateSlide(slide.id, { brand: v })}
                   />
-                  <TextField
-                    label="Link"
+                  <LinkField
+                    label="Link (optional)"
                     value={slide.href ?? ""}
                     onChange={(v) => updateSlide(slide.id, { href: v })}
-                    placeholder="/products/slug"
+                    options={{
+                      brands: options.brands,
+                      categories: options.categories,
+                      products: options.products.map((p) => ({
+                        slug: p.slug,
+                        name: p.name,
+                      })),
+                    }}
                   />
                   <label className="flex items-center gap-2">
                     <input
@@ -874,11 +764,18 @@ export function TripleBannerBoxesField({
               value={box.alt}
               onChange={(v) => updateBox(box.id, { alt: v })}
             />
-            <TextField
+            <LinkField
               label="Link (optional)"
               value={box.href ?? ""}
               onChange={(v) => updateBox(box.id, { href: v })}
-              placeholder="e.g. /brand/nowater"
+              options={{
+                brands: options.brands,
+                categories: options.categories,
+                products: options.products.map((p) => ({
+                  slug: p.slug,
+                  name: p.name,
+                })),
+              }}
             />
             <SlugsField
               value={box.productSlugs}
@@ -908,11 +805,18 @@ export function TripleBannerBoxesField({
 export function ShowcaseBannersField({
   value,
   onChange,
+  options,
 }: {
   value: ShowcaseBanner[];
   onChange: (banners: ShowcaseBanner[]) => void;
+  options: SectionFormOptions;
 }) {
   const banners = value ?? [];
+  const linkOptions: LinkFieldOptions = {
+    brands: options.brands,
+    categories: options.categories,
+    products: options.products.map((p) => ({ slug: p.slug, name: p.name })),
+  };
 
   function update(id: string, patch: Partial<ShowcaseBanner>) {
     onChange(banners.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -954,7 +858,7 @@ export function ShowcaseBannersField({
               Remove
             </button>
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-3 [&>*]:min-w-0">
             <ImageField
               value={banner.image}
               onChange={(v) => update(banner.id, { image: v })}
@@ -991,11 +895,11 @@ export function ShowcaseBannersField({
                 />
               </>
             )}
-            <TextField
+            <LinkField
               label="Link (optional)"
               value={banner.href ?? ""}
               onChange={(v) => update(banner.id, { href: v })}
-              placeholder="/brand/nowater"
+              options={linkOptions}
             />
           </div>
         </div>
@@ -1027,15 +931,18 @@ export function ShowcaseTabsField({
   options: SectionFormOptions;
 }) {
   const tabs = value ?? [];
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [expandAll, setExpandAll] = useState(false);
 
   function updateTab(id: string, patch: Partial<ShowcaseTab>) {
     onChange(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }
   function addTab() {
+    const id = crypto.randomUUID();
     onChange([
       ...tabs,
       {
-        id: crypto.randomUUID(),
+        id,
         label: "",
         image: "",
         alt: "",
@@ -1045,65 +952,180 @@ export function ShowcaseTabsField({
         productSlugs: [],
       },
     ]);
+    setExpandAll(false);
+    setOpenId(id);
+  }
+  function removeTab(id: string) {
+    onChange(tabs.filter((t) => t.id !== id));
+    if (openId === id) setOpenId(null);
+  }
+  function moveTab(id: string, dir: -1 | 1) {
+    const index = tabs.findIndex((t) => t.id === id);
+    const target = index + dir;
+    if (index < 0 || target < 0 || target >= tabs.length) return;
+    const next = [...tabs];
+    [next[index], next[target]] = [next[target], next[index]];
+    onChange(next);
+  }
+  function toggleOpen(id: string) {
+    setExpandAll(false);
+    setOpenId((cur) => (cur === id ? null : id));
   }
 
+  const linkOptions: LinkFieldOptions = {
+    brands: options.brands,
+    categories: options.categories,
+    products: options.products.map((p) => ({ slug: p.slug, name: p.name })),
+  };
+
   return (
-    <div className="space-y-4">
-      {tabs.map((tab, index) => (
-        <div key={tab.id} className="rounded-lg border border-zinc-200 p-3">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-700">
-              Tab {index + 1} — {tab.label || "(no label)"}
-            </span>
-            <button
-              type="button"
-              onClick={() => onChange(tabs.filter((t) => t.id !== tab.id))}
-              className="text-xs font-medium text-red-500 hover:underline"
-            >
-              Remove
-            </button>
-          </div>
-          <div className="grid gap-3">
-            <TextField
-              label="Tab label"
-              value={tab.label}
-              onChange={(v) => updateTab(tab.id, { label: v })}
-              placeholder="e.g. Brightening"
-            />
-            <ImageField
-              value={tab.image}
-              onChange={(v) => updateTab(tab.id, { image: v })}
-              label="Banner image"
-            />
-            <TextField
-              label="Banner headline (optional)"
-              value={tab.title}
-              onChange={(v) => updateTab(tab.id, { title: v })}
-            />
-            <TextField
-              label="Banner subtitle (optional)"
-              value={tab.sub}
-              onChange={(v) => updateTab(tab.id, { sub: v })}
-            />
-            <TextField
-              label="Banner link"
-              value={tab.href}
-              onChange={(v) => updateTab(tab.id, { href: v })}
-              placeholder="/brand/nowater"
-            />
-            <TextField
-              label="Alt text"
-              value={tab.alt}
-              onChange={(v) => updateTab(tab.id, { alt: v })}
-            />
-            <SlugsField
-              value={tab.productSlugs}
-              onChange={(v) => updateTab(tab.id, { productSlugs: v })}
-              options={options}
-            />
-          </div>
+    <div className="space-y-3">
+      {tabs.length > 0 && (
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setExpandAll((v) => !v);
+              setOpenId(null);
+            }}
+            className="text-xs font-medium text-zinc-500 hover:text-point-500"
+          >
+            {expandAll ? "Collapse all" : "Expand all"}
+          </button>
         </div>
-      ))}
+      )}
+
+      {tabs.length === 0 && (
+        <p className="text-sm text-zinc-400">No tabs yet.</p>
+      )}
+
+      {tabs.map((tab, i) => {
+        const open = expandAll || tab.id === openId;
+        return (
+          <div key={tab.id} className="rounded-lg border border-zinc-200">
+            {/* Header — always visible; click to expand/collapse. */}
+            <div
+              className="flex cursor-pointer items-center gap-2 p-3"
+              onClick={() => toggleOpen(tab.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleOpen(tab.id);
+                }
+              }}
+            >
+              <ChevronRight
+                size={16}
+                className={`shrink-0 text-zinc-400 transition-transform ${
+                  open ? "rotate-90" : ""
+                }`}
+              />
+              {tab.image ? (
+                <div
+                  className="h-10 w-16 shrink-0 rounded bg-zinc-100 bg-cover bg-center"
+                  style={{ backgroundImage: `url(${tab.image})` }}
+                  aria-hidden
+                />
+              ) : (
+                <div
+                  className="h-10 w-16 shrink-0 rounded bg-zinc-100"
+                  aria-hidden
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-zinc-800">
+                  {tab.label || `Tab ${i + 1}`}
+                </div>
+                <div className="truncate text-xs text-zinc-400">
+                  {tab.productSlugs.length} product
+                  {tab.productSlugs.length === 1 ? "" : "s"}
+                  {tab.href ? ` · ${tab.href}` : ""}
+                </div>
+              </div>
+              <div
+                className="flex shrink-0 items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => moveTab(tab.id, -1)}
+                  disabled={i === 0}
+                  aria-label="Move tab up"
+                  className={slideIconBtn}
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveTab(tab.id, 1)}
+                  disabled={i === tabs.length - 1}
+                  aria-label="Move tab down"
+                  className={slideIconBtn}
+                >
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeTab(tab.id)}
+                  className="ml-1 text-xs font-medium text-red-500 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            {/* Body — only when expanded. `min-w-0` on every row keeps long
+                product lists from widening the card past the panel. */}
+            {open && (
+              <div className="border-t border-zinc-100 p-3">
+                <div className="grid gap-3 [&>*]:min-w-0">
+                  <TextField
+                    label="Tab label"
+                    value={tab.label}
+                    onChange={(v) => updateTab(tab.id, { label: v })}
+                    placeholder="e.g. Brightening"
+                  />
+                  <LinkField
+                    label="Banner link"
+                    value={tab.href}
+                    onChange={(v) => updateTab(tab.id, { href: v })}
+                    options={linkOptions}
+                    required
+                    hint="Where the banner goes when clicked."
+                  />
+                  <ImageField
+                    value={tab.image}
+                    onChange={(v) => updateTab(tab.id, { image: v })}
+                    label="Banner image"
+                  />
+                  <TextField
+                    label="Banner headline (optional)"
+                    value={tab.title}
+                    onChange={(v) => updateTab(tab.id, { title: v })}
+                  />
+                  <TextField
+                    label="Banner subtitle (optional)"
+                    value={tab.sub}
+                    onChange={(v) => updateTab(tab.id, { sub: v })}
+                  />
+                  <TextField
+                    label="Alt text"
+                    value={tab.alt}
+                    onChange={(v) => updateTab(tab.id, { alt: v })}
+                  />
+                  <SlugsField
+                    value={tab.productSlugs}
+                    onChange={(v) => updateTab(tab.id, { productSlugs: v })}
+                    options={options}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
       <button
         type="button"
         onClick={addTab}

@@ -958,6 +958,14 @@ function StorePickerEditor({
               hint="Small flag or brand mark shown beside the store name (e.g. the India flag)."
             />
             <ImageField
+              label="Title image (optional)"
+              value={block.titleImage ?? ""}
+              onChange={(titleImage) =>
+                updateBlock(i, { titleImage: titleImage || undefined })
+              }
+              hint="Shown instead of the store name — e.g. the KDrop wordmark on the international card."
+            />
+            <ImageField
               label="Card image (optional)"
               value={block.image ?? ""}
               onChange={(image) =>

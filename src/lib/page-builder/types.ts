@@ -181,6 +181,8 @@ export const sectionConfigSchemas = {
   "tabbed-showcase": z.object({
     tabs: z.array(showcaseTabSchema).default([]),
     columns: z.number().int().min(2).max(6).default(4),
+    /** Banner height in pixels (the admin adjusts it, not a ratio). */
+    height: z.number().int().min(80).max(1200).default(400),
     moreHref: z.string().optional(),
     moreLabel: z.string().optional(),
   }),
@@ -258,6 +260,7 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     defaultConfig: () => ({
       tabs: [],
       columns: 4,
+      height: 400,
       moreHref: "",
       moreLabel: "",
     }),

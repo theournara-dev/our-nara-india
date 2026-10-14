@@ -78,9 +78,21 @@ export function StorePickerCards({
                     className="h-8 w-8 shrink-0 rounded object-contain"
                   />
                 )}
-                <span className="text-base font-bold text-ink">
-                  {block.title}
-                </span>
+                {block.titleImage ? (
+                  // A wordmark (e.g. the KDrop logo) stands in for the name.
+                  <Image
+                    src={block.titleImage}
+                    alt={block.title}
+                    width={151}
+                    height={28}
+                    unoptimized
+                    className="h-5 w-auto max-w-[110px] object-contain sm:h-6"
+                  />
+                ) : (
+                  <span className="text-base font-bold text-ink">
+                    {block.title}
+                  </span>
+                )}
                 {block.badge && (
                   <span
                     className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"

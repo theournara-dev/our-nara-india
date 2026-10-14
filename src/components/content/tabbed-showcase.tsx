@@ -28,11 +28,14 @@ const GRID_CLASS: Record<number, string> = {
 export function TabbedShowcase({
   tabs,
   columns = 4,
+  height = 400,
   moreHref,
   moreLabel,
 }: {
   tabs: TabbedShowcaseTab[];
   columns?: number;
+  /** Banner height in pixels (admin-set; 400 by default). */
+  height?: number;
   moreHref?: string;
   moreLabel?: string;
 }) {
@@ -77,6 +80,7 @@ export function TabbedShowcase({
             <Link
               href={active.href || "#"}
               className="group relative block overflow-hidden rounded-2xl"
+              style={{ height }}
               aria-label={active.title || active.label}
             >
               <Image
@@ -86,7 +90,7 @@ export function TabbedShowcase({
                 height={760}
                 unoptimized
                 priority={false}
-                className="h-auto w-full transition-transform duration-500 group-hover:scale-[1.01]"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
               />
               {(active.title || active.sub) && (
                 <>

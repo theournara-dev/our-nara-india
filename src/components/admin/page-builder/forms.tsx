@@ -91,13 +91,23 @@ export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
         onChange={(tabs) => onChange({ ...config, tabs })}
         options={options}
       />
-      <NumberField
-        label="Columns"
-        value={config.columns ?? 4}
-        min={2}
-        max={6}
-        onChange={(columns) => onChange({ ...config, columns })}
-      />
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2">
+        <NumberField
+          label="Banner height (px)"
+          value={config.height ?? 400}
+          min={80}
+          max={1200}
+          onChange={(height) => onChange({ ...config, height })}
+          hint="Every tab's banner renders at this height."
+        />
+        <NumberField
+          label="Columns"
+          value={config.columns ?? 4}
+          min={2}
+          max={6}
+          onChange={(columns) => onChange({ ...config, columns })}
+        />
+      </div>
       <MoreLinkField
         value={config.moreHref ?? ""}
         onChange={(moreHref) => onChange({ ...config, moreHref })}
@@ -187,6 +197,7 @@ export function ProductShowcaseForm({ config, onChange, options }: FormProps) {
       <ShowcaseBannersField
         value={config.banners ?? []}
         onChange={(banners) => onChange({ ...config, banners })}
+        options={options}
       />
     </div>
   );

@@ -163,6 +163,7 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
       const c = config as {
         tabs?: ShowcaseTab[];
         columns?: number;
+        height?: number;
         moreHref?: string;
         moreLabel?: string;
       };
@@ -175,6 +176,7 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
           })),
         ),
         columns: c.columns ?? 4,
+        height: c.height ?? 400,
         moreHref: c.moreHref,
         moreLabel: c.moreLabel,
       };

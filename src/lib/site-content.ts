@@ -35,6 +35,11 @@ export type SwitcherBlock = {
   /** Which store this card switches to. */
   store: SiteVersion;
   title: string;
+  /**
+   * Optional image shown instead of the title text (e.g. the KDrop wordmark
+   * on the international card). The title stays for screen readers.
+   */
+  titleImage?: string;
   description: string;
   /** Currency hint shown in the card, e.g. "₹ INR". */
   currency: string;
@@ -156,6 +161,8 @@ const DEFAULT_SWITCHER: SwitcherContent = {
       id: "s1",
       store: "local",
       title: "India",
+      // The India flag leads the card (the client's mock).
+      icon: "/flags/in.svg",
       description: "Ships within India",
       currency: "₹ INR",
       ctaLabel: "Shop India",
@@ -165,6 +172,8 @@ const DEFAULT_SWITCHER: SwitcherContent = {
       id: "s2",
       store: "global",
       title: "KDrop",
+      // The KDrop wordmark replaces the name on the international card.
+      titleImage: "/kdrop-logo.png",
       description: "Direct shipping to India",
       currency: "₹ INR",
       ctaLabel: "Shop KDrop",
@@ -324,6 +333,7 @@ export function normalizeSwitcher(
       id: str(raw.id) || `${store}-${i + 1}`,
       store,
       title: str(raw.title, def?.title ?? store),
+      titleImage: str(raw.titleImage) || undefined,
       description: str(raw.description, def?.description ?? ""),
       currency: str(raw.currency, def?.currency ?? "₹ INR"),
       badge: str(raw.badge) || undefined,
