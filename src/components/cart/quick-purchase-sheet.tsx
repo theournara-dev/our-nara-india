@@ -60,10 +60,6 @@ export function QuickPurchaseSheet({
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
     null,
   );
-  // Vertical offset so the drawer slides in below the header instead of
-  // underneath it. Measured from the header bar (responsive height), clamped to
-  // 0 when the page is scrolled and the header is off-screen.
-  const [topOffset, setTopOffset] = useState(0);
   // Bumped after the payment modal closes so the scroll lock is re-asserted
   // (the Razorpay modal restores body overflow when it dismisses, which can
   // undo our lock while the sheet is still open).
@@ -71,10 +67,10 @@ export function QuickPurchaseSheet({
   const overlayRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  // Lock page scroll (html + body) and measure the header while the drawer is
-  // open. Locking only <body> leaves the root scroller (the <html> element)
-  // free to scroll, so wheeling over the drawer's non-scrollable header would
-  // still scroll the page behind it.
+  // Lock page scroll (html + body) while the drawer is open. Locking only
+  // <body> leaves the root scroller (the <html> element) free to scroll, so
+  // wheeling over the drawer's non-scrollable header would still scroll the
+  // page behind it.
   useEffect(() => {
     if (!open) return;
     const prevBody = document.body.style.overflow;
@@ -95,19 +91,11 @@ export function QuickPurchaseSheet({
     overlay?.addEventListener("wheel", preventScroll, { passive: false });
     overlay?.addEventListener("touchmove", preventScroll, { passive: false });
 
-    const measure = () => {
-      const header = document.querySelector<HTMLElement>("[data-site-header]");
-      const bottom = header?.getBoundingClientRect().bottom ?? 0;
-      setTopOffset(Math.max(0, bottom));
-    };
-    measure();
-    window.addEventListener("resize", measure);
     return () => {
       document.body.style.overflow = prevBody;
       document.documentElement.style.overflow = prevHtml;
       overlay?.removeEventListener("wheel", preventScroll);
       overlay?.removeEventListener("touchmove", preventScroll);
-      window.removeEventListener("resize", measure);
     };
   }, [open, lockTick]);
 
@@ -223,13 +211,13 @@ export function QuickPurchaseSheet({
         onClick={onClose}
       />
 
-      {/* Drawer */}
+      {/* Drawer — full height, so the storefront behind it is only ever the
+          blurred backdrop on the left. */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Quick purchase"
-        style={{ top: topOffset }}
-        className={`absolute right-0 bottom-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
+        className={`absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
