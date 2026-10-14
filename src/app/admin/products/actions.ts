@@ -85,6 +85,16 @@ const productInput = z.object({
     .regex(/^\d{4,8}$/, "HSN codes are 4 to 8 digits")
     .optional()
     .or(z.literal("")),
+  // Product-level GST overrides in basis points (1800 = 18%); null = use the
+  // storewide default from Site settings.
+  taxRateMhBps: z.coerce.number().int().min(0).max(5000).nullable().optional(),
+  taxRateOtherBps: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(5000)
+    .nullable()
+    .optional(),
   variants: z.array(variantInput).default([]),
   blocks: z.array(blockInput).default([]),
   infoRows: z
@@ -185,6 +195,35 @@ function revalidateCatalog() {
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 
+/**
+ * Save the two GST percentages set straight from the products list. A single
+ * row-level update, so a blur costs one small query — the grid is optimised for
+ * tabbing through a catalog.
+ */
+export async function saveProductTax(
+  id: string,
+  rates: { mhBps: number | null; otherBps: number | null },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  await requireAdmin();
+  const clean = (value: number | null) =>
+    value == null || !Number.isFinite(value)
+      ? null
+      : Math.min(5000, Math.max(0, Math.round(value)));
+  try {
+    await db.product.update({
+      where: { id },
+      data: {
+        taxRateMhBps: clean(rates.mhBps),
+        taxRateOtherBps: clean(rates.otherBps),
+      },
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error(`[products] failed to save tax rates for ${id}:`, err);
+    return { ok: false, message: "Could not save the tax rate. Try again." };
+  }
+}
+
 export async function createProduct(input: ProductInput) {
   await requireAdmin();
   const data = parseInput(productInput, input, "products.create");
@@ -224,6 +263,8 @@ export async function createProduct(input: ProductInput) {
       seoTitle: data.seoTitle || null,
       seoDescription: data.seoDescription || null,
       hsnCode: data.hsnCode || null,
+      taxRateMhBps: data.taxRateMhBps ?? null,
+      taxRateOtherBps: data.taxRateOtherBps ?? null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
       buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
       subcategories: {
@@ -325,6 +366,8 @@ export async function updateProduct(id: string, input: ProductInput) {
           seoTitle: data.seoTitle || null,
           seoDescription: data.seoDescription || null,
           hsnCode: data.hsnCode || null,
+          taxRateMhBps: data.taxRateMhBps ?? null,
+          taxRateOtherBps: data.taxRateOtherBps ?? null,
           infoRows: data.infoRows as Prisma.InputJsonValue,
           buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
         },

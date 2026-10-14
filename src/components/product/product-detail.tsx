@@ -272,25 +272,25 @@ export function ProductDetail({
               )}
 
               {/* Previous / next: step through the gallery without reaching for
-                  the thumbnails. Sized between the thumbnails and the old
-                  banner arrows so they read as controls, not decoration. */}
+                  the thumbnails. Kept deliberately quiet — faint until the
+                  gallery is hovered — so the photograph stays the subject. */}
               {images.length > 1 && (
                 <>
                   <button
                     type="button"
                     aria-label="Previous photo"
                     onClick={() => stepImage(-1)}
-                    className="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-[#222] shadow-[0_1px_6px_rgba(0,0,0,0.18)] transition-colors hover:bg-white"
+                    className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/45 text-[#444] opacity-70 backdrop-blur-[2px] transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100"
                   >
-                    <MdKeyboardArrowLeft size={24} />
+                    <MdKeyboardArrowLeft size={20} />
                   </button>
                   <button
                     type="button"
                     aria-label="Next photo"
                     onClick={() => stepImage(1)}
-                    className="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-[#222] shadow-[0_1px_6px_rgba(0,0,0,0.18)] transition-colors hover:bg-white"
+                    className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/45 text-[#444] opacity-70 backdrop-blur-[2px] transition-opacity duration-300 hover:opacity-100 focus-visible:opacity-100"
                   >
-                    <MdKeyboardArrowRight size={24} />
+                    <MdKeyboardArrowRight size={20} />
                   </button>
                 </>
               )}

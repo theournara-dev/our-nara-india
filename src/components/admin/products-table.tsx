@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
@@ -10,10 +10,97 @@ import {
   toggleProductActive,
   softDeleteProduct,
   hardDeleteProduct,
+  saveProductTax,
   setProductStoreFlag,
 } from "@/app/admin/products/actions";
 import { assignSubcategories } from "@/app/admin/products/subcategory-actions";
 import { ProductRowActions } from "@/app/admin/products/row-actions";
+
+/**
+ * The two GST percentages an admin can set straight from the list: one for a
+ * Maharashtra delivery, one for everywhere else. Empty means "use the storewide
+ * default". Saving happens on blur and only when something changed.
+ */
+function TaxPercentInputs({ row }: { row: AdminProductRow }) {
+  const [mh, setMh] = useState(
+    row.taxRateMhBps == null ? "" : String(row.taxRateMhBps / 100),
+  );
+  const [other, setOther] = useState(
+    row.taxRateOtherBps == null ? "" : String(row.taxRateOtherBps / 100),
+  );
+  const [saved, setSaved] = useState(false);
+  const [pending, startTransition] = useTransition();
+  // What the server holds, so a blur that changed nothing sends nothing.
+  const [baseline, setBaseline] = useState({
+    mh: row.taxRateMhBps,
+    other: row.taxRateOtherBps,
+  });
+  // Read the boxes themselves on blur: a fast tab can fire change and blur in
+  // the same tick, before the state above has re-rendered with what was typed.
+  const mhRef = useRef<HTMLInputElement>(null);
+  const otherRef = useRef<HTMLInputElement>(null);
+
+  function toBps(text: string): number | null {
+    const value = text.trim();
+    if (value === "") return null;
+    const parsed = Number(value.replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(parsed)) return null;
+    return Math.min(5000, Math.max(0, Math.round(parsed * 100)));
+  }
+
+  function save() {
+    const mhBps = toBps(mhRef.current?.value ?? mh);
+    const otherBps = toBps(otherRef.current?.value ?? other);
+    if (mhBps === baseline.mh && otherBps === baseline.other) {
+      return;
+    }
+    startTransition(async () => {
+      const res = await saveProductTax(row.id, { mhBps, otherBps });
+      if (!res.ok) {
+        notify.error("product-tax", "Tax not saved", res.message);
+        return;
+      }
+      setBaseline({ mh: mhBps, other: otherBps });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    });
+  }
+
+  const inputCls =
+    "h-7 w-14 rounded border border-zinc-200 bg-white px-1.5 text-center text-xs text-zinc-900 outline-none focus:border-point-500";
+
+  return (
+    <div
+      className="flex items-center gap-1"
+      title="GST % — Maharashtra / other states"
+    >
+      <input
+        ref={mhRef}
+        value={mh}
+        onChange={(e) => setMh(e.target.value)}
+        onBlur={save}
+        inputMode="decimal"
+        placeholder="MH"
+        aria-label={`Maharashtra GST % for ${row.name}`}
+        className={inputCls}
+      />
+      <span className="text-xs text-zinc-300">/</span>
+      <input
+        ref={otherRef}
+        value={other}
+        onChange={(e) => setOther(e.target.value)}
+        onBlur={save}
+        inputMode="decimal"
+        placeholder="EG"
+        aria-label={`Other-state GST % for ${row.name}`}
+        className={inputCls}
+      />
+      <span className="w-8 text-[10px] text-emerald-600">
+        {pending ? "…" : saved ? "saved" : ""}
+      </span>
+    </div>
+  );
+}
 
 export interface AdminProductRow {
   id: string;
@@ -32,6 +119,9 @@ export interface AdminProductRow {
   globalIsActive: boolean;
   globalIsPreOrder: boolean;
   globalBuyNowEnabled: boolean;
+  /** Product-level GST overrides in basis points (1800 = 18%); null = global. */
+  taxRateMhBps: number | null;
+  taxRateOtherBps: number | null;
   /** Mid-level categories the product sits in. */
   subcategories: { id: string; name: string }[];
 }
@@ -195,6 +285,11 @@ export function ProductsTable({
               <th className="px-2 py-2 font-medium">Price</th>
               <th className="px-2 py-2 font-medium">Stock</th>
               <th className="px-2 py-2 font-medium">
+                <span title="GST % — Maharashtra / other states. Empty = the storewide default.">
+                  Tax % MH / Other
+                </span>
+              </th>
+              <th className="px-2 py-2 font-medium">
                 Stores
                 <span className="ml-1 font-normal normal-case text-zinc-300">
                   IN · GL
@@ -215,7 +310,10 @@ export function ProductsTable({
               </tr>
             ) : (
               rows.map((p) => (
-                <tr key={p.id} className="border-b border-zinc-50 last:border-0">
+                <tr
+                  key={p.id}
+                  className="border-b border-zinc-50 last:border-0"
+                >
                   <td className="px-2 py-1.5 align-top">
                     <input
                       type="checkbox"
@@ -293,6 +391,9 @@ export function ProductsTable({
                   </td>
                   <td className="px-2 py-1.5 text-sm text-zinc-600">
                     {p.stock}
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <TaxPercentInputs row={p} />
                   </td>
                   <td className="px-2 py-1.5">
                     <StoreFlagToggles

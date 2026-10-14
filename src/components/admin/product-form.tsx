@@ -82,6 +82,9 @@ type Props = {
     seoDescription: string | null;
     /** HSN code for India GST invoices (4–8 digits). */
     hsnCode: string | null;
+    /** GST overrides in basis points (1800 = 18%); null = storewide default. */
+    taxRateMhBps: number | null;
+    taxRateOtherBps: number | null;
     variants: {
       id: string;
       optionLabel: string | null;
@@ -117,6 +120,18 @@ type Props = {
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
+
+/**
+ * Percent text → basis points (1800 = 18%). Empty or unreadable means "use the
+ * storewide default", which the schema takes as `undefined`.
+ */
+function percentToBps(text: string): number | undefined {
+  const value = text.trim();
+  if (value === "") return undefined;
+  const parsed = Number(value.replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(parsed)) return undefined;
+  return Math.min(5000, Math.max(0, Math.round(parsed * 100)));
+}
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
 
 // Admin always shows the stored currency (INR) as-is; derive its symbol from
@@ -220,6 +235,15 @@ function ProductFormInner({
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [seoTitle, setSeoTitle] = useState(product?.seoTitle ?? "");
   const [hsnCode, setHsnCode] = useState(product?.hsnCode ?? "");
+  // Percent text while typing ("18" / "12.5"); empty means "use the default".
+  const [taxMh, setTaxMh] = useState(
+    product?.taxRateMhBps == null ? "" : String(product.taxRateMhBps / 100),
+  );
+  const [taxOther, setTaxOther] = useState(
+    product?.taxRateOtherBps == null
+      ? ""
+      : String(product.taxRateOtherBps / 100),
+  );
   const [seoDescription, setSeoDescription] = useState(
     product?.seoDescription ?? "",
   );
@@ -424,6 +448,8 @@ function ProductFormInner({
       globalBuyNowEnabled,
       seoTitle: seoTitle.trim() || undefined,
       hsnCode: hsnCode.trim() || undefined,
+      taxRateMhBps: percentToBps(taxMh),
+      taxRateOtherBps: percentToBps(taxOther),
       seoDescription: seoDescription.trim() || undefined,
       variants: variants.map((v) => ({
         id: v.id,
@@ -827,6 +853,26 @@ function ProductFormInner({
                   }
                   inputMode="numeric"
                   placeholder="e.g. 33049910"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>GST % (Maharashtra)</span>
+                <input
+                  value={taxMh}
+                  onChange={(e) => setTaxMh(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="Storewide default"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>GST % (other states)</span>
+                <input
+                  value={taxOther}
+                  onChange={(e) => setTaxOther(e.target.value)}
+                  inputMode="decimal"
+                  placeholder="Storewide default"
                   className={inputCls}
                 />
               </label>

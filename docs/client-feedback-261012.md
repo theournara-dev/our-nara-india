@@ -264,3 +264,42 @@ the non-current store card, and everything content-side admin-uploadable.
 | 5. Header blur     | Each scroll arrow now sits on a soft white fade with a light blur, so items sliding under it dissolve into the header instead of showing through.                                                                                                                                                                                                                                   |
 | 6. Nav arrow spot  | The left arrow moved into the free space beside the menu button (20px left of the strip on desktop) so it no longer sits on top of the first category.                                                                                                                                                                                                                              |
 | 7. Ambassador pace | The images now advance every 75% of a viewport of scrolling instead of a full screen, so visitors reach the end of the sequence sooner.                                                                                                                                                                                                                                             |
+
+## 10. Round six (review feedback)
+
+| Item               | What changed                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Header menus    | The All-categories panel and the search panel now close when a link inside them is clicked, and when the visitor clicks anywhere outside (mousedown, so it beats the link's own click).                                                                                                                                                                                                                                                                                                                  |
+| 2. Product uploads | Root cause found and fixed. The upload queue's context object was rebuilt whenever the pending count changed — and the image fields use that object for their unmount cleanup — so picking a second file unregistered the first: its preview stayed on screen but nothing uploaded on save. It showed on some products and not others because it only bit when a product had more than one image pick pending at once. The context is now a stable object reading the live count, and both picks upload. |
+| 3. Gallery arrows  | The product gallery has round ‹ › buttons over the main photo, wrapping at both ends. Kept quiet on purpose: faint and translucent until hover, so the photograph stays the subject.                                                                                                                                                                                                                                                                                                                     |
+| 4. KDrop in title  | The KDrop mark is half its previous size and leads the `<h1>` again instead of sitting below it; the PRE-ORDER badge keeps its own line.                                                                                                                                                                                                                                                                                                                                                                 |
+| 5. GST on invoices | India GST, **local store only**. See the notes below: two storewide rates (Maharashtra / other states, 18% by default) under Site settings → Tax (India GST), per-product overrides from the products table, CGST + SGST for Maharashtra vs IGST elsewhere, round-off to the nearest rupee, and per-line tax frozen at checkout. Global invoices are untouched.                                                                                                                                          |
+| 6. HSN codes       | A product gets an HSN field in its edit form, and the invoice table's HSN column is editable — a change saves on blur (batched, ~600 ms debounce, only rows that actually changed) and updates both the order line and the product, so the next invoice for that product carries it. Print and PDF render HSN as text, never an input box.                                                                                                                                                               |
+
+### GST: the rules as implemented
+
+- Prices are **tax-inclusive**, so the invoice works the tax back out:
+  `taxable = round(gross × 10000 / (10000 + rate))`, and the tax is whatever is
+  left of the gross. This is the standard Indian reading for inclusive MRPs.
+- **Place of supply** is the shipping address's State. Maharashtra (however it
+  is written, "MH" included) is intra-State: CGST = half the tax rounded down,
+  SGST = the remainder — a one-paise difference between the two is normal and
+  matches how Indian invoices print it. Anywhere else is inter-State: one IGST
+  line.
+- **Rates**: storewide default 18% (admin-editable) for each of the two cases;
+  a product can override either one from the products table (`MH` / `EG`
+  boxes; emptying a box falls back to the storewide rate).
+- **Round off** lifts the printed total to the nearest rupee and appears as its
+  own line, only on local invoices and only when it is not zero.
+- **Every line's tax is frozen when the order is placed** (rate, taxable value,
+  split, and the order's place of supply + round-off). Changing a rate later
+  can never rewrite an issued invoice; orders placed before this feature
+  compute from the current rates instead.
+- No GSTIN / legal-registration block yet — the client is not registered as
+  yet, so the invoice heading is unchanged; the registered ID stays in Site
+  settings → Invoice details for when it is available.
+- A save-side bug found while verifying: the Tax panel patched its rates and
+  saved in the same click, so the save ran against the previous render and
+  dropped the new numbers. The typed rates now ride in a ref that the payload
+  reads at send time — the round trip (12% → saved → reload → back to 18%) was
+  verified against the database.

@@ -1,4 +1,5 @@
 import type { SiteVersion } from "@/lib/site-version";
+import { DEFAULT_GST_BPS, clampBps } from "@/lib/tax";
 
 /**
  * Storefront content that admins edit per site version: the contact details
@@ -105,6 +106,8 @@ export const DEFAULT_BRANDS_PAGE: BrandsPageContent = {
   previewRows: 2,
 };
 
+const DEFAULT_TAX_RATES = { mhBps: DEFAULT_GST_BPS, otherBps: DEFAULT_GST_BPS };
+
 export type SiteContent = {
   version: SiteVersion;
   /** Support address shown in the footer and the order emails. */
@@ -126,6 +129,12 @@ export type SiteContent = {
     taxId: string;
     note: string;
   };
+  /**
+   * India GST defaults in basis points (1800 = 18%), used by the local store's
+   * invoices unless a product carries its own rate. The global storefront
+   * charges no tax, so its row is simply unused.
+   */
+  taxRates: { mhBps: number; otherBps: number };
   topBanner: TopBannerBlock[];
   switcher: SwitcherContent;
   /** /brands: the preview grid's tile height, columns and rows. */
@@ -216,6 +225,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
+    taxRates: DEFAULT_TAX_RATES,
   },
   global: {
     version: "global",
@@ -237,6 +247,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
+    taxRates: DEFAULT_TAX_RATES,
   },
 };
 
@@ -384,6 +395,8 @@ export function siteContentFromRow(
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
+    taxRateMhBps: number | null;
+    taxRateOtherBps: number | null;
   } | null,
 ): SiteContent {
   const base = DEFAULT_SITE_CONTENT[version];
@@ -432,6 +445,11 @@ export function siteContentFromRow(
         10,
         base.brandsPage.previewRows,
       ),
+    },
+    // India GST defaults (basis points); anything unusable falls back to 18%.
+    taxRates: {
+      mhBps: clampBps(row.taxRateMhBps) ?? base.taxRates.mhBps,
+      otherBps: clampBps(row.taxRateOtherBps) ?? base.taxRates.otherBps,
     },
   };
 }

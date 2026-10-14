@@ -16,6 +16,14 @@ import { priceForVersion } from "@/lib/money";
 import { computeShippingCents } from "@/lib/shipping";
 import { loadSiteConfig } from "@/lib/site-config";
 import {
+  isMaharashtra,
+  productTaxRates,
+  resolveTaxBps,
+  roundOffCents,
+  siteTaxRates,
+  splitInclusiveTax,
+} from "@/lib/tax";
+import {
   SITE_VERSION_COOKIE,
   getVersionConfig,
   parseSiteVersion,
@@ -176,6 +184,15 @@ async function createOrderImpl(
 
   // Load products from the DB to get authoritative prices (never trust client).
   const productIds = [...new Set(data.items.map((i) => i.productId))];
+  // India GST: the shipping State decides how the tax is shown (Maharashtra is
+  // intra-State, CGST + SGST; anywhere else inter-State, IGST); the rates come
+  // from the product and fall back to the storewide defaults. The global
+  // storefront charges no tax.
+  const intraState = isMaharashtra(data.state);
+  const siteTaxRatesRaw =
+    requestVersion === "local"
+      ? (await loadSiteConfig(requestVersion)).taxRates
+      : null;
   const products = await db.product.findMany({
     // "Shown" is per store: the checkout only accepts products this storefront
     // lists, so a stale cart cannot buy something hidden here.
@@ -196,6 +213,9 @@ async function createOrderImpl(
       // Copied onto the order item so the invoice keeps the code it was billed
       // with (see the invoices lib).
       hsnCode: true,
+      // Product-level GST overrides (null = storewide default).
+      taxRateMhBps: true,
+      taxRateOtherBps: true,
       // Scope matching for coupons (brand / category targeted codes).
       brandId: true,
       categoryId: true,
@@ -241,6 +261,12 @@ async function createOrderImpl(
     quantity: number;
     currency: string;
     hsnCode: string | null;
+    taxRateBps: number | null;
+    taxableValueCents: number | null;
+    taxCents: number | null;
+    cgstCents: number | null;
+    sgstCents: number | null;
+    igstCents: number | null;
   }[] = [];
   // The same lines, shaped for the coupon rules (unit price + scope ids).
   const couponLines: CouponCartLine[] = [];
@@ -328,6 +354,38 @@ async function createOrderImpl(
       quantity: item.quantity,
       currency: requestConfig.currency,
       hsnCode: product.hsnCode ?? null,
+      // GST is extracted from the tax-inclusive price and frozen here, so the
+      // invoice keeps the numbers it was billed with (site settings and product
+      // rates may change later). The global store charges no tax.
+      ...(requestVersion === "local"
+        ? (() => {
+            const bps = resolveTaxBps(
+              intraState,
+              productTaxRates(product),
+              siteTaxRates(siteTaxRatesRaw),
+            );
+            const split = splitInclusiveTax(
+              unitPriceCents * item.quantity,
+              bps,
+              intraState,
+            );
+            return {
+              taxRateBps: bps,
+              taxableValueCents: split.taxableCents,
+              taxCents: split.taxCents,
+              cgstCents: split.cgstCents,
+              sgstCents: split.sgstCents,
+              igstCents: split.igstCents,
+            };
+          })()
+        : {
+            taxRateBps: null,
+            taxableValueCents: null,
+            taxCents: null,
+            cgstCents: null,
+            sgstCents: null,
+            igstCents: null,
+          }),
     });
   }
 
@@ -470,6 +528,12 @@ async function createOrderImpl(
         shippingCents,
         discountCents,
         totalCents,
+        // India GST (local only): the State the tax was computed for, and the
+        // paise that lift the printed invoice total to the nearest rupee.
+        taxPlaceOfSupply:
+          requestVersion === "local" ? data.state?.trim() || null : null,
+        taxRoundOffCents:
+          requestVersion === "local" ? roundOffCents(totalCents) : 0,
         isPreOrder,
         // cartToken + the applied coupon live in billing Json (an unused
         // column) for idempotent reuse and so staff can see which code a guest

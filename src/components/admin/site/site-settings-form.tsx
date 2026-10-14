@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ImageField } from "@/components/admin/image-field";
 import { StoreNudge } from "@/components/layout/store-nudge";
 import {
@@ -25,6 +25,19 @@ import type { SiteVersion } from "@/lib/site-version";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
+
+/** Basis points → the plain "18" an admin types (1800 → "18"). */
+function bpsToPercent(bps: number): string {
+  return String(bps / 100);
+}
+
+/** An admin's percent text → basis points, clamped to 0–50%, or the old value. */
+function percentToBps(text: string | null, fallback: number): number {
+  if (text == null || text.trim() === "") return fallback;
+  const value = Number(text.replace(/[^0-9.]/g, ""));
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(5000, Math.max(0, Math.round(value * 100)));
+}
 const labelCls = "mb-1 block text-xs font-medium text-zinc-500";
 const saveBtnCls =
   "h-9 rounded bg-point-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60";
@@ -77,6 +90,13 @@ function SiteSettingsInner({
   const [content, setContent] = useState(initial);
   const [switcher, setSwitcher] = useState(initialSwitcher);
   const [saving, setSaving] = useState<string | null>(null);
+  // Raw percent text while the admin types the GST rates (null = show stored).
+  const [taxMhText, setTaxMhText] = useState<string | null>(null);
+  const [taxOtherText, setTaxOtherText] = useState<string | null>(null);
+  // The GST panel patches its rates and saves in the same click, but the
+  // handler the gate calls still closes over the previous render — so the
+  // just-typed rates ride in a ref that the payload reads at send time.
+  const taxOverride = useRef<{ mhBps: number; otherBps: number } | null>(null);
   const [, startTransition] = useTransition();
 
   const current = content[tab];
@@ -110,8 +130,10 @@ function SiteSettingsInner({
   // first, then the handler re-runs against the state holding its URL.
   const gate = useUploadGate();
 
-  const saveStore = (label: string) =>
-    run(label, () =>
+  const saveStore = (label: string) => {
+    const taxRates = taxOverride.current ?? current.taxRates;
+    taxOverride.current = null;
+    return run(label, () =>
       saveSiteContent({
         version: tab,
         email: current.email,
@@ -119,17 +141,20 @@ function SiteSettingsInner({
         address: current.address,
         topBanner: current.topBanner,
         brandsPage: current.brandsPage,
+        taxRates,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
         dispatchCutoffHour: current.dispatchCutoffHour,
         invoice: current.invoice,
       }),
     );
+  };
 
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
     gate.registerHandler("banner", () => saveStore("banner"));
     gate.registerHandler("brands", () => saveStore("brands"));
+    gate.registerHandler("tax", () => saveStore("tax"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
     gate.registerHandler("switcher", () =>
@@ -398,6 +423,65 @@ function SiteSettingsInner({
         saving={saving === "brands"}
         disabled={saving !== null}
       />
+
+      {/* ── India GST (local store only) ────────────────────────────────── */}
+      {tab === "local" && (
+        <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+          <h2 className="mb-1 text-sm font-semibold text-zinc-900">
+            Tax (India GST)
+          </h2>
+          <p className="mb-4 text-xs text-zinc-400">
+            Storewide defaults for the India store&apos;s invoices. Prices are
+            tax-inclusive, so the invoice works the tax back out of them: a
+            Maharashtra delivery splits it into CGST + SGST, anywhere else
+            charges it as IGST. A product with its own rates (Products → Tax %)
+            overrides these. The International storefront shows no tax.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className={labelCls}>Maharashtra (intra-State) %</span>
+              <input
+                value={taxMhText ?? bpsToPercent(current.taxRates.mhBps)}
+                onChange={(e) => setTaxMhText(e.target.value)}
+                inputMode="decimal"
+                placeholder="18"
+                className={inputCls}
+              />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Other states (inter-State) %</span>
+              <input
+                value={taxOtherText ?? bpsToPercent(current.taxRates.otherBps)}
+                onChange={(e) => setTaxOtherText(e.target.value)}
+                inputMode="decimal"
+                placeholder="18"
+                className={inputCls}
+              />
+            </label>
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                const taxRates = {
+                  mhBps: percentToBps(taxMhText, current.taxRates.mhBps),
+                  otherBps: percentToBps(
+                    taxOtherText,
+                    current.taxRates.otherBps,
+                  ),
+                };
+                taxOverride.current = taxRates;
+                patch({ taxRates });
+                void gate.save("tax");
+              }}
+              disabled={saving !== null}
+              className={saveBtnCls}
+            >
+              {saving === "tax" ? "Saving…" : "Save tax rates"}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ── Store picker ────────────────────────────────────────────────── */}
       <StorePickerEditor

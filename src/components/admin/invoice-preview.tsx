@@ -29,6 +29,8 @@ export function InvoicePreviewButton({
   // and Download can keep using the data it was rendered from.
   const documentRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  /** True only while the document is being printed or rasterised. */
+  const [plain, setPlain] = useState(false);
 
   // ── HSN editing ────────────────────────────────────────────────────────
   // The admin can fix codes right in the table. Typing is local; blur marks the
@@ -115,9 +117,13 @@ export function InvoicePreviewButton({
   function onPrint() {
     const node = documentRef.current;
     if (!node) return;
-    // A blocked popup falls back to printing the page, where the @media print
-    // rules keep only the invoice.
-    if (!printElement(node)) window.print();
+    // Drop the editable HSN inputs before the snapshot: `outerHTML` (and a
+    // PDF raster) would otherwise print an empty box instead of the code.
+    void withPlainDocument(() => {
+      // A blocked popup falls back to printing the page, where the @media print
+      // rules keep only the invoice.
+      if (!printElement(node)) window.print();
+    });
   }
 
   async function onDownload() {
@@ -125,7 +131,7 @@ export function InvoicePreviewButton({
     if (!node || !view) return;
     setDownloading(true);
     try {
-      await downloadInvoicePdf(node, view.number);
+      await withPlainDocument(() => downloadInvoicePdf(node, view.number));
     } catch (err) {
       console.error("[invoices] PDF download failed:", err);
       notify.error(
@@ -135,6 +141,23 @@ export function InvoicePreviewButton({
       );
     } finally {
       setDownloading(false);
+    }
+  }
+
+  /**
+   * Run `capture` with the document rendered read-only, then bring the editor
+   * back. The double rAF lets React commit the plain document and the browser
+   * paint it before the node is cloned or rasterised.
+   */
+  async function withPlainDocument(capture: () => void | Promise<void>) {
+    setPlain(true);
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+    try {
+      await capture();
+    } finally {
+      setPlain(false);
     }
   }
 
@@ -220,6 +243,7 @@ export function InvoicePreviewButton({
                     view={view}
                     onHsnChange={onHsnChange}
                     hsnValues={hsnValues}
+                    readOnly={plain}
                   />
                 </div>
               )}

@@ -49,6 +49,14 @@ const contentInput = z.object({
       previewRows: z.coerce.number().int().min(1).max(10).optional(),
     })
     .optional(),
+  // ── India GST defaults ────────────────────────────────────────────────
+  taxRates: z
+    .object({
+      /** Basis points: 1800 = 18%. */
+      mhBps: z.coerce.number().int().min(0).max(5000).optional(),
+      otherBps: z.coerce.number().int().min(0).max(5000).optional(),
+    })
+    .optional(),
   // ── Invoice "from" block ────────────────────────────────────────────────
   invoice: z
     .object({
@@ -122,6 +130,16 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
           invoicePhone: data.invoice.phone?.trim() || null,
           invoiceTaxId: data.invoice.taxId?.trim() || null,
           invoiceNote: data.invoice.note?.trim() || null,
+        }
+      : {}),
+    ...(data.taxRates
+      ? {
+          ...(data.taxRates.mhBps !== undefined
+            ? { taxRateMhBps: data.taxRates.mhBps }
+            : {}),
+          ...(data.taxRates.otherBps !== undefined
+            ? { taxRateOtherBps: data.taxRates.otherBps }
+            : {}),
         }
       : {}),
   };

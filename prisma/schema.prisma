@@ -256,6 +256,11 @@ model Product {
   // the order item at checkout so an issued invoice keeps the code it was
   // billed with.
   hsnCode        String?  @map("hsn_code")
+  // Product-level GST rate overrides, in basis points (1800 = 18%): one for a
+  // Maharashtra (intra-State) delivery, one for everywhere else. Null = use the
+  // storewide defaults from Site settings.
+  taxRateMhBps    Int?    @map("tax_rate_mh_bps")
+  taxRateOtherBps Int?    @map("tax_rate_other_bps")
   // INFO tab: optional per-product override of the storewide
   // ProductInfoTemplate blocks. Null = use the global default.
   infoRows       Json?    @map("info_rows")
@@ -408,6 +413,10 @@ model Order {
   shippingCents Int         @default(0) @map("shipping_cents")
   discountCents Int         @default(0) @map("discount_cents")
   totalCents    Int         @map("total_cents")
+  // India GST (local store only): the State the tax was computed for and the
+  // paise adjustment that lifts the printed total to the nearest rupee.
+  taxPlaceOfSupply String?  @map("tax_place_of_supply")
+  taxRoundOffCents Int      @default(0) @map("tax_round_off_cents")
   isPreOrder    Boolean     @default(false) @map("is_pre_order")
   // Photo ID the customer uploads at checkout on the global site (direct
   // shipping). Stored as the public blob URL of the uploaded image.
@@ -455,6 +464,15 @@ model OrderItem {
   // admin can still correct it from the invoice table, see
   // saveInvoiceHsn).
   hsnCode     String? @map("hsn_code")
+  // GST frozen at checkout (all in the order's currency): the rate applied to
+  // this line, the taxable value extracted from the tax-inclusive price, and
+  // the split. Intra-State (Maharashtra) fills CGST + SGST, inter-State IGST.
+  taxRateBps        Int? @map("tax_rate_bps")
+  taxableValueCents Int? @map("taxable_value_cents")
+  taxCents          Int? @map("tax_cents")
+  cgstCents         Int? @map("cgst_cents")
+  sgstCents         Int? @map("sgst_cents")
+  igstCents         Int? @map("igst_cents")
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -991,6 +1009,10 @@ model SiteConfig {
   invoicePhone     String? @map("invoice_phone")
   invoiceTaxId     String? @map("invoice_tax_id")
   invoiceNote      String? @map("invoice_note")
+  // Storewide India GST defaults, in basis points (1800 = 18%): one for a
+  // Maharashtra delivery, one for everywhere else. Products may override both.
+  taxRateMhBps     Int?    @map("tax_rate_mh_bps")
+  taxRateOtherBps  Int?    @map("tax_rate_other_bps")
 
   // ── Storefront content ─────────────────────────────────────────────────
   // Rotating strips pinned above the header: an ordered list of blocks, each a

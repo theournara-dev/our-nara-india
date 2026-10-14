@@ -1,4 +1,5 @@
 import { formatMoney } from "@/lib/money";
+import { formatBps } from "@/lib/tax";
 import type { InvoiceView } from "@/lib/invoices";
 import {
   ORDER_STATUS_LABELS,
@@ -31,6 +32,7 @@ export function InvoiceDocument({
   view,
   onHsnChange,
   hsnValues,
+  readOnly,
 }: {
   view: InvoiceView;
   /**
@@ -40,10 +42,21 @@ export function InvoiceDocument({
   onHsnChange?: (itemId: string, hsn: string) => void;
   /** Live values while the admin types (falls back to the invoice's own). */
   hsnValues?: Record<string, string>;
+  /**
+   * Render the HSN cells as plain text. Print and PDF set this first, so a
+   * printed invoice can never carry an input box (or lose the value, which
+   * `outerHTML` would drop).
+   */
+  readOnly?: boolean;
 }) {
   const money = (cents: number) =>
     formatMoney(cents, view.currency, { convert: false });
-  const editableHsn = Boolean(onHsnChange);
+  const editableHsn = Boolean(onHsnChange) && !readOnly;
+  const tax = view.tax;
+  // Half the uniform rate for the CGST/SGST labels; no percentage when the
+  // lines carry different rates.
+  const halfRate = tax?.uniformBps != null ? formatBps(tax.uniformBps / 2) : "";
+  const fullRate = tax?.uniformBps != null ? formatBps(tax.uniformBps) : "";
 
   return (
     <div className="mx-auto w-full max-w-2xl text-sm text-zinc-900">
@@ -139,6 +152,7 @@ export function InvoiceDocument({
           <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400">
             <th className="py-2 pr-3 font-medium">Item</th>
             <th className="py-2 px-3 text-center font-medium">HSN</th>
+            {tax && <th className="py-2 px-3 text-center font-medium">Rate</th>}
             <th className="py-2 px-3 text-center font-medium">Qty</th>
             <th className="py-2 px-3 text-right font-medium">Unit</th>
             <th className="py-2 pl-3 text-right font-medium">Amount</th>
@@ -172,6 +186,11 @@ export function InvoiceDocument({
                   </span>
                 )}
               </td>
+              {tax && (
+                <td className="py-2.5 px-3 text-center font-mono text-xs text-zinc-600">
+                  {line.rateBps != null ? formatBps(line.rateBps) : "—"}
+                </td>
+              )}
               <td className="py-2.5 px-3 text-center text-zinc-600">
                 {line.quantity}
               </td>
@@ -186,12 +205,45 @@ export function InvoiceDocument({
         </tbody>
       </table>
 
-      {/* Totals */}
+      {/* Totals. A local (India) invoice decomposes the tax-inclusive amounts:
+          the taxable value, then CGST + SGST (Maharashtra) or IGST, then the
+          round-off that lifts the printed total to the nearest rupee. */}
       <dl className="mt-4 ml-auto w-full max-w-[16rem] space-y-1.5 text-sm">
-        <div className="flex justify-between gap-4">
-          <dt className="text-zinc-500">Subtotal</dt>
-          <dd>{money(view.subtotalCents)}</dd>
-        </div>
+        {tax ? (
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-500">Taxable value</dt>
+            <dd>{money(tax.taxableCents)}</dd>
+          </div>
+        ) : (
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-500">Subtotal</dt>
+            <dd>{money(view.subtotalCents)}</dd>
+          </div>
+        )}
+        {tax?.intraState && (
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-zinc-500">
+                CGST{halfRate ? ` ${halfRate}` : ""}
+              </dt>
+              <dd>{money(tax.cgstCents)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-zinc-500">
+                SGST{halfRate ? ` ${halfRate}` : ""}
+              </dt>
+              <dd>{money(tax.sgstCents)}</dd>
+            </div>
+          </>
+        )}
+        {tax && !tax.intraState && (
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-500">
+              IGST{fullRate ? ` ${fullRate}` : ""}
+            </dt>
+            <dd>{money(tax.igstCents)}</dd>
+          </div>
+        )}
         <div className="flex justify-between gap-4">
           <dt className="text-zinc-500">Shipping</dt>
           <dd>
@@ -204,9 +256,18 @@ export function InvoiceDocument({
             <dd>−{money(view.discountCents)}</dd>
           </div>
         )}
+        {tax != null && tax.roundOffCents !== 0 && (
+          <div className="flex justify-between gap-4">
+            <dt className="text-zinc-500">Round off</dt>
+            <dd>
+              {tax.roundOffCents > 0 ? "+" : "−"}
+              {money(Math.abs(tax.roundOffCents))}
+            </dd>
+          </div>
+        )}
         <div className="flex justify-between gap-4 border-t border-zinc-200 pt-2 font-semibold">
           <dt>Total</dt>
-          <dd>{money(view.totalCents)}</dd>
+          <dd>{money(view.totalCents + (tax?.roundOffCents ?? 0))}</dd>
         </div>
       </dl>
 

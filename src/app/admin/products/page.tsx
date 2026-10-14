@@ -218,6 +218,8 @@ export default async function AdminProductsPage({
           globalIsActive: p.globalIsActive,
           globalIsPreOrder: p.globalIsPreOrder,
           globalBuyNowEnabled: p.globalBuyNowEnabled,
+          taxRateMhBps: p.taxRateMhBps,
+          taxRateOtherBps: p.taxRateOtherBps,
           subcategories: p.subcategories.map((s) => ({
             id: s.category.id,
             name: s.category.name,
