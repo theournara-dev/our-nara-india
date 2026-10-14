@@ -66,42 +66,48 @@ export function shippingProgress(
   const charges = feeCents > 0;
   const hasMilestone = milestoneCents != null && milestoneCents > 0;
 
-  if (!charges) {
+  // A configured milestone is what the bar measures, fee or no fee: a store
+  // that ships free today can still set one for the future, and the bar must
+  // not sit at 100% on an empty cart. (A free-shipping coupon passes
+  // FREE_SHIPPING — no milestone — so it still shows a full bar.)
+  if (hasMilestone) {
+    const met = payableSubtotalCents >= milestoneCents;
     return {
-      configured: hasMilestone,
-      isFree: true,
-      reason: "always-free",
-      remainingCents: 0,
-      percent: 100,
+      configured: true,
+      isFree: met,
+      reason: met ? (charges ? "milestone-met" : "always-free") : "none",
+      remainingCents: met ? 0 : milestoneCents - payableSubtotalCents,
+      percent: Math.min(
+        100,
+        Math.max(0, Math.round((payableSubtotalCents / milestoneCents) * 100)),
+      ),
       feeCents,
       milestoneCents,
     };
   }
 
-  if (!hasMilestone) {
+  // Nothing to progress towards: a store that always ships free shows a full
+  // bar, one that always charges shows an empty one.
+  if (!charges) {
     return {
-      configured: true,
-      isFree: false,
-      reason: "none",
+      configured: false,
+      isFree: true,
+      reason: "always-free",
       remainingCents: 0,
-      percent: 0,
+      percent: 100,
       feeCents,
       milestoneCents: null,
     };
   }
 
-  const met = payableSubtotalCents >= milestoneCents;
   return {
     configured: true,
-    isFree: met,
-    reason: met ? "milestone-met" : "none",
-    remainingCents: met ? 0 : milestoneCents - payableSubtotalCents,
-    percent: Math.min(
-      100,
-      Math.max(0, Math.round((payableSubtotalCents / milestoneCents) * 100)),
-    ),
+    isFree: false,
+    reason: "none",
+    remainingCents: 0,
+    percent: 0,
     feeCents,
-    milestoneCents,
+    milestoneCents: null,
   };
 }
 

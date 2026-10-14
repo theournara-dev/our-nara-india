@@ -20,6 +20,7 @@ import {
   useCart,
 } from "@/lib/cart";
 import { formatMoney } from "@/lib/money";
+import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
 import { friendlyPaymentError } from "@/lib/payment-errors";
 import { notify, notifyErrorWithContact } from "@/lib/toast";
@@ -74,7 +75,9 @@ export default function CartPage() {
     // Mirrors the server-side required fields (orders.ts) and reports exactly
     // which inputs are missing — the inputs are not inside a <form>, so
     // `required` attributes never fire; this guard is the real check.
-    const errors = validateUserInfo(userInfo);
+    const errors = validateUserInfo(userInfo, {
+      requireIndiaAddress: !isGlobal,
+    });
     if (Object.keys(errors).length > 0) {
       setInfoErrors(errors);
       notify.error(
@@ -245,7 +248,7 @@ export default function CartPage() {
                             updateCartItemQty(
                               item.productId,
                               item.option,
-                              Math.min(99, item.qty + 1),
+                              Math.min(MAX_LINE_QTY, item.qty + 1),
                             )
                           }
                           className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
@@ -285,7 +288,9 @@ export default function CartPage() {
                     setValues(next);
                     setInfoErrors((prev) => {
                       if (Object.keys(prev).length === 0) return prev;
-                      const fresh = validateUserInfo(next);
+                      const fresh = validateUserInfo(next, {
+                        requireIndiaAddress: !isGlobal,
+                      });
                       const kept: UserInfoErrors = {};
                       for (const key of Object.keys(
                         prev,

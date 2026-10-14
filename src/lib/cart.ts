@@ -5,6 +5,7 @@ import {
   type SiteVersion,
 } from "@/lib/site-version";
 import { priceForVersion } from "@/lib/money";
+import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 
 /**
  * Minimal client-side cart backed by localStorage. There's no cart backend yet
@@ -162,16 +163,20 @@ export function addProductToCart(
   });
 }
 
-/** Add an item, merging with an existing line for the same product + option. */
+/** Add an item, merging with an existing line for the same product + option.
+ *
+ * The line's quantity stops at MAX_LINE_QTY — the same ceiling the checkout
+ * enforces — so a shopper can never build a cart the server will refuse.
+ */
 export function addToCart(item: CartItem): CartItem[] {
   const cart = read();
   const existing = cart.find(
     (c) => c.productId === item.productId && c.option === item.option,
   );
   if (existing) {
-    existing.qty += item.qty;
+    existing.qty = Math.min(MAX_LINE_QTY, existing.qty + item.qty);
   } else {
-    cart.push({ ...item });
+    cart.push({ ...item, qty: Math.min(MAX_LINE_QTY, item.qty) });
   }
   save(cart);
   invalidate();
@@ -184,8 +189,9 @@ export function setCart(cart: CartItem[]): void {
 }
 
 /**
- * Update the quantity of a single cart line (product + option), clamped to a
- * minimum of 1. Shared by the cart page and the quick-purchase sheet.
+ * Update the quantity of a single cart line (product + option), clamped to
+ * 1…MAX_LINE_QTY (the range the checkout accepts). Shared by the cart page and
+ * the quick-purchase sheet.
  */
 export function updateCartItemQty(
   productId: string,
@@ -195,7 +201,7 @@ export function updateCartItemQty(
   setCart(
     read().map((i) =>
       i.productId === productId && i.option === option
-        ? { ...i, qty: Math.max(1, qty) }
+        ? { ...i, qty: Math.min(MAX_LINE_QTY, Math.max(1, qty)) }
         : i,
     ),
   );

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
+import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { notifyAddedToCart } from "@/lib/toast";
 import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
@@ -371,7 +372,7 @@ export function ProductDetail({
                 <button
                   type="button"
                   aria-label="Increase quantity"
-                  onClick={() => setQty((q) => q + 1)}
+                  onClick={() => setQty((q) => Math.min(MAX_LINE_QTY, q + 1))}
                   className="flex h-9 w-9 cursor-pointer items-center justify-center text-lg text-[#555] hover:text-point-500"
                 >
                   +

@@ -15,7 +15,7 @@ import {
  * a dispatch cut-off notice ("Today's shipment closes at 3:00 PM / Order now and
  * it will be shipped Tomorrow 10/07(WED)") over the store's free-delivery
  * progress bar. Always rendered — an empty cart shows the bar at zero progress,
- * a store that ships free shows it filled.
+ * and only a store with no free-delivery milestone shows it filled.
  */
 export function ShippingProgressBar({
   subtotalCents,

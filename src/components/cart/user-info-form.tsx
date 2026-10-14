@@ -2,6 +2,10 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import {
+  validateCheckoutDetails,
+  type CheckoutDetailErrors,
+} from "@/lib/checkout-rules";
 
 export type UserInfoValues = {
   name: string;
@@ -28,29 +32,20 @@ export const EMPTY_USER_INFO: UserInfoValues = {
 };
 
 /** Field-level validation messages for [UserInfoForm], keyed by field. */
-export type UserInfoErrors = Partial<Record<keyof UserInfoValues, string>>;
-
-const EMAIL_RE = /^\S+@\S+\.\S+$/;
+export type UserInfoErrors = CheckoutDetailErrors;
 
 /**
- * Client-side mirror of the server's required fields (see actions/orders.ts).
- * The inputs aren't inside a <form>, so native `required` never fires — this
- * is the real check, and it powers both the input highlights and the toast
- * copy that names exactly what's missing.
+ * Client-side mirror of the server's rules (see `lib/checkout-rules.ts`, which
+ * the order action runs as well). The inputs aren't inside a <form> in the
+ * cart, so native `required` never fires — this is the real check, and it
+ * powers both the input highlights and the toast copy that names exactly what's
+ * missing.
  */
-export function validateUserInfo(values: UserInfoValues): UserInfoErrors {
-  const errors: UserInfoErrors = {};
-  if (!values.name.trim()) errors.name = "Name is required";
-  if (!values.email.trim()) errors.email = "Email is required";
-  else if (!EMAIL_RE.test(values.email.trim()))
-    errors.email = "Enter a valid email address";
-  if (!values.phone.trim()) errors.phone = "Phone is required";
-  if (!values.addressLine1.trim())
-    errors.addressLine1 = "Address line 1 is required";
-  if (!values.city.trim()) errors.city = "City is required";
-  if (!values.postal.trim()) errors.postal = "Postal code is required";
-  if (!values.country.trim()) errors.country = "Country is required";
-  return errors;
+export function validateUserInfo(
+  values: UserInfoValues,
+  options?: { requireIndiaAddress?: boolean },
+): UserInfoErrors {
+  return validateCheckoutDetails(values, options);
 }
 
 type SessionUser = {
@@ -228,8 +223,11 @@ export function UserInfoForm({
                 value={values.state}
                 onChange={(e) => update("state", e.target.value)}
                 autoComplete="address-level1"
-                className={inputCls(false)}
+                className={inputCls(!!errors?.state)}
               />
+              {errors?.state ? (
+                <span className={errorCls}>{errors.state}</span>
+              ) : null}
             </label>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

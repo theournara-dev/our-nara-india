@@ -272,6 +272,13 @@ function SiteSettingsInner({
               onChange={(cents) => patch({ freeShippingOverCents: cents })}
               placeholder="Empty = no free-delivery threshold"
             />
+            {current.shippingCents === 0 &&
+              (current.freeShippingOverCents ?? 0) > 0 && (
+                <span className="mt-1 block text-[11px] text-zinc-400">
+                  With no delivery fee nothing is charged either way; this
+                  threshold only drives the progress bar customers see.
+                </span>
+              )}
           </label>
           <label className="block">
             <span className={labelCls}>Dispatch cut-off (hour, 0–23)</span>

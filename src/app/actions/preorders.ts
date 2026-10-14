@@ -4,6 +4,8 @@ import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { MAX_LINE_QTY } from "@/lib/checkout-rules";
+import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { parseInput, safeEmail, safeText } from "@/lib/validation";
 import {
   parseSiteVersion,
@@ -22,7 +24,15 @@ const preorderInput = z.object({
   state: safeText(120).optional(),
   postal: safeText(20).optional(),
   country: safeText(120).optional(),
-  quantity: z.coerce.number().int().min(1).default(1),
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(1, "Quantity must be at least 1.")
+    .max(
+      MAX_LINE_QTY,
+      `You can order up to ${MAX_LINE_QTY} of one item — please contact us for a larger quantity.`,
+    )
+    .default(1),
 });
 
 export type PreorderInput = z.infer<typeof preorderInput>;
@@ -41,6 +51,28 @@ export async function createPreorder(input: PreorderInput) {
     resolveRequestSiteVersion(
       requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
     );
+  // The product is re-checked from the database, exactly like the storefront
+  // does before it shows the pre-order button: it must still be listed on this
+  // store and still sold as a pre-order there.
+  const product = await db.product.findUnique({
+    where: { id: data.productId },
+    select: {
+      isActive: true,
+      isPreOrder: true,
+      buyNowEnabled: true,
+      globalIsActive: true,
+      globalIsPreOrder: true,
+      globalBuyNowEnabled: true,
+    },
+  });
+  if (
+    !product ||
+    !visibleForVersion(product, siteVersion) ||
+    saleStateForVersion(product, siteVersion) !== "preorder"
+  ) {
+    throw new Error("This product is no longer available for pre-order.");
+  }
+
   await db.preorder.create({
     data: {
       productId: data.productId,

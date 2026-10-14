@@ -4,6 +4,11 @@ import { cookies, headers } from "next/headers";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { isValidIdDocumentUrl } from "@/lib/blob";
+import {
+  MAX_CART_LINES,
+  MAX_LINE_QTY,
+  validateCheckoutDetails,
+} from "@/lib/checkout-rules";
 import { CheckoutError } from "@/lib/checkout-errors";
 import { resolveCouponForCart } from "@/lib/coupon-store";
 import {
@@ -46,14 +51,27 @@ const orderItemInput = z.object({
   productId: z.string().min(1),
   /** The cart stores the selected variant id in its `option` field. */
   variantId: z.string().optional(),
-  quantity: z.coerce.number().int().min(1).max(99),
+  quantity: z.coerce
+    .number()
+    .int()
+    .min(1, "Quantity must be at least 1.")
+    .max(
+      MAX_LINE_QTY,
+      `You can order up to ${MAX_LINE_QTY} of one item — please contact us for a larger quantity.`,
+    ),
 });
 
 const requiredText = (message: string, max = 200) =>
   safeText(max, { min: 1, message });
 
 const createOrderInput = z.object({
-  items: z.array(orderItemInput).min(1, "Your cart is empty."),
+  items: z
+    .array(orderItemInput)
+    .min(1, "Your cart is empty.")
+    .max(
+      MAX_CART_LINES,
+      "Your cart has too many items for one order — please contact us.",
+    ),
   name: requiredText("Name is required", 120),
   email: safeEmail(),
   phone: requiredText("Phone number is required", 40),
@@ -151,6 +169,17 @@ async function createOrderImpl(
       requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
     );
   const requestConfig = getVersionConfig(requestVersion);
+
+  // What a courier and the tax invoice actually need, checked against the same
+  // rules the cart form runs (lib/checkout-rules) so the two cannot drift: the
+  // India store needs the State (the GST place of supply) and a real PIN.
+  const detailErrors = validateCheckoutDetails(data, {
+    requireIndiaAddress: requestVersion === "local",
+  });
+  const firstDetailError = Object.values(detailErrors)[0];
+  if (firstDetailError) {
+    throw new CheckoutError("INVALID_ADDRESS", firstDetailError);
+  }
 
   // Payments are not enabled on this site version — refuse to create orders
   // so no PENDING order ever exists without a payment path behind it.
@@ -279,6 +308,15 @@ async function createOrderImpl(
       throw new CheckoutError(
         "ITEM_UNAVAILABLE",
         "One of the items in your cart is no longer available.",
+      );
+    }
+
+    // The product page refuses to add a variant product without a choice; a
+    // crafted request must not buy one at its base price.
+    if (!item.variantId && product.variants.length > 0) {
+      throw new CheckoutError(
+        "OPTION_REQUIRED",
+        `Please choose an option for ${product.name} before checking out.`,
       );
     }
 

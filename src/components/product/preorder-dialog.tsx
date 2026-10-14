@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { authClient } from "@/lib/auth-client";
+import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 import { notify } from "@/lib/toast";
 import { createPreorder } from "@/app/actions/preorders";
 
@@ -234,8 +235,16 @@ export function PreorderDialog({
             <input
               type="number"
               min={1}
+              max={MAX_LINE_QTY}
               value={qty}
-              onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
+              onChange={(e) =>
+                setQty(
+                  Math.min(
+                    MAX_LINE_QTY,
+                    Math.max(1, Number(e.target.value) || 1),
+                  ),
+                )
+              }
               className={inputCls}
             />
           </label>
