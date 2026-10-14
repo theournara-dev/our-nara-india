@@ -1,0 +1,16 @@
+{
+  // Zed ships two TypeScript servers (vtsls, which bundles its own TypeScript,
+  // and typescript-language-server). The bundle drifts from the project — this
+  // repo is on 5.9.3 with `moduleResolution: bundler` — and a mismatch shows up
+  // as phantom errors that `tsc --noEmit` does not reproduce. Pin the one that
+  // uses the workspace compiler (`node_modules/typescript/lib/tsserver.js`), so
+  // the editor and `npm run typecheck` always agree.
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["typescript-language-server"]
+    },
+    "TSX": {
+      "language_servers": ["typescript-language-server"]
+    }
+  }
+}
