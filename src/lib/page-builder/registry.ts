@@ -22,6 +22,7 @@ import {
 } from "@/data/products";
 import {
   DEFAULT_AMBASSADOR_FORM_INTRO,
+  LONG_BANNER_NONE,
   DEFAULT_AMBASSADOR_FORM_TITLE,
   SECTION_TYPE_META_BY_TYPE,
   type AmbassadorImageConfig,
@@ -173,18 +174,24 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
       const all = await getLongBanners();
       // A cell left on "automatic" takes the next active banner no other cell
       // uses, so two empty cells show the first two banners rather than the
-      // same one twice.
-      const used = new Set(cells.map((cell) => cell.bannerId).filter(Boolean));
+      // same one twice. A cell set to "none" stays hidden on purpose.
+      const used = new Set(
+        cells
+          .map((cell) => cell.bannerId)
+          .filter((id): id is string => Boolean(id) && id !== LONG_BANNER_NONE),
+      );
       const auto = all.filter((b) => !used.has(b.id));
       return {
         cells: cells.map((cell) => ({
           id: cell.id,
           banner:
-            (cell.bannerId
-              ? all.find((b) => b.id === cell.bannerId)
-              : undefined) ??
-            auto.shift() ??
-            null,
+            cell.bannerId === LONG_BANNER_NONE
+              ? null
+              : ((cell.bannerId
+                  ? all.find((b) => b.id === cell.bannerId)
+                  : undefined) ??
+                auto.shift() ??
+                null),
         })),
       };
     },

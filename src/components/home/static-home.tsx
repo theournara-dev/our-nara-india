@@ -4,7 +4,6 @@ import { LongBanner } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TabbedShowcase } from "@/components/content/tabbed-showcase";
-import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
@@ -124,9 +123,6 @@ export async function StaticHome() {
       <Reveal>
         <InstagramSection />
       </Reveal>
-
-      {/* Floating actions (home only): recent views + scroll to top */}
-      <FloatingButtons />
     </div>
   );
 }

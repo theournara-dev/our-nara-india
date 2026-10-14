@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { Reveal } from "@/components/ui/reveal";
 import { StaticHome } from "@/components/home/static-home";
 import { getPage, isInSchedule } from "@/lib/page-builder/data";
@@ -49,9 +48,7 @@ export default async function HomePage() {
           }),
       )
     : [];
-  const sections = loaded.filter(
-    (s): s is NonNullable<typeof s> => s !== null,
-  );
+  const sections = loaded.filter((s): s is NonNullable<typeof s> => s !== null);
 
   const homeContent =
     !page || !page.isActive ? (
@@ -63,8 +60,6 @@ export default async function HomePage() {
             <s.Component {...s.props} />
           </Reveal>
         ))}
-        {/* Floating actions (home only): recent views + scroll to top */}
-        <FloatingButtons />
       </div>
     );
 

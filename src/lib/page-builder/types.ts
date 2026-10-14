@@ -122,6 +122,12 @@ export const DEFAULT_AMBASSADOR_FORM_TITLE =
 export const DEFAULT_AMBASSADOR_FORM_INTRO =
   "We review every application and reply by email. Fields marked * are required.";
 
+/**
+ * The long-banner cell sentinel: a cell set to this hides on the storefront.
+ * (An empty cell means "automatic — next free banner" instead.)
+ */
+export const LONG_BANNER_NONE = "none";
+
 // ── Triple banner box ───────────────────────────────────────────────────────
 
 export const tripleBannerBoxSchema = z.object({
@@ -214,7 +220,7 @@ export const sectionConfigSchemas = {
     // The two banner cells (side by side on desktop, stacked on phones): each
     // shows exactly one banner, picked from the Banners admin. A cell left
     // empty takes the next free active "long" banner, so the section is never
-    // unexpectedly blank.
+    // unexpectedly blank; the "none" sentinel hides that cell on purpose.
     cells: z
       .array(z.object({ id: z.string(), bannerId: z.string().default("") }))
       .max(2)

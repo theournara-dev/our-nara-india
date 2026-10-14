@@ -100,7 +100,11 @@ export function ImageListField({
     if (!file) return;
     const problem = checkPickedFile(file, "image");
     if (problem) {
-      notify.error("Unsupported file", problem);
+      notify.error(
+        notify.loading("Checking file…"),
+        "Unsupported file",
+        problem,
+      );
       return;
     }
     if (!queue) {
@@ -219,6 +223,28 @@ export function ImageListField({
         <input
           value={urlInput}
           onChange={(e) => setUrlInput(e.target.value)}
+          onPaste={(e) => {
+            // Pasting is the common path, so apply it right away — the admin
+            // shouldn't have to press "Add URL" after it.
+            const text = e.clipboardData.getData("text/plain").trim();
+            if (!text) return;
+            if (isValidImageUrl(text)) {
+              e.preventDefault();
+              onChange([...value, text]);
+              setUrlInput("");
+              notify.success(
+                notify.loading("Checking image URL…"),
+                "Image URL added",
+                text,
+              );
+            } else {
+              notify.error(
+                notify.loading("Checking image URL…"),
+                "Not an image URL",
+                "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
+              );
+            }
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -261,6 +287,7 @@ export function ImageListField({
     if (!v) return;
     if (!isValidImageUrl(v)) {
       notify.error(
+        notify.loading("Checking image URL…"),
         "Invalid image URL",
         "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
       );
@@ -268,6 +295,7 @@ export function ImageListField({
     }
     onChange([...value, v]);
     setUrlInput("");
+    notify.success(notify.loading("Checking image URL…"), "Image URL added", v);
   }
 }
 
@@ -330,11 +358,13 @@ export function ImageField({
     onPreviewChangeRef.current?.(pending ? pending.previewUrl : null);
   }, [pending]);
 
-  function addUrl() {
-    const v = urlInput.trim();
+  /** Validate and set a typed or pasted URL, with clear feedback either way. */
+  function applyUrl(raw: string) {
+    const v = raw.trim();
     if (!v) return;
     if (!isValidImageUrl(v)) {
       notify.error(
+        notify.loading("Checking image URL…"),
         "Invalid image URL",
         "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
       );
@@ -342,13 +372,18 @@ export function ImageField({
     }
     onChange(v);
     setUrlInput(v);
+    notify.success(notify.loading("Checking image URL…"), "Image URL set", v);
   }
 
   async function onFile(file: File | undefined) {
     if (!file) return;
     const problem = checkPickedFile(file, "image");
     if (problem) {
-      notify.error("Unsupported file", problem);
+      notify.error(
+        notify.loading("Checking file…"),
+        "Unsupported file",
+        problem,
+      );
       return;
     }
     if (!queue) {
@@ -399,12 +434,34 @@ export function ImageField({
       <input
         value={urlInput}
         onChange={(e) => setUrlInput(e.target.value)}
+        onPaste={(e) => {
+          // Pasting is the common path, so apply it right away — the admin
+          // shouldn't have to press "Set URL" after it.
+          const text = e.clipboardData.getData("text/plain").trim();
+          if (!text) return;
+          if (isValidImageUrl(text)) {
+            e.preventDefault();
+            applyUrl(text);
+          } else {
+            notify.error(
+              notify.loading("Checking image URL…"),
+              "Not an image URL",
+              "Use a public http(s) image URL ending in .png, .jpg, .gif, .webp or .avif.",
+            );
+          }
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            applyUrl(urlInput);
+          }
+        }}
         placeholder="Paste image URL…"
         className={inputCls}
       />
       <button
         type="button"
-        onClick={addUrl}
+        onClick={() => applyUrl(urlInput)}
         className="inline-flex h-9 shrink-0 items-center rounded border border-zinc-200 bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-100"
       >
         Set URL

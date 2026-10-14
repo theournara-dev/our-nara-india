@@ -19,6 +19,7 @@ import {
   TripleBannerBoxesField,
   type SectionFormOptions,
 } from "./fields";
+import { LONG_BANNER_NONE } from "@/lib/page-builder/types";
 
 /**
  * Per-type admin forms. Each receives the section's current `config` and an
@@ -90,6 +91,7 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
             onChange={(v) => setCell(i, v)}
             options={[
               { value: "", label: "Automatic (next free banner)" },
+              { value: LONG_BANNER_NONE, label: "None (hide this cell)" },
               ...longBanners.map((b) => ({ value: b.id, label: b.title })),
             ]}
           />
@@ -99,7 +101,8 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
         The two cells sit side by side on desktop (stacked on phones). Each
         shows one banner from the Banners admin — a cell left on
         &quot;Automatic&quot; takes the next active &quot;Long banner&quot; no
-        other cell uses.
+        other cell uses. Choose &quot;None&quot; to hide a cell; setting both to
+        &quot;None&quot; hides the whole section.
       </p>
     </div>
   );

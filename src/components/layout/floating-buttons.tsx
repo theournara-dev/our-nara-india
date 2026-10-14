@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MdKeyboardArrowUp, MdOutlineHistory } from "react-icons/md";
 
 const SHOW_AFTER = 300;
 
 /**
- * Floating action buttons on the right edge: open recently-viewed products and
- * scroll to top. Hidden at the top of the page and revealed smoothly once the
- * user scrolls down.
+ * Floating action buttons on the right edge of every storefront page: open
+ * recently-viewed products and scroll to top. Hidden at the top of the page
+ * and revealed smoothly once the user scrolls down. Not shown inside the
+ * admin dashboard, which has its own chrome.
  */
 export function FloatingButtons() {
   const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > SHOW_AFTER);
@@ -20,6 +23,8 @@ export function FloatingButtons() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  if (pathname?.startsWith("/admin")) return null;
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 

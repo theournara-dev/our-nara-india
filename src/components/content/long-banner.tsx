@@ -162,7 +162,10 @@ export function LongBannerCells({ cells }: { cells: LongBannerCell[] }) {
 
   return (
     <div className="long-banner">
-      <div className="grid gap-[10px] md:grid-cols-2">
+      {/* One banner fills the strip; two share it side by side. */}
+      <div
+        className={`grid gap-[10px] ${visible.length > 1 ? "md:grid-cols-2" : ""}`}
+      >
         {visible.map((cell) => (
           <Link
             key={cell.id}

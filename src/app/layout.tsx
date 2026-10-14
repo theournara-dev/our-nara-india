@@ -3,6 +3,7 @@ import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
 import { headers } from "next/headers";
 import { Toaster } from "sonner";
 import { Footer } from "@/components/layout/footer";
+import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { Header } from "@/components/layout/header";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { PopupHost } from "@/components/layout/popup-host";
@@ -119,6 +120,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             <Footer />
           </CartProvider>
           <MobileTabBar />
+          {/* Storefront-wide floating actions (recent views + scroll to top);
+              it hides itself inside the admin dashboard. */}
+          <FloatingButtons />
           {/* Inside the provider: a store-picker popup switches the store, and
               the card reads the current version to mark the active card. */}
           <PopupHost switcher={siteContent.switcher} />
