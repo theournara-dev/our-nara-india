@@ -6,6 +6,11 @@ import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
 import { ImageField } from "@/components/admin/image-field";
 import {
+  LinkField,
+  type LinkFieldOptions,
+} from "@/components/admin/link-field";
+import { EventCardView } from "@/components/events/event-card";
+import {
   UploadQueueProvider,
   useUploadGate,
 } from "@/components/upload/upload-queue";
@@ -25,18 +30,32 @@ type EventModel = {
   text: string | null;
   dateLabel: string | null;
   image: string | null;
+  color: string | null;
   href: string | null;
-  sortOrder: number;
   isActive: boolean;
   startsAt: Date | null;
   expiresAt: Date | null;
 };
 
-/** Create/edit form for an /event card; images upload when the form is saved. */
-export function EventForm(props: { event: EventModel | null; backHref: string }) {
+/** The brand purple, matching the storefront card's fallback. */
+const DEFAULT_COLOR = "#6f2dbd";
+
+/**
+ * Create/edit form for an /event card, with a live preview of the exact block
+ * the storefront renders; images upload when the form is saved.
+ */
+export function EventForm({
+  event,
+  backHref,
+  options,
+}: {
+  event: EventModel | null;
+  backHref: string;
+  options: LinkFieldOptions;
+}) {
   return (
     <UploadQueueProvider>
-      <EventFormInner {...props} />
+      <EventFormInner event={event} backHref={backHref} options={options} />
     </UploadQueueProvider>
   );
 }
@@ -44,9 +63,11 @@ export function EventForm(props: { event: EventModel | null; backHref: string })
 function EventFormInner({
   event,
   backHref,
+  options,
 }: {
   event: EventModel | null;
   backHref: string;
+  options: LinkFieldOptions;
 }) {
   const isEdit = Boolean(event);
   const [pending, startTransition] = useTransition();
@@ -55,8 +76,8 @@ function EventFormInner({
   const [text, setText] = useState(event?.text ?? "");
   const [dateLabel, setDateLabel] = useState(event?.dateLabel ?? "");
   const [image, setImage] = useState(event?.image ?? "");
+  const [color, setColor] = useState(event?.color ?? DEFAULT_COLOR);
   const [href, setHref] = useState(event?.href ?? "");
-  const [sortOrder, setSortOrder] = useState(String(event?.sortOrder ?? 0));
   const [isActive, setIsActive] = useState(event?.isActive ?? true);
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(event?.startsAt));
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocal(event?.expiresAt));
@@ -75,8 +96,8 @@ function EventFormInner({
       text: text.trim() || undefined,
       dateLabel: dateLabel.trim() || undefined,
       image: image.trim() || undefined,
+      color: color.trim() || undefined,
       href: href.trim() || undefined,
-      sortOrder: parseInt(sortOrder || "0", 10),
       isActive,
       startsAt: startsAt || undefined,
       expiresAt: expiresAt || undefined,
@@ -115,104 +136,139 @@ function EventFormInner({
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-900">Card</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
-            <span className={labelCls}>Title</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Welcome Gift — +3,000P"
-              required
-              className={inputCls}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className={labelCls}>Text</span>
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={3}
-              maxLength={600}
-              placeholder="One or two lines shown under the title."
-              className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
-            />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Date label (optional)</span>
-            <input
-              value={dateLabel}
-              onChange={(e) => setDateLabel(e.target.value)}
-              placeholder="e.g. Ongoing or Dec 1 – 31"
-              className={inputCls}
-            />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Link (optional)</span>
-            <input
-              value={href}
-              onChange={(e) => setHref(e.target.value)}
-              placeholder="e.g. /coupons"
-              className={inputCls}
-            />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Sort order</span>
-            <input
-              type="number"
-              min={0}
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className={inputCls}
-            />
-            <span className="mt-1 block text-xs text-zinc-400">
-              Lower values appear first.
-            </span>
-          </label>
-        </div>
-        <div className="mt-4">
-          <ImageField
-            value={image}
-            onChange={setImage}
-            label="Card image (optional)"
-            hint="Wide artwork; the title and text sit over its bottom-left corner. Without one the card renders as a plain panel."
-          />
-        </div>
-      </section>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-6">
+          <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900">Card</h2>
+            <div className="grid gap-4 [&>*]:min-w-0 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className={labelCls}>Title</span>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Welcome Gift — +3,000P"
+                  required
+                  className={inputCls}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className={labelCls}>Text</span>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  rows={3}
+                  maxLength={600}
+                  placeholder="One or two lines shown under the title."
+                  className="w-full rounded border border-zinc-200 bg-white px-2 py-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Date label (optional)</span>
+                <input
+                  value={dateLabel}
+                  onChange={(e) => setDateLabel(e.target.value)}
+                  placeholder="e.g. Ongoing or Dec 1 – 31"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>
+                  Card colour (when there is no image)
+                </span>
+                <span className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    aria-label="Card colour"
+                    className="h-9 w-12 shrink-0 cursor-pointer rounded border border-zinc-200 bg-white p-1"
+                  />
+                  <input
+                    value={color}
+                    onChange={(e) => setColor(e.target.value)}
+                    className={inputCls}
+                  />
+                </span>
+              </label>
+              <div className="sm:col-span-2">
+                <LinkField
+                  label="Link (optional)"
+                  value={href}
+                  onChange={setHref}
+                  options={options}
+                  hint="Where the card goes when clicked."
+                />
+              </div>
+            </div>
+            <div className="mt-4">
+              <ImageField
+                value={image}
+                onChange={setImage}
+                label="Card image (optional)"
+                hint="Any size; it fills the card's fixed-height block. Without one the card uses the colour above."
+              />
+            </div>
+          </section>
 
-      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-        <h2 className="mb-4 text-sm font-semibold text-zinc-900">Visibility</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className={labelCls}>Starts at</span>
-            <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className={inputCls}
-            />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Expires at</span>
-            <input
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              className={inputCls}
-            />
-          </label>
+          <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+            <h2 className="mb-4 text-sm font-semibold text-zinc-900">
+              Visibility
+            </h2>
+            <div className="grid gap-4 [&>*]:min-w-0 sm:grid-cols-2">
+              <label className="block">
+                <span className={labelCls}>Starts at</span>
+                <input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) => setStartsAt(e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Expires at</span>
+                <input
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+            </div>
+            <label className="mt-4 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+              />
+              <span className="text-sm text-zinc-700">
+                Active on storefront
+              </span>
+            </label>
+            <p className="mt-3 text-xs text-zinc-400">
+              The order on /event is set from the list&apos;s arrows.
+            </p>
+          </section>
         </div>
-        <label className="mt-4 flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={isActive}
-            onChange={(e) => setIsActive(e.target.checked)}
-            className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+
+        {/* Live preview of the block exactly as /event renders it. */}
+        <div className="min-w-0 lg:sticky lg:top-6">
+          <p className={labelCls}>Preview</p>
+          <EventCardView
+            event={{
+              title,
+              text,
+              dateLabel,
+              image: image || null,
+              color,
+              href: href || null,
+            }}
           />
-          <span className="text-sm text-zinc-700">Active on storefront</span>
-        </label>
-      </section>
+          <p className="mt-2 text-xs text-zinc-400">
+            Shown at the same size as the /event grid.
+          </p>
+        </div>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <button

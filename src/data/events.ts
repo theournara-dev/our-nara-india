@@ -11,6 +11,8 @@ export interface EventCard {
   text: string | null;
   dateLabel: string | null;
   image: string | null;
+  /** Hex background for cards without artwork. */
+  color: string | null;
   href: string | null;
 }
 
@@ -30,6 +32,7 @@ export async function getEvents(): Promise<EventCard[]> {
       text: true,
       dateLabel: true,
       image: true,
+      color: true,
       href: true,
     },
   });

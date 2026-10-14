@@ -4,10 +4,15 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { notify } from "@/lib/toast";
 import { formatDateTime } from "@/lib/datetime";
-import { deleteEvent, toggleEventActive } from "@/app/admin/events/actions";
+import {
+  deleteEvent,
+  moveEvent,
+  toggleEventActive,
+} from "@/app/admin/events/actions";
 
 export interface AdminEventRow {
   id: string;
@@ -15,14 +20,18 @@ export interface AdminEventRow {
   text: string | null;
   dateLabel: string | null;
   image: string | null;
+  color: string | null;
   href: string | null;
-  sortOrder: number;
   isActive: boolean;
   startsAt: Date | null;
   expiresAt: Date | null;
 }
 
-/** Event list for the admin: the /event cards with their schedule and state. */
+/**
+ * Event list for the admin: the /event cards with their schedule and state.
+ * Order is managed right here with the up/down arrows (the edit form doesn't
+ * carry a sort field).
+ */
 export function EventsTable({ events }: { events: AdminEventRow[] }) {
   const router = useRouter();
   const [deleteTarget, setDeleteTarget] = useState<AdminEventRow | null>(null);
@@ -35,7 +44,17 @@ export function EventsTable({ events }: { events: AdminEventRow[] }) {
         notify.error("Update failed", res.message);
         return;
       }
-      notify.success(row.isActive ? "Event hidden" : "Event visible", row.title);
+      notify.success(
+        row.isActive ? "Event hidden" : "Event visible",
+        row.title,
+      );
+      router.refresh();
+    });
+  }
+
+  function onMove(row: AdminEventRow, direction: "up" | "down") {
+    startTransition(async () => {
+      await moveEvent(row.id, direction);
       router.refresh();
     });
   }
@@ -63,6 +82,7 @@ export function EventsTable({ events }: { events: AdminEventRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50/60 text-left text-xs uppercase tracking-wide text-zinc-400">
+              <th className="px-4 py-3 font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Event</th>
               <th className="px-4 py-3 font-medium">Date label</th>
               <th className="px-4 py-3 font-medium">Window</th>
@@ -71,8 +91,33 @@ export function EventsTable({ events }: { events: AdminEventRow[] }) {
             </tr>
           </thead>
           <tbody>
-            {events.map((row) => (
-              <tr key={row.id} className="border-b border-zinc-50 last:border-0">
+            {events.map((row, index) => (
+              <tr
+                key={row.id}
+                className="border-b border-zinc-50 last:border-0"
+              >
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label="Move up"
+                      disabled={index === 0 || pending}
+                      onClick={() => onMove(row, "up")}
+                      className="grid h-7 w-7 place-items-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronUp className="h-4 w-4" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Move down"
+                      disabled={index === events.length - 1 || pending}
+                      onClick={() => onMove(row, "down")}
+                      className="grid h-7 w-7 place-items-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                    >
+                      <ChevronDown className="h-4 w-4" aria-hidden />
+                    </button>
+                  </span>
+                </td>
                 <td className="px-4 py-3">
                   <span className="flex items-start gap-3">
                     {row.image ? (
@@ -85,9 +130,13 @@ export function EventsTable({ events }: { events: AdminEventRow[] }) {
                         className="h-10 w-16 shrink-0 rounded border border-zinc-100 object-cover"
                       />
                     ) : (
-                      <span className="flex h-10 w-16 shrink-0 items-center justify-center rounded border border-dashed border-zinc-200 text-[10px] text-zinc-300">
-                        no image
-                      </span>
+                      <span
+                        aria-hidden
+                        className="h-10 w-16 shrink-0 rounded border border-zinc-100"
+                        style={{
+                          backgroundColor: row.color ?? "#6f2dbd",
+                        }}
+                      />
                     )}
                     <span className="min-w-0">
                       <span className="block font-medium text-zinc-900">
@@ -157,7 +206,7 @@ export function EventsTable({ events }: { events: AdminEventRow[] }) {
             {events.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-10 text-center text-sm text-zinc-400"
                 >
                   No events yet. Add one to fill the /event page.

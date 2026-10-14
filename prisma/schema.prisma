@@ -792,6 +792,8 @@ model Event {
   // Free-text date shown with the card, e.g. "Ongoing" or "Dec 1 – 31".
   dateLabel String?   @map("date_label")
   image     String?
+  // Background colour for cards without artwork (hex).
+  color     String?
   href      String?
   sortOrder Int       @default(0) @map("sort_order")
   isActive  Boolean   @default(true) @map("is_active")

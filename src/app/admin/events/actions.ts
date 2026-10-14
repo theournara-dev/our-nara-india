@@ -18,8 +18,9 @@ const eventInput = z.object({
   text: safeMultiline(600).optional(),
   dateLabel: safeText(80).optional(),
   image: safeText(2000).optional(),
+  // Hex background for cards without artwork, e.g. "#6f2dbd".
+  color: safeText(20).optional(),
   href: safeText(2000).optional(),
-  sortOrder: z.coerce.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
   // Optional display window sent as `datetime-local` strings; empty = no limit.
   startsAt: z.string().optional(),
@@ -43,8 +44,8 @@ function fields(data: EventInput) {
     text: data.text?.trim() || null,
     dateLabel: data.dateLabel?.trim() || null,
     image: data.image?.trim() || null,
+    color: data.color?.trim() || null,
     href: data.href?.trim() || null,
-    sortOrder: data.sortOrder,
     isActive: data.isActive,
     startsAt: toDate(data.startsAt),
     expiresAt: toDate(data.expiresAt),
@@ -59,7 +60,14 @@ function revalidateEvents() {
 export async function createEvent(input: EventInput, backHref: string) {
   await requireAdmin();
   const data = parseInput(eventInput, input, "events.create");
-  await db.event.create({ data: fields(data) });
+  // New events go to the end of the list; the table's arrows reorder them.
+  const last = await db.event.findFirst({
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+  await db.event.create({
+    data: { ...fields(data), sortOrder: (last?.sortOrder ?? -1) + 1 },
+  });
   revalidateEvents();
   redirect(backHref || "/admin/events");
 }
@@ -105,4 +113,29 @@ export async function deleteEvent(id: string): Promise<EventActionResult> {
   }
   revalidateEvents();
   return { ok: true };
+}
+
+/** Move an event up or down within the list, then renumber it. */
+export async function moveEvent(id: string, direction: "up" | "down") {
+  await requireAdmin();
+  const rows = await db.event.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+    select: { id: true },
+  });
+  const ids = rows.map((r) => r.id);
+  const index = ids.indexOf(id);
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || target < 0 || target >= ids.length) {
+    return { ok: true as const };
+  }
+  ids.splice(index, 1);
+  ids.splice(target, 0, id);
+
+  await db.$transaction(
+    ids.map((eventId, order) =>
+      db.event.update({ where: { id: eventId }, data: { sortOrder: order } }),
+    ),
+  );
+  revalidateEvents();
+  return { ok: true as const };
 }
