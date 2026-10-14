@@ -424,6 +424,21 @@ export function Header({
                     ))}
                   </ul>
 
+                  {/* Fade + blur under each arrow so scrolled items dissolve
+                      into the header instead of showing through it. */}
+                  {navEdges.left && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 left-0 w-14 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[2px]"
+                    />
+                  )}
+                  {navEdges.right && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 right-0 w-14 bg-gradient-to-l from-white via-white/80 to-transparent backdrop-blur-[2px]"
+                    />
+                  )}
+
                   {/* Scroll arrows: shown only while the strip has more to
                       reach in that direction (any width). */}
                   {navEdges.left && (

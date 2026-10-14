@@ -205,6 +205,10 @@ export function PageBuilder({
       </div>
 
       <DndContext
+        // A stable id keeps the generated aria-describedby the same on the
+        // server and the client, so hydration doesn't warn (dnd-kit otherwise
+        // numbers its ids from a module counter that dev renders bump twice).
+        id="page-builder"
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={onDragEnd}
