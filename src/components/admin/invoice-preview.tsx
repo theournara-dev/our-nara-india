@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { InvoiceDocument } from "@/components/admin/invoice-document";
-import { fetchInvoiceView } from "@/app/admin/invoices/actions";
+import { fetchInvoiceView, saveInvoiceHsn } from "@/app/admin/invoices/actions";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import { printElement } from "@/lib/print";
 import type { InvoiceView } from "@/lib/invoices";
@@ -30,6 +30,57 @@ export function InvoicePreviewButton({
   const documentRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
 
+  // ── HSN editing ────────────────────────────────────────────────────────
+  // The admin can fix codes right in the table. Typing is local; blur marks the
+  // row dirty and a short timer batches every dirty row into ONE request, so
+  // tabbing through a long invoice costs a single round trip. The rows keep the
+  // typed values while the save is in flight (optimistic), and the indicator
+  // tells the admin where it stands.
+  const [hsnValues, setHsnValues] = useState<Record<string, string>>({});
+  const [hsnStatus, setHsnStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
+  const hsnDirty = useRef(new Map<string, string>());
+  const hsnTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  async function flushHsn() {
+    const entries = [...hsnDirty.current].map(([itemId, hsn]) => ({
+      itemId,
+      hsn,
+    }));
+    if (entries.length === 0) return;
+    hsnDirty.current.clear();
+    setHsnStatus("saving");
+    const res = await saveInvoiceHsn(entries);
+    if (!res.ok) {
+      setHsnStatus("idle");
+      notify.error("hsn-save", "HSN not saved", res.message);
+      return;
+    }
+    setHsnStatus("saved");
+  }
+
+  function onHsnChange(itemId: string, hsn: string) {
+    setHsnValues((prev) => ({ ...prev, [itemId]: hsn }));
+    hsnDirty.current.set(itemId, hsn);
+    setHsnStatus("saving");
+    clearTimeout(hsnTimer.current);
+    hsnTimer.current = setTimeout(() => void flushHsn(), 600);
+  }
+
+  // Never lose a pending edit: flush on unmount (Escape, Close, backdrop).
+  useEffect(
+    () => () => {
+      clearTimeout(hsnTimer.current);
+      if (hsnDirty.current.size > 0) {
+        void saveInvoiceHsn(
+          [...hsnDirty.current].map(([itemId, hsn]) => ({ itemId, hsn })),
+        );
+      }
+    },
+    [],
+  );
+
   // Close on Escape, matching the other admin dialogs.
   useEffect(() => {
     if (!open) return;
@@ -43,6 +94,9 @@ export function InvoicePreviewButton({
   function show() {
     setView(null);
     setError(null);
+    setHsnValues({});
+    setHsnStatus("idle");
+    hsnDirty.current.clear();
     setOpen(true);
     startTransition(async () => {
       try {
@@ -114,7 +168,14 @@ export function InvoicePreviewButton({
                 <h3 className="text-base font-semibold text-zinc-900">
                   Invoice preview
                 </h3>
-                <p className="text-xs text-zinc-500">Order {orderNumber}</p>
+                <p className="text-xs text-zinc-500">
+                  Order {orderNumber}
+                  {hsnStatus !== "idle" && (
+                    <span className="ml-2 text-zinc-400">
+                      {hsnStatus === "saving" ? "· saving HSN…" : "· HSN saved"}
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -155,7 +216,11 @@ export function InvoicePreviewButton({
               )}
               {!pending && view && (
                 <div ref={documentRef} data-print-root>
-                  <InvoiceDocument view={view} />
+                  <InvoiceDocument
+                    view={view}
+                    onHsnChange={onHsnChange}
+                    hsnValues={hsnValues}
+                  />
                 </div>
               )}
             </div>

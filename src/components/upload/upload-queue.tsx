@@ -90,30 +90,20 @@ export function checkPickedFile(
 
 export function UploadQueueProvider({ children }: { children: ReactNode }) {
   const items = useRef(new Map<string, PendingUpload>());
-  const [count, setCount] = useState(0);
-  const sync = useCallback(() => setCount(items.current.size), []);
 
-  const register = useCallback(
-    (item: PendingUpload) => {
-      items.current.set(item.id, item);
-      sync();
-    },
-    [sync],
-  );
+  const register = useCallback((item: PendingUpload) => {
+    items.current.set(item.id, item);
+  }, []);
 
-  const unregister = useCallback(
-    (id: string) => {
-      if (items.current.delete(id)) sync();
-    },
-    [sync],
-  );
+  const unregister = useCallback((id: string) => {
+    items.current.delete(id);
+  }, []);
 
   const flush = useCallback(async (): Promise<FlushResult> => {
     for (const item of [...items.current.values()]) {
       try {
         const url = await postFile(item.endpoint, item.file);
         items.current.delete(item.id);
-        sync();
         item.apply(url);
       } catch (err) {
         return {
@@ -123,11 +113,23 @@ export function UploadQueueProvider({ children }: { children: ReactNode }) {
       }
     }
     return { ok: true };
-  }, [sync]);
+  }, []);
 
-  const value = useMemo(
-    () => ({ count, register, unregister, flush }),
-    [count, register, unregister, flush],
+  // A *stable* object: each field keeps it as a dependency (its unmount cleanup
+  // unregisters whatever is still waiting), so the identity must not change when
+  // the pending count does. It used to, and the resulting cleanup unregistered
+  // the files the admin had just picked — they previewed but never uploaded.
+  // `count` reads through to the live map, so a save sees the current queue.
+  const value = useMemo<UploadQueue>(
+    () => ({
+      get count() {
+        return items.current.size;
+      },
+      register,
+      unregister,
+      flush,
+    }),
+    [register, unregister, flush],
   );
 
   return (

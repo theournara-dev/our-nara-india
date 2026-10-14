@@ -193,6 +193,9 @@ async function createOrderImpl(
       currency: true,
       isPreOrder: true,
       stock: true,
+      // Copied onto the order item so the invoice keeps the code it was billed
+      // with (see the invoices lib).
+      hsnCode: true,
       // Scope matching for coupons (brand / category targeted codes).
       brandId: true,
       categoryId: true,
@@ -237,6 +240,7 @@ async function createOrderImpl(
     priceCents: number;
     quantity: number;
     currency: string;
+    hsnCode: string | null;
   }[] = [];
   // The same lines, shaped for the coupon rules (unit price + scope ids).
   const couponLines: CouponCartLine[] = [];
@@ -323,6 +327,7 @@ async function createOrderImpl(
       priceCents: unitPriceCents,
       quantity: item.quantity,
       currency: requestConfig.currency,
+      hsnCode: product.hsnCode ?? null,
     });
   }
 

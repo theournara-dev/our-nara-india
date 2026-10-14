@@ -27,9 +27,23 @@ function formatDate(iso: string): string {
   });
 }
 
-export function InvoiceDocument({ view }: { view: InvoiceView }) {
+export function InvoiceDocument({
+  view,
+  onHsnChange,
+  hsnValues,
+}: {
+  view: InvoiceView;
+  /**
+   * When set, the HSN column becomes editable — the admin can fix codes straight
+   * from the invoice table (the value is saved on blur, see the preview dialog).
+   */
+  onHsnChange?: (itemId: string, hsn: string) => void;
+  /** Live values while the admin types (falls back to the invoice's own). */
+  hsnValues?: Record<string, string>;
+}) {
   const money = (cents: number) =>
     formatMoney(cents, view.currency, { convert: false });
+  const editableHsn = Boolean(onHsnChange);
 
   return (
     <div className="mx-auto w-full max-w-2xl text-sm text-zinc-900">
@@ -124,20 +138,38 @@ export function InvoiceDocument({ view }: { view: InvoiceView }) {
         <thead>
           <tr className="border-b border-zinc-200 text-xs uppercase tracking-wide text-zinc-400">
             <th className="py-2 pr-3 font-medium">Item</th>
+            <th className="py-2 px-3 text-center font-medium">HSN</th>
             <th className="py-2 px-3 text-center font-medium">Qty</th>
             <th className="py-2 px-3 text-right font-medium">Unit</th>
             <th className="py-2 pl-3 text-right font-medium">Amount</th>
           </tr>
         </thead>
         <tbody>
-          {view.lines.map((line, i) => (
-            <tr key={i} className="border-b border-zinc-100 align-top">
+          {view.lines.map((line) => (
+            <tr key={line.id} className="border-b border-zinc-100 align-top">
               <td className="py-2.5 pr-3">
                 <p className="font-medium">{line.name}</p>
                 {(line.optionValue || line.sku) && (
                   <p className="mt-0.5 text-xs text-zinc-400">
                     {[line.optionValue, line.sku].filter(Boolean).join(" · ")}
                   </p>
+                )}
+              </td>
+              <td className="py-2.5 px-3 text-center">
+                {editableHsn ? (
+                  <input
+                    value={hsnValues?.[line.id] ?? line.hsn}
+                    onChange={(e) => onHsnChange?.(line.id, e.target.value)}
+                    inputMode="numeric"
+                    maxLength={8}
+                    aria-label={`HSN code for ${line.name}`}
+                    placeholder="—"
+                    className="w-20 rounded border border-zinc-200 px-1.5 py-1 text-center font-mono text-xs outline-none focus:border-point-500"
+                  />
+                ) : (
+                  <span className="font-mono text-xs text-zinc-600">
+                    {line.hsn || "—"}
+                  </span>
                 )}
               </td>
               <td className="py-2.5 px-3 text-center text-zinc-600">

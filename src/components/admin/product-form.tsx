@@ -80,6 +80,8 @@ type Props = {
     globalBuyNowEnabled: boolean;
     seoTitle: string | null;
     seoDescription: string | null;
+    /** HSN code for India GST invoices (4–8 digits). */
+    hsnCode: string | null;
     variants: {
       id: string;
       optionLabel: string | null;
@@ -217,6 +219,7 @@ function ProductFormInner({
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [seoTitle, setSeoTitle] = useState(product?.seoTitle ?? "");
+  const [hsnCode, setHsnCode] = useState(product?.hsnCode ?? "");
   const [seoDescription, setSeoDescription] = useState(
     product?.seoDescription ?? "",
   );
@@ -420,6 +423,7 @@ function ProductFormInner({
       globalIsActive,
       globalBuyNowEnabled,
       seoTitle: seoTitle.trim() || undefined,
+      hsnCode: hsnCode.trim() || undefined,
       seoDescription: seoDescription.trim() || undefined,
       variants: variants.map((v) => ({
         id: v.id,
@@ -811,6 +815,18 @@ function ProductFormInner({
                 <input
                   value={shortTags}
                   onChange={(e) => setShortTags(e.target.value)}
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>HSN code (India invoices)</span>
+                <input
+                  value={hsnCode}
+                  onChange={(e) =>
+                    setHsnCode(e.target.value.replace(/\D/g, "").slice(0, 8))
+                  }
+                  inputMode="numeric"
+                  placeholder="e.g. 33049910"
                   className={inputCls}
                 />
               </label>

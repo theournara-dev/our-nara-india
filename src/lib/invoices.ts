@@ -22,9 +22,13 @@ import { versionForOrder } from "@/lib/site-version";
 export type InvoiceFrom = SiteContent["invoice"];
 
 export interface InvoiceLine {
+  /** Order item id — the handle the admin's HSN edits save against. */
+  id: string;
   name: string;
   optionValue: string | null;
   sku: string | null;
+  /** HSN code: the order item's snapshot, else the product's current code. */
+  hsn: string;
   quantity: number;
   /** Per-unit price in the order's stored currency (never displayed-converted). */
   unitCents: number;
@@ -198,7 +202,10 @@ export async function buildInvoiceView(
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: {
-      items: { orderBy: { id: "asc" } },
+      items: {
+        orderBy: { id: "asc" },
+        include: { product: { select: { hsnCode: true } } },
+      },
       payments: {
         where: { status: { in: [...INVOICE_PAYMENT_STATUSES] } },
         orderBy: { createdAt: "asc" },
@@ -237,9 +244,11 @@ export async function buildInvoiceView(
       email: order.email,
     },
     lines: order.items.map((item) => ({
+      id: item.id,
       name: item.name,
       optionValue: item.optionValue,
       sku: item.sku,
+      hsn: item.hsnCode ?? item.product.hsnCode ?? "",
       quantity: item.quantity,
       unitCents: item.priceCents,
       lineTotalCents: item.priceCents * item.quantity,

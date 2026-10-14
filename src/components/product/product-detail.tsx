@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { formatMoney, priceForVersion } from "@/lib/money";
@@ -193,6 +194,12 @@ export function ProductDetail({
     setPreorderOpen(true);
   }
 
+  /** Step the gallery one photo, wrapping around at either end. */
+  function stepImage(dir: 1 | -1) {
+    if (images.length < 2) return;
+    setActiveImage((cur) => (cur + dir + images.length) % images.length);
+  }
+
   return (
     <div className="mx-auto box-border w-[92%] max-w-[1560px] px-2">
       <div className="flex flex-wrap">
@@ -263,6 +270,30 @@ export function ProductDetail({
                   {String(images.length).padStart(2, "0")}
                 </span>
               )}
+
+              {/* Previous / next: step through the gallery without reaching for
+                  the thumbnails. Sized between the thumbnails and the old
+                  banner arrows so they read as controls, not decoration. */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous photo"
+                    onClick={() => stepImage(-1)}
+                    className="absolute left-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-[#222] shadow-[0_1px_6px_rgba(0,0,0,0.18)] transition-colors hover:bg-white"
+                  >
+                    <MdKeyboardArrowLeft size={24} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next photo"
+                    onClick={() => stepImage(1)}
+                    className="absolute right-2 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-[#222] shadow-[0_1px_6px_rgba(0,0,0,0.18)] transition-colors hover:bg-white"
+                  >
+                    <MdKeyboardArrowRight size={24} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -275,23 +306,21 @@ export function ProductDetail({
           >
             {product.brand.name}
           </Link>
+          {/* The K-Drop mark leads the title again (the client's follow-up),
+              half the size it was; the pre-order badge keeps its own line. */}
           <h1 className="mt-1 font-display text-2xl font-semibold leading-snug text-ink">
+            <KDropMark
+              availableGlobally={availableGlobally}
+              className="mr-1.5 h-[11px] align-middle md:h-[12px]"
+            />
             {product.name}
           </h1>
 
-          {/* The K-Drop mark and the pre-order badge sit on their own line under
-              the name (the client's mock), so the title stays compact. */}
-          {(availableGlobally || showPreOrder) && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <KDropMark
-                availableGlobally={availableGlobally}
-                className="h-[22px] md:h-[24px]"
-              />
-              {showPreOrder && (
-                <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
-                  PRE-ORDER
-                </span>
-              )}
+          {showPreOrder && (
+            <div className="mt-2">
+              <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
+                PRE-ORDER
+              </span>
             </div>
           )}
 

@@ -100,6 +100,36 @@ export function Header({
   const [searchPanelTop, setSearchPanelTop] = useState<number | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openCate, setOpenCate] = useState<string | null>(null);
+  // The click-driven panels (all categories, search) close when the pointer
+  // goes down outside them and their trigger, and when a link inside them is
+  // followed — otherwise the panel survives the navigation it triggered.
+  const allCateTriggerRef = useRef<HTMLButtonElement>(null);
+  const allCatePanelRef = useRef<HTMLDivElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!allCateOpen && !searchOpen) return;
+    function onDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (
+        allCateOpen &&
+        !allCatePanelRef.current?.contains(target) &&
+        !allCateTriggerRef.current?.contains(target)
+      ) {
+        setAllCateOpen(false);
+      }
+      if (
+        searchOpen &&
+        !searchPanelRef.current?.contains(target) &&
+        !searchTriggerRef.current?.contains(target)
+      ) {
+        setSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [allCateOpen, searchOpen]);
 
   // Escape closes the header's overlays (mobile drawer, search, all-categories),
   // like any other menu.
@@ -249,6 +279,7 @@ export function Header({
               <div className="relative h-20 w-[50px] shrink-0 max-[1200px]:hidden">
                 <button
                   type="button"
+                  ref={allCateTriggerRef}
                   aria-label="All categories"
                   onClick={() => setAllCateOpen((v) => !v)}
                   className="relative top-1/2 block h-10 w-full -translate-y-1/2 cursor-pointer"
@@ -273,7 +304,17 @@ export function Header({
 
               {/* All-categories panel (desktop-only) */}
               {allCateOpen && (
-                <div className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)] max-[1200px]:hidden">
+                <div
+                  ref={allCatePanelRef}
+                  onClick={(e) => {
+                    // Any menu entry closes the panel so it never outlives its
+                    // own navigation.
+                    if ((e.target as HTMLElement).closest("a")) {
+                      setAllCateOpen(false);
+                    }
+                  }}
+                  className="absolute left-0 right-0 top-16 z-40 mx-auto w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)] max-[1200px]:hidden"
+                >
                   <div className="mx-auto box-border w-[96%] max-w-[1440px] px-2.5 py-[30px]">
                     <div className="flex">
                       <div className="w-[70%]">
@@ -577,6 +618,7 @@ export function Header({
               <div className="relative min-w-6 cursor-pointer pl-1 max-[1200px]:pl-2">
                 <button
                   type="button"
+                  ref={searchTriggerRef}
                   aria-label="Search"
                   onClick={() => {
                     if (window.innerWidth < 1200) {
@@ -631,6 +673,12 @@ export function Header({
               {/* Search overlay */}
               {searchOpen && (
                 <div
+                  ref={searchPanelRef}
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("a")) {
+                      setSearchOpen(false);
+                    }
+                  }}
                   className="absolute right-[-10%] top-[46px] z-[99] box-border w-[92vw] max-w-[380px] overflow-visible border border-[#e9e9e9] bg-white shadow-[1px_1px_10px_rgba(0,0,0,0.1)] max-[1200px]:fixed max-[1200px]:right-2 max-[1200px]:left-2 max-[1200px]:w-auto max-[1200px]:max-w-none"
                   style={
                     searchPanelTop == null ? undefined : { top: searchPanelTop }

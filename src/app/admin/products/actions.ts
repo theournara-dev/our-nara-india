@@ -78,6 +78,13 @@ const productInput = z.object({
   globalBuyNowEnabled: z.boolean().default(false),
   seoTitle: safeText(200).optional(),
   seoDescription: safeMultiline(500).optional(),
+  // HSN (customs tariff) code for India GST invoices: 4–8 digits, or empty.
+  hsnCode: z
+    .string()
+    .trim()
+    .regex(/^\d{4,8}$/, "HSN codes are 4 to 8 digits")
+    .optional()
+    .or(z.literal("")),
   variants: z.array(variantInput).default([]),
   blocks: z.array(blockInput).default([]),
   infoRows: z
@@ -216,6 +223,7 @@ export async function createProduct(input: ProductInput) {
       globalBuyNowEnabled: data.globalBuyNowEnabled,
       seoTitle: data.seoTitle || null,
       seoDescription: data.seoDescription || null,
+      hsnCode: data.hsnCode || null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
       buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
       subcategories: {
@@ -316,6 +324,7 @@ export async function updateProduct(id: string, input: ProductInput) {
           globalBuyNowEnabled: data.globalBuyNowEnabled,
           seoTitle: data.seoTitle || null,
           seoDescription: data.seoDescription || null,
+          hsnCode: data.hsnCode || null,
           infoRows: data.infoRows as Prisma.InputJsonValue,
           buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
         },

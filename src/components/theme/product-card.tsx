@@ -149,7 +149,7 @@ export function ThemeProductCard({
         <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
           <KDropMark
             availableGlobally={visibleForVersion(product, "global")}
-            className="mr-1 h-[14px] align-middle md:h-[15px]"
+            className="mr-1 h-[7px] align-middle md:h-[7.5px]"
           />
           <Link href={`/products/${product.slug}`} className="text-black">
             {product.name}

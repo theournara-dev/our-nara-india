@@ -252,6 +252,10 @@ model Product {
   globalBuyNowEnabled Boolean @default(false) @map("global_buy_now_enabled")
   seoTitle       String?  @map("seo_title")
   seoDescription String?  @map("seo_description")
+  // India GST: the HSN (customs tariff) code printed on invoices, copied onto
+  // the order item at checkout so an issued invoice keeps the code it was
+  // billed with.
+  hsnCode        String?  @map("hsn_code")
   // INFO tab: optional per-product override of the storewide
   // ProductInfoTemplate blocks. Null = use the global default.
   infoRows       Json?    @map("info_rows")
@@ -447,6 +451,10 @@ model OrderItem {
   priceCents  Int     @map("price_cents")
   quantity    Int     @default(1)
   currency    String  @default("INR")
+  // HSN code as it stood when the order was placed (invoices print this; an
+  // admin can still correct it from the invoice table, see
+  // saveInvoiceHsn).
+  hsnCode     String? @map("hsn_code")
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
