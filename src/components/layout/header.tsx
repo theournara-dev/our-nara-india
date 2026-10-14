@@ -424,14 +424,8 @@ export function Header({
                     ))}
                   </ul>
 
-                  {/* Fade + blur under each arrow so scrolled items dissolve
-                      into the header instead of showing through it. */}
-                  {navEdges.left && (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-y-0 left-0 w-14 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[2px]"
-                    />
-                  )}
+                  {/* Fade + blur on the right so scrolled items dissolve
+                      into the header instead of showing through the arrow. */}
                   {navEdges.right && (
                     <span
                       aria-hidden
@@ -441,16 +435,6 @@ export function Header({
 
                   {/* Scroll arrows: shown only while the strip has more to
                       reach in that direction (any width). */}
-                  {navEdges.left && (
-                    <button
-                      type="button"
-                      aria-label="Scroll categories left"
-                      onClick={() => scrollNav(-1)}
-                      className="absolute left-0 top-1/2 z-[40] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#e9e9e9] bg-white text-[#222] shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-colors hover:bg-zinc-50 max-[1200px]:h-7 max-[1200px]:w-7"
-                    >
-                      <MdKeyboardArrowLeft size={20} />
-                    </button>
-                  )}
                   {navEdges.right && (
                     <button
                       type="button"
@@ -462,6 +446,26 @@ export function Header({
                     </button>
                   )}
                 </div>
+
+                {/* The left arrow sits outside the clipped strip (on desktop,
+                    in the gap after the menu button) so it doesn't cover the
+                    first item; its fade comes along. */}
+                {navEdges.left && (
+                  <>
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 left-0 w-14 bg-gradient-to-r from-white via-white/80 to-transparent backdrop-blur-[2px] min-[1200px]:-left-5"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Scroll categories left"
+                      onClick={() => scrollNav(-1)}
+                      className="absolute left-0 top-1/2 z-[40] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#e9e9e9] bg-white text-[#222] shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-colors hover:bg-zinc-50 max-[1200px]:h-7 max-[1200px]:w-7 min-[1200px]:-left-5"
+                    >
+                      <MdKeyboardArrowLeft size={20} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

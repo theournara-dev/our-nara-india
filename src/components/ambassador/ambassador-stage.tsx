@@ -5,6 +5,12 @@ import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 
 /**
+ * How far the visitor scrolls for one image: 75% of a viewport, so the
+ * sequence advances faster than one full screen per image.
+ */
+const SCROLL_PER_IMAGE_SVH = 75;
+
+/**
  * The /ambassador stage (client slide 12): a full-bleed section that pins to
  * the viewport while the visitor scrolls through the admin's images — one
  * image per viewport of scroll — then releases and the page carries on. The
@@ -70,14 +76,15 @@ export function AmbassadorStage({
 
   return (
     <section className="w-full">
-      {/* The pinned range: one viewport per image, so scrolling advances the
-          sequence one image at a time before the page moves on. */}
+      {/* The pinned range: one scroll slice per image (75% of a viewport, so
+          the sequence moves faster than a full screen each time) and then the
+          stage releases and the page moves on. */}
       <div
         ref={wrapRef}
         className="relative lg:h-[var(--ambassador-stage)]"
         style={
           {
-            "--ambassador-stage": `${Math.max(images.length, 1) * 100}svh`,
+            "--ambassador-stage": `${100 + SCROLL_PER_IMAGE_SVH * Math.max(images.length - 1, 0)}svh`,
           } as CSSProperties
         }
       >
