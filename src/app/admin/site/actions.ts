@@ -42,9 +42,13 @@ const contentInput = z.object({
     .nullable()
     .optional(),
   dispatchCutoffHour: z.coerce.number().int().min(0).max(23).optional(),
-  // ── /ambassador left column ────────────────────────────────────────────
+  // ── /ambassador page ───────────────────────────────────────────────────
   ambassador: z
-    .object({ images: z.array(z.unknown()).max(20, "At most 20 images") })
+    .object({
+      images: z.array(z.unknown()).max(50, "At most 50 images"),
+      formTitle: safeText(120).optional(),
+      formIntro: safeText(300).optional(),
+    })
     .optional(),
   // ── Invoice "from" block ────────────────────────────────────────────────
   invoice: z
@@ -103,6 +107,8 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
           ambassadorImages: normalizeAmbassadorImages(data.ambassador.images, {
             allowEmpty: true,
           }),
+          ambassadorFormTitle: data.ambassador.formTitle?.trim() || null,
+          ambassadorFormIntro: data.ambassador.formIntro?.trim() || null,
         }
       : {}),
     ...(data.invoice

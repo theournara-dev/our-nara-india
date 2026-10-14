@@ -98,9 +98,15 @@ function validate(form: FormState): FieldErrors {
 
 export function AmbassadorApplyForm({
   products,
+  title,
+  intro,
   onClose,
 }: {
   products: AmbassadorProductOption[];
+  /** Admin-editable heading (Site settings → Ambassador page). */
+  title?: string;
+  /** Admin-editable supporting line. */
+  intro?: string;
   /** Present when the form runs inside the CTA dialog — the thank-you state
    *  then offers a Done button that calls this. */
   onClose?: () => void;
@@ -215,11 +221,15 @@ export function AmbassadorApplyForm({
   return (
     <>
       <h2 className="text-lg font-semibold text-zinc-900">
-        Apply to become an OUR:NARA ambassador
+        {title || "Apply to become an OUR:NARA ambassador"}
       </h2>
       <p className="mt-1 text-sm text-zinc-500">
-        We review every application and reply by email. Fields marked{" "}
-        <span className="text-point-500">*</span> are required.
+        {intro || (
+          <>
+            We review every application and reply by email. Fields marked{" "}
+            <span className="text-point-500">*</span> are required.
+          </>
+        )}
       </p>
 
       <form
@@ -245,9 +255,7 @@ export function AmbassadorApplyForm({
                   maxLength={120}
                   className={inputCls(!!errors.name)}
                 />
-                {errors.name && (
-                  <span className={errorCls}>{errors.name}</span>
-                )}
+                {errors.name && <span className={errorCls}>{errors.name}</span>}
               </label>
               <label className="block">
                 <span className={labelCls}>

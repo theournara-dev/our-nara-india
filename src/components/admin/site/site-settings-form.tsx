@@ -14,6 +14,7 @@ import {
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
+  AmbassadorContent,
   AmbassadorImage,
   SiteContent,
   SwitcherBlock,
@@ -392,8 +393,8 @@ function SiteSettingsInner({
 
       {/* ── Ambassador page ─────────────────────────────────────────────── */}
       <AmbassadorEditor
-        images={current.ambassador.images}
-        onChange={(images) => patch({ ambassador: { images } })}
+        content={current.ambassador}
+        onChange={(ambassador) => patch({ ambassador })}
         onSave={() => void gate.save("ambassador")}
         saving={saving === "ambassador"}
         disabled={saving !== null}
@@ -690,22 +691,28 @@ function TopBannerEditor({
   );
 }
 
-/** Editor for the /ambassador page's long image column (per store). */
+/** Editor for the /ambassador page: the image column and the form copy. */
 function AmbassadorEditor({
-  images,
+  content,
   onChange,
   onSave,
   saving,
   disabled,
 }: {
-  images: AmbassadorImage[];
-  onChange: (images: AmbassadorImage[]) => void;
+  content: AmbassadorContent;
+  onChange: (content: AmbassadorContent) => void;
   onSave: () => void;
   saving: boolean;
   disabled: boolean;
 }) {
+  const images = content.images;
+
+  function setImages(next: AmbassadorImage[]) {
+    onChange({ ...content, images: next });
+  }
+
   function update(index: number, patchImage: Partial<AmbassadorImage>) {
-    onChange(
+    setImages(
       images.map((img, i) => (i === index ? { ...img, ...patchImage } : img)),
     );
   }
@@ -715,7 +722,7 @@ function AmbassadorEditor({
     if (target < 0 || target >= images.length) return;
     const next = [...images];
     [next[index], next[target]] = [next[target], next[index]];
-    onChange(next);
+    setImages(next);
   }
 
   return (
@@ -724,10 +731,9 @@ function AmbassadorEditor({
         Ambassador page
       </h2>
       <p className="mb-4 text-xs text-zinc-400">
-        The long images that scroll beside the application form on this
-        store&apos;s /ambassador page, in order. One image runs full width;
-        stack the whole program story as several images. Empty shows the
-        built-in perks list instead.
+        The images that fill the left half of this store&apos;s /ambassador page
+        and change as the visitor scrolls the form, in order — upload as many as
+        you need. Empty shows the built-in perks list instead.
       </p>
 
       <div className="space-y-3">
@@ -761,7 +767,7 @@ function AmbassadorEditor({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onChange(images.filter((_, j) => j !== i))}
+                  onClick={() => setImages(images.filter((_, j) => j !== i))}
                   disabled={disabled}
                   className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-rose-500 hover:bg-rose-50 disabled:opacity-40"
                 >
@@ -804,12 +810,36 @@ function AmbassadorEditor({
 
       <button
         type="button"
-        onClick={() => onChange([...images, { id: newId("amb"), image: "" }])}
+        onClick={() => setImages([...images, { id: newId("amb"), image: "" }])}
         disabled={disabled}
         className="mt-3 rounded border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-point-300 hover:text-point-600 disabled:opacity-60"
       >
         + Add image
       </button>
+
+      {/* The form's own copy, also editable. */}
+      <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4">
+        <label className="block">
+          <span className={labelCls}>Form heading</span>
+          <input
+            value={content.formTitle}
+            onChange={(e) =>
+              onChange({ ...content, formTitle: e.target.value })
+            }
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className={labelCls}>Form introduction</span>
+          <input
+            value={content.formIntro}
+            onChange={(e) =>
+              onChange({ ...content, formIntro: e.target.value })
+            }
+            className={inputCls}
+          />
+        </label>
+      </div>
 
       <div className="mt-4">
         <button
@@ -818,7 +848,7 @@ function AmbassadorEditor({
           disabled={disabled}
           className={saveBtnCls}
         >
-          {saving ? "Saving…" : "Save ambassador images"}
+          {saving ? "Saving…" : "Save ambassador page"}
         </button>
       </div>
     </section>

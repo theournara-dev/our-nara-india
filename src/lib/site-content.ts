@@ -98,6 +98,22 @@ export type AmbassadorImage = {
   href?: string;
 };
 
+/** The /ambassador page's admin-managed content. */
+export type AmbassadorContent = {
+  images: AmbassadorImage[];
+  /** Heading above the application form. */
+  formTitle: string;
+  /** Supporting line under that heading. */
+  formIntro: string;
+};
+
+export const DEFAULT_AMBASSADOR: AmbassadorContent = {
+  images: [],
+  formTitle: "Apply to become an OUR:NARA ambassador",
+  formIntro:
+    "We review every application and reply by email. Fields marked * are required.",
+};
+
 export type SiteContent = {
   version: SiteVersion;
   /** Support address shown in the footer and the order emails. */
@@ -121,8 +137,8 @@ export type SiteContent = {
   };
   topBanner: TopBannerBlock[];
   switcher: SwitcherContent;
-  /** /ambassador: the ordered long-form images (left column). */
-  ambassador: { images: AmbassadorImage[] };
+  /** /ambassador: the sticky image column and the form's copy. */
+  ambassador: AmbassadorContent;
 };
 
 const DEFAULT_BANNER: TopBannerBlock[] = [
@@ -208,7 +224,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
-    ambassador: { images: [] },
+    ambassador: DEFAULT_AMBASSADOR,
   },
   global: {
     version: "global",
@@ -229,7 +245,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
-    ambassador: { images: [] },
+    ambassador: DEFAULT_AMBASSADOR,
   },
 };
 
@@ -389,6 +405,8 @@ export function siteContentFromRow(
     topBanner: unknown;
     switcher: unknown;
     ambassadorImages: unknown;
+    ambassadorFormTitle: string | null;
+    ambassadorFormIntro: string | null;
   } | null,
 ): SiteContent {
   const base = DEFAULT_SITE_CONTENT[version];
@@ -417,10 +435,12 @@ export function siteContentFromRow(
         : normalizeTopBanner(row.topBanner, []),
     switcher: normalizeSwitcher(row.switcher, base.switcher),
     // A stored (even empty) list wins: clearing every image in the admin
-    // removes the left column instead of bringing the defaults back.
-    ambassador:
-      row.ambassadorImages == null
-        ? base.ambassador
-        : { images: normalizeAmbassadorImages(row.ambassadorImages) },
+    // removes the images instead of bringing the defaults back; the form copy
+    // falls back per field.
+    ambassador: {
+      images: normalizeAmbassadorImages(row.ambassadorImages),
+      formTitle: row.ambassadorFormTitle?.trim() || base.ambassador.formTitle,
+      formIntro: row.ambassadorFormIntro?.trim() || base.ambassador.formIntro,
+    },
   };
 }

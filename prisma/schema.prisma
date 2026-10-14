@@ -992,6 +992,9 @@ model SiteConfig {
   switcher  Json?
   // /ambassador: the ordered long-form images beside the application form.
   ambassadorImages Json? @map("ambassador_images")
+  // /ambassador: the form's heading and supporting line.
+  ambassadorFormTitle String? @map("ambassador_form_title")
+  ambassadorFormIntro String? @map("ambassador_form_intro")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
