@@ -136,6 +136,14 @@ export function StoresManager({ stores }: { stores: AdminStore[] }) {
                 <p className="truncate text-xs text-zinc-500">
                   {store.address || "No address yet"}
                 </p>
+                {/* What the storefront will show for the contact rows — a
+                    missing phone/email here means the /stores card falls back
+                    to the storefront's contact details. */}
+                <p className="truncate text-xs text-zinc-400">
+                  {[store.phone || "no phone", store.email || "no email"].join(
+                    " · ",
+                  )}
+                </p>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -257,7 +265,7 @@ function StoreEditor({
     startTransition(async () => {
       const id = notify.loading(store ? "Saving…" : "Adding…");
       try {
-        await saveStore({
+        const res = await saveStore({
           ...(store ? { id: store.id } : {}),
           version,
           name,
@@ -268,6 +276,12 @@ function StoreEditor({
           hours: days,
           isActive,
         });
+        // The action reports unknown versions etc. as a result rather than a
+        // throw, so check it before claiming success.
+        if ("ok" in res && !res.ok) {
+          notify.error(id, "Could not save the store", res.error);
+          return;
+        }
         notify.success(id, store ? "Store saved" : "Store added");
         onClose();
       } catch (err) {

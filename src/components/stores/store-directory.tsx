@@ -12,7 +12,16 @@ import type { StoreView } from "@/data/stores";
  * render under a row of store-name pills so a shopper can switch between them
  * without loading a map per store.
  */
-export function StoreDirectory({ stores }: { stores: StoreView[] }) {
+export function StoreDirectory({
+  stores,
+  fallbackPhone,
+  fallbackEmail,
+}: {
+  stores: StoreView[];
+  /** Used when a store row has no phone of its own (Site settings). */
+  fallbackPhone?: string;
+  fallbackEmail?: string;
+}) {
   const [active, setActive] = useState(0);
 
   if (stores.length === 0) {
@@ -56,8 +65,8 @@ export function StoreDirectory({ stores }: { stores: StoreView[] }) {
         <StoreInfo
           name={store.name}
           address={store.address}
-          phone={store.phone}
-          email={store.email}
+          phone={store.phone || fallbackPhone || ""}
+          email={store.email || fallbackEmail || ""}
           hours={storeHoursLines(store.hours)}
         />
       </section>

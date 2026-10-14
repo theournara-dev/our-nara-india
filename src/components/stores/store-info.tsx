@@ -1,8 +1,9 @@
 import { storeDetailValue } from "@/lib/store-map";
 
 /**
- * The store details card: under the map on phones, beside it on desktop. Labels,
- * values, rules and spacing follow the original's store card.
+ * The store details card: under the map on phones, beside it on desktop.
+ * Typography follows the site's other content pages (the display face for the
+ * store name, the standard body scale for the values).
  */
 export function StoreInfo({
   name,
@@ -27,7 +28,7 @@ export function StoreInfo({
 
   return (
     <div className="rounded-[14px] bg-[#e9d5ff] px-[24px] py-[34px] md:rounded-[18px] md:max-[1025px]:px-[34px] md:max-[1025px]:py-[42px] min-[1025px]:px-[44px] min-[1025px]:py-[50px]">
-      <h2 className="mb-[28px] text-[28px] leading-[normal] font-extrabold text-[#222] md:mb-[36px] md:text-[34px]">
+      <h2 className="mb-[28px] font-display text-[28px] leading-[normal] font-semibold text-[#222] md:mb-[36px] md:text-[34px]">
         {name}
       </h2>
       <dl className="border-t border-[#d8dfd5]">
@@ -36,10 +37,10 @@ export function StoreInfo({
             key={label}
             className="border-b border-[#d8dfd5] py-[22px] md:py-[26px]"
           >
-            <dt className="mb-[12px] text-[15px] leading-[normal] font-bold text-[#6f2dbd]">
+            <dt className="mb-[12px] text-[13px] leading-[normal] font-semibold tracking-[0.02em] text-[#6f2dbd] md:text-[14px]">
               {label}
             </dt>
-            <dd className="text-[15px] leading-[1.7] break-words whitespace-pre-line text-[#333] md:text-[16px]">
+            <dd className="text-[15px] leading-[1.7] break-words whitespace-pre-line text-[#444] md:text-[16px]">
               {storeDetailValue(value)}
             </dd>
           </div>
