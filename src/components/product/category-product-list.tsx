@@ -494,21 +494,18 @@ function SubTile({
       aria-pressed={active}
       className="group flex w-[76px] shrink-0 cursor-pointer flex-col items-center gap-1.5 md:w-[92px]"
     >
-      {/* With artwork the tile renders the image as-is (the client's slide 7
+      {/* With artwork the tile renders the image as-is — a plain rectangle,
+          no circle and no border, so nothing is cropped (the client's
           follow-up); only the letter fallback keeps the circle. */}
       {image ? (
-        <span
-          className={`block h-[62px] w-[62px] overflow-hidden rounded-xl transition-shadow md:h-[76px] md:w-[76px] ${
-            active ? "ring-2 ring-point-500 ring-offset-2" : ""
-          }`}
-        >
+        <span className="block w-[62px] md:w-[76px]">
           <Image
             src={image}
             alt=""
             width={160}
             height={160}
             unoptimized
-            className="h-full w-full object-cover"
+            className="h-auto w-full"
           />
         </span>
       ) : (

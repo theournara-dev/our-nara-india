@@ -5,16 +5,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import {
-  BannersField,
+  AmbassadorImagesField,
   HeroSlidesField,
   InstagramItemsField,
   MoreLinkField,
   NumberField,
   ProductSourceField,
   SelectField,
-  ShortsItemsField,
   ShowcaseBannersField,
   ShowcaseTabsField,
+  ShortsItemsField,
   TextField,
   TripleBannerBoxesField,
   type SectionFormOptions,
@@ -60,66 +60,46 @@ export function ShortsForm({ config, onChange }: FormProps) {
 }
 
 export function LongBannerForm({ config, onChange, options }: FormProps) {
-  // Sections saved before the block split carry only `bannerIds`; show them as
-  // the first block so editing never loses the old selection.
-  const rows: { id: string; bannerIds: string[] }[] =
-    config.rows && config.rows.length > 0
-      ? config.rows
-      : [{ id: "block-1", bannerIds: config.bannerIds ?? [] }];
+  // Sections saved before the cell split carry a carousel selection; show its
+  // first two entries in the cells so editing never loses them.
+  const legacy: string[] = config.bannerIds ?? [];
+  const cells: { id: string; bannerId: string }[] =
+    config.cells && config.cells.length > 0
+      ? config.cells
+      : [
+          { id: "cell-1", bannerId: legacy[0] ?? "" },
+          { id: "cell-2", bannerId: legacy[1] ?? "" },
+        ];
+  const longBanners = options.banners.filter((b) => b.placement === "long");
 
-  function updateRows(next: { id: string; bannerIds: string[] }[]) {
-    // Keep the legacy field in step with the first block for older readers.
-    onChange({ ...config, rows: next, bannerIds: next[0]?.bannerIds ?? [] });
+  function setCell(index: number, bannerId: string) {
+    const next = cells.map((cell, i) =>
+      i === index ? { ...cell, bannerId } : cell,
+    );
+    onChange({ ...config, cells: next, bannerIds: [] });
   }
 
   return (
-    <div className="space-y-3">
-      {rows.map((row, i) => (
-        <div key={row.id} className="rounded-lg border border-zinc-200 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-700">
-              Banner block {i + 1}
-            </span>
-            {rows.length > 1 && (
-              <button
-                type="button"
-                onClick={() => updateRows(rows.filter((r) => r.id !== row.id))}
-                className="text-xs font-medium text-red-500 hover:underline"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <BannersField
-            label={`Banners in block ${i + 1}`}
-            value={row.bannerIds}
-            onChange={(bannerIds) =>
-              updateRows(
-                rows.map((r) => (r.id === row.id ? { ...r, bannerIds } : r)),
-              )
-            }
-            options={options}
+    <div className="space-y-4">
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2">
+        {cells.map((cell, i) => (
+          <SelectField
+            key={cell.id}
+            label={`Cell ${i + 1} banner`}
+            value={cell.bannerId}
+            onChange={(v) => setCell(i, v)}
+            options={[
+              { value: "", label: "Automatic (next free banner)" },
+              ...longBanners.map((b) => ({ value: b.id, label: b.title })),
+            ]}
           />
-        </div>
-      ))}
-      {rows.length < 4 && (
-        <button
-          type="button"
-          onClick={() =>
-            updateRows([
-              ...rows,
-              { id: `block-${rows.length + 1}-${Date.now()}`, bannerIds: [] },
-            ])
-          }
-          className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
-        >
-          + Add block
-        </button>
-      )}
+        ))}
+      </div>
       <p className="text-xs leading-5 text-zinc-400">
-        Each block renders its own full-width carousel. A block left empty shows
-        every active &quot;Long banner&quot; from the Banners admin — assign
-        specific banners when you use more than one block.
+        The two cells sit side by side on desktop (stacked on phones). Each
+        shows one banner from the Banners admin — a cell left on
+        &quot;Automatic&quot; takes the next active &quot;Long banner&quot; no
+        other cell uses.
       </p>
     </div>
   );
@@ -169,6 +149,29 @@ export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
         value={config.moreLabel ?? ""}
         onChange={(moreLabel) => onChange({ ...config, moreLabel })}
         placeholder="VIEW MORE →"
+      />
+    </div>
+  );
+}
+
+export function AmbassadorForm({ config, onChange, options }: FormProps) {
+  return (
+    <div className="space-y-4">
+      <AmbassadorImagesField
+        value={config.images ?? []}
+        onChange={(images) => onChange({ ...config, images })}
+        options={options}
+      />
+      <TextField
+        label="Form heading"
+        value={config.formTitle ?? ""}
+        onChange={(formTitle) => onChange({ ...config, formTitle })}
+      />
+      <TextField
+        label="Form introduction"
+        value={config.formIntro ?? ""}
+        onChange={(formIntro) => onChange({ ...config, formIntro })}
+        hint="Shown under the heading, above the fields."
       />
     </div>
   );

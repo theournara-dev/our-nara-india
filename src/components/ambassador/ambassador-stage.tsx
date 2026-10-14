@@ -2,140 +2,159 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import type { AmbassadorImage } from "@/lib/site-content";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 /**
- * The /ambassador stage (client slide 12): a full-bleed two-column section.
- * On desktop the left pane sticks to the viewport and its image changes as the
- * visitor scrolls through the form on the right (the charcoalkorea.store
- * pattern); on phones the images simply stack above the form.
+ * The /ambassador stage (client slide 12): a full-bleed section that pins to
+ * the viewport while the visitor scrolls through the admin's images — one
+ * image per viewport of scroll — then releases and the page carries on. The
+ * application form is the right half and stays in view the whole time,
+ * scrolling inside its own column when it is taller than the viewport.
+ *
+ * On phones the images simply stack above the form (no pinning).
  */
 export function AmbassadorStage({
   images,
   children,
 }: {
-  images: AmbassadorImage[];
+  images: {
+    id: string;
+    image: string;
+    alt?: string | null;
+    href?: string | null;
+  }[];
   /** The application form (right column). */
   children: ReactNode;
 }) {
-  const sectionRef = useRef<HTMLElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
 
   useEffect(() => {
-    if (images.length <= 1) return;
+    const el = wrapRef.current;
+    if (!el || images.length <= 1) return;
+
     let raf = 0;
-    const update = () => {
+
+    /**
+     * The stage is pinned for one viewport per image beyond the first, so the
+     * scroll progress through that range picks the image: 0 at the start, the
+     * last image once the range is spent (then the stage scrolls away).
+     */
+    const measure = () => {
       raf = 0;
-      const el = sectionRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      // Progress through the section's scrollable travel; each image gets an
-      // equal share, so the last one holds until the section ends.
-      const travel = rect.height - window.innerHeight;
-      const progress =
-        travel > 0 ? Math.min(1, Math.max(0, -rect.top / travel)) : 0;
-      const index = Math.min(
-        images.length - 1,
-        Math.floor(progress * images.length),
+      // Only the desktop stage is pinned; on phones the images are an
+      // ordinary column and there is nothing to measure.
+      if (!window.matchMedia("(min-width: 1024px)").matches) return;
+      const range = el.offsetHeight - window.innerHeight;
+      if (range <= 0) return;
+      const progress = Math.min(
+        Math.max(-el.getBoundingClientRect().top, 0),
+        range,
       );
-      setActive(index);
+      const step = range / (images.length - 1);
+      setActive(Math.min(images.length - 1, Math.round(progress / step)));
     };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(update);
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(measure);
     };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+
+    measure();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
       if (raf) cancelAnimationFrame(raf);
     };
   }, [images.length]);
 
   return (
-    <section ref={sectionRef} className="w-full">
-      <div className="grid items-start lg:grid-cols-2">
-        <div className="lg:sticky lg:top-0 lg:h-screen">
-          {/* Desktop/tablet: one image at a time, cross-fading on scroll. */}
-          <div className="relative hidden h-full w-full overflow-hidden bg-[#f4f1ee] lg:block">
-            {images.map((image, i) => {
-              const inner = (
-                <Image
-                  src={image.image}
-                  alt={image.alt ?? ""}
-                  fill
-                  unoptimized
-                  sizes="50vw"
-                  className="object-contain p-4"
-                />
-              );
-              return (
-                <div
-                  key={image.id}
-                  className={`absolute inset-0 transition-opacity duration-500 ${
-                    i === active ? "opacity-100" : "opacity-0"
-                  }`}
-                  aria-hidden={i !== active}
-                >
-                  {image.href ? (
-                    <a href={image.href} className="block h-full w-full">
-                      {inner}
+    <section className="w-full">
+      {/* The pinned range: one viewport per image, so scrolling advances the
+          sequence one image at a time before the page moves on. */}
+      <div
+        ref={wrapRef}
+        className="relative lg:h-[var(--ambassador-stage)]"
+        style={
+          {
+            "--ambassador-stage": `${Math.max(images.length, 1) * 100}svh`,
+          } as CSSProperties
+        }
+      >
+        <div className="lg:sticky lg:top-0 lg:h-[100svh]">
+          <div className="lg:grid lg:h-full lg:grid-cols-2">
+            {/* Left half. */}
+            <div className="lg:h-full">
+              {/* Desktop/tablet: a single pane that fills the half; the image
+                  changes as the visitor scrolls through the pinned stage. */}
+              <div className="relative hidden h-full w-full overflow-hidden bg-[#f4f1ee] lg:block">
+                {images.map((image, i) => {
+                  const inner = (
+                    <Image
+                      src={image.image}
+                      alt={image.alt ?? ""}
+                      fill
+                      unoptimized
+                      sizes="50vw"
+                      className="object-cover"
+                    />
+                  );
+                  return (
+                    <div
+                      key={image.id}
+                      className={`absolute inset-0 transition-opacity duration-500 ${
+                        i === active ? "opacity-100" : "opacity-0"
+                      }`}
+                      aria-hidden={i !== active}
+                    >
+                      {image.href ? (
+                        <a href={image.href} className="block h-full w-full">
+                          {inner}
+                        </a>
+                      ) : (
+                        inner
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Phones: every image, stacked. */}
+              <div className="lg:hidden">
+                {images.map((image) =>
+                  image.href ? (
+                    <a key={image.id} href={image.href} className="block">
+                      <Image
+                        src={image.image}
+                        alt={image.alt ?? ""}
+                        width={1200}
+                        height={1500}
+                        unoptimized
+                        className="block h-auto w-full"
+                      />
                     </a>
                   ) : (
-                    inner
-                  )}
-                </div>
-              );
-            })}
-
-            {images.length > 1 && (
-              <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-1.5">
-                {images.map((image, i) => (
-                  <span
-                    key={image.id}
-                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                      i === active ? "w-5 bg-point-500" : "w-1.5 bg-zinc-400"
-                    }`}
-                  />
-                ))}
+                    <Image
+                      key={image.id}
+                      src={image.image}
+                      alt={image.alt ?? ""}
+                      width={1200}
+                      height={1500}
+                      unoptimized
+                      className="block h-auto w-full"
+                    />
+                  ),
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Phones: every image, stacked. */}
-          <div className="lg:hidden">
-            {images.map((image) =>
-              image.href ? (
-                <a key={image.id} href={image.href} className="block">
-                  <Image
-                    src={image.image}
-                    alt={image.alt ?? ""}
-                    width={1200}
-                    height={1500}
-                    unoptimized
-                    className="block h-auto w-full"
-                  />
-                </a>
-              ) : (
-                <Image
-                  key={image.id}
-                  src={image.image}
-                  alt={image.alt ?? ""}
-                  width={1200}
-                  height={1500}
-                  unoptimized
-                  className="block h-auto w-full"
-                />
-              ),
-            )}
+            {/* Right half: the form, scrolling inside its own column on desktop. */}
+            <div className="min-w-0 lg:h-full lg:overflow-y-auto">
+              <div className="px-5 py-10 md:px-8 lg:px-12 lg:py-14">
+                <div className="mx-auto max-w-xl">{children}</div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* Right: the form, in normal flow — it is what drives the swaps. */}
-        <div className="min-w-0 px-5 py-10 md:px-8 lg:px-12 lg:py-14">
-          <div className="mx-auto max-w-xl">{children}</div>
         </div>
       </div>
     </section>

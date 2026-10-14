@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { BrandDirectory } from "@/components/brands/brand-directory";
 import { BrandLetterNav } from "@/components/brands/brand-letter-nav";
 import type { BrandSummary } from "@/data/brands";
+import type { BrandsPageContent } from "@/lib/site-content";
 import { groupBrandsByLetter } from "@/lib/brand-index";
 
 type TabKey = "all" | "ONLY_AT_OURNARA" | "NEW_LAUNCH";
@@ -17,12 +18,28 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "NEW_LAUNCH", label: "New Launch" },
 ];
 
+/** Literal classes so Tailwind can see every column count. */
+const COLUMN_CLASS: Record<number, string> = {
+  2: "grid-cols-2 lg:grid-cols-2",
+  3: "grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-2 lg:grid-cols-4",
+  5: "grid-cols-2 lg:grid-cols-5",
+  6: "grid-cols-2 lg:grid-cols-6",
+};
+
 /**
  * The /brands directory below the banners (client slide 8): full-width group
- * tabs whose active state is a bottom border, the tab's brand preview images
+ * tabs whose active state is a bottom border, the tab's brand preview tiles
  * (name slides up on hover), the A–Z circles and then the plain brand list.
+ * Tile height and the number of previews come from Site settings → Brands page.
  */
-export function BrandBrowser({ brands }: { brands: BrandSummary[] }) {
+export function BrandBrowser({
+  brands,
+  preview,
+}: {
+  brands: BrandSummary[];
+  preview: BrandsPageContent;
+}) {
   const [tab, setTab] = useState<TabKey>("all");
 
   const visible = useMemo(
@@ -37,6 +54,9 @@ export function BrandBrowser({ brands }: { brands: BrandSummary[] }) {
     () => new Set(groups.map((group) => group.key)),
     [groups],
   );
+  const previewCount = preview.previewColumns * preview.previewRows;
+  const previewBrands = visible.slice(0, previewCount);
+  const columnClass = COLUMN_CLASS[preview.previewColumns] ?? COLUMN_CLASS[4];
 
   return (
     <div>
@@ -67,12 +87,16 @@ export function BrandBrowser({ brands }: { brands: BrandSummary[] }) {
         })}
       </div>
 
-      {/* The tab's preview images: each fills its block, the brand name
-          slides up from the bottom on hover. */}
-      {visible.length > 0 ? (
-        <ul className="mt-[30px] grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
-          {visible.map((brand) => (
-            <BrandPreview key={brand.slug} brand={brand} />
+      {/* The tab's preview tiles: each shows the brand image at the height
+          set in the admin; the name slides up from the bottom on hover. */}
+      {previewBrands.length > 0 ? (
+        <ul className={`mt-[30px] grid gap-3 md:gap-4 ${columnClass}`}>
+          {previewBrands.map((brand) => (
+            <BrandPreview
+              key={brand.slug}
+              brand={brand}
+              height={preview.previewHeight}
+            />
           ))}
         </ul>
       ) : (
@@ -92,12 +116,19 @@ export function BrandBrowser({ brands }: { brands: BrandSummary[] }) {
   );
 }
 
-function BrandPreview({ brand }: { brand: BrandSummary }) {
+function BrandPreview({
+  brand,
+  height,
+}: {
+  brand: BrandSummary;
+  height: number;
+}) {
   return (
     <li>
       <Link
         href={`/brand/${brand.slug}`}
-        className="group relative block aspect-square overflow-hidden rounded-2xl bg-[#f6f6f6]"
+        className="group relative block overflow-hidden rounded-xl bg-[#f6f6f6]"
+        style={{ height }}
       >
         {brand.logoUrl ? (
           <>

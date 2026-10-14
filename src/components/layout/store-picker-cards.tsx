@@ -67,7 +67,9 @@ export function StorePickerCards({
               </span>
             )}
             <span className="flex flex-1 flex-col gap-1.5 p-3">
-              <span className="flex items-center gap-2">
+              {/* A fixed-height title row keeps both cards in step whether the
+                  store is named by text, a flag or a wordmark. */}
+              <span className="flex min-h-8 items-center gap-2">
                 {block.icon && (
                   <Image
                     src={block.icon}
@@ -113,7 +115,7 @@ export function StorePickerCards({
                 {block.currency}
               </span>
               <span
-                className={`mt-2 inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors ${
+                className={`mt-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-xs font-semibold transition-colors ${
                   isActive
                     ? "text-ink/70"
                     : "bg-[#E2E2E2] text-ink " +

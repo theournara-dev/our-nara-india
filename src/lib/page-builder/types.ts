@@ -105,6 +105,23 @@ export const showcaseTabSchema = z.object({
 });
 export type ShowcaseTab = z.infer<typeof showcaseTabSchema>;
 
+// ── Ambassador stage ────────────────────────────────────────────────────────
+
+/** One image of the /ambassador sequence. */
+export const ambassadorImageSchema = z.object({
+  id: z.string(),
+  image: z.string().default(""),
+  alt: z.string().default(""),
+  /** Optional link the image opens. */
+  href: z.string().default(""),
+});
+export type AmbassadorImageConfig = z.infer<typeof ambassadorImageSchema>;
+
+export const DEFAULT_AMBASSADOR_FORM_TITLE =
+  "Apply to become an OUR:NARA ambassador";
+export const DEFAULT_AMBASSADOR_FORM_INTRO =
+  "We review every application and reply by email. Fields marked * are required.";
+
 // ── Triple banner box ───────────────────────────────────────────────────────
 
 export const tripleBannerBoxSchema = z.object({
@@ -186,21 +203,24 @@ export const sectionConfigSchemas = {
     moreHref: z.string().optional(),
     moreLabel: z.string().optional(),
   }),
+  // The /ambassador stage: the admin's images fill the left half and advance
+  // one by one as the visitor scrolls; the application form is the right half.
+  ambassador: z.object({
+    images: z.array(ambassadorImageSchema).default([]),
+    formTitle: z.string().default(DEFAULT_AMBASSADOR_FORM_TITLE),
+    formIntro: z.string().default(DEFAULT_AMBASSADOR_FORM_INTRO),
+  }),
   "long-banner": z.object({
-    // The banner blocks: each renders its own full-width carousel. A block
-    // with nothing selected shows every active "long" banner, so the section
-    // is never unexpectedly empty.
-    rows: z
-      .array(
-        z.object({
-          id: z.string(),
-          bannerIds: z.array(z.string()).default([]),
-        }),
-      )
-      .max(4)
+    // The two banner cells (side by side on desktop, stacked on phones): each
+    // shows exactly one banner, picked from the Banners admin. A cell left
+    // empty takes the next free active "long" banner, so the section is never
+    // unexpectedly blank.
+    cells: z
+      .array(z.object({ id: z.string(), bannerId: z.string().default("") }))
+      .max(2)
       .default([]),
-    // Legacy single selection from before the rows split; folded into the
-    // first block when a stored section has no rows yet.
+    // Legacy carousel selection from before the cell split; folded into the
+    // cells when a stored section has none yet.
     bannerIds: z.array(z.string()).default([]),
   }),
   reviews: z.object({}),
@@ -278,12 +298,27 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     }),
   },
   {
+    type: "ambassador",
+    label: "Ambassador stage",
+    description:
+      "Full-bleed image sequence beside the ambassador application form.",
+    configSchema: sectionConfigSchemas.ambassador,
+    defaultConfig: () => ({
+      images: [],
+      formTitle: DEFAULT_AMBASSADOR_FORM_TITLE,
+      formIntro: DEFAULT_AMBASSADOR_FORM_INTRO,
+    }),
+  },
+  {
     type: "long-banner",
     label: "Long banner",
-    description: "Full-width banner carousel from the Banners admin.",
+    description: "Two banner cells from the Banners admin.",
     configSchema: sectionConfigSchemas["long-banner"],
     defaultConfig: () => ({
-      rows: [{ id: "block-1", bannerIds: [] }],
+      cells: [
+        { id: "cell-1", bannerId: "" },
+        { id: "cell-2", bannerId: "" },
+      ],
       bannerIds: [],
     }),
   },

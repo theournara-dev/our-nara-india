@@ -89,29 +89,20 @@ export type SwitcherNudge = {
   text: string;
 };
 
-/** One of the long-form images beside the /ambassador application form. */
-export type AmbassadorImage = {
-  id: string;
-  image: string;
-  alt?: string;
-  /** Optional link the image opens. */
-  href?: string;
+/** The /brands page's preview grid (client round two). */
+export type BrandsPageContent = {
+  /** Height of a preview tile in pixels (default 100). */
+  previewHeight: number;
+  /** Columns on desktop (2–6). */
+  previewColumns: number;
+  /** Rows of previews shown; the rest stay in the list below. */
+  previewRows: number;
 };
 
-/** The /ambassador page's admin-managed content. */
-export type AmbassadorContent = {
-  images: AmbassadorImage[];
-  /** Heading above the application form. */
-  formTitle: string;
-  /** Supporting line under that heading. */
-  formIntro: string;
-};
-
-export const DEFAULT_AMBASSADOR: AmbassadorContent = {
-  images: [],
-  formTitle: "Apply to become an OUR:NARA ambassador",
-  formIntro:
-    "We review every application and reply by email. Fields marked * are required.",
+export const DEFAULT_BRANDS_PAGE: BrandsPageContent = {
+  previewHeight: 100,
+  previewColumns: 4,
+  previewRows: 2,
 };
 
 export type SiteContent = {
@@ -137,8 +128,8 @@ export type SiteContent = {
   };
   topBanner: TopBannerBlock[];
   switcher: SwitcherContent;
-  /** /ambassador: the sticky image column and the form's copy. */
-  ambassador: AmbassadorContent;
+  /** /brands: the preview grid's tile height, columns and rows. */
+  brandsPage: BrandsPageContent;
 };
 
 const DEFAULT_BANNER: TopBannerBlock[] = [
@@ -224,7 +215,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
-    ambassador: DEFAULT_AMBASSADOR,
+    brandsPage: DEFAULT_BRANDS_PAGE,
   },
   global: {
     version: "global",
@@ -245,7 +236,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     },
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
-    ambassador: DEFAULT_AMBASSADOR,
+    brandsPage: DEFAULT_BRANDS_PAGE,
   },
 };
 
@@ -260,29 +251,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * Parse the /ambassador image list. Images without artwork are dropped on the
- * storefront read, but the admin save path passes `allowEmpty` so a row the
- * admin is still filling in survives a reload.
- */
-export function normalizeAmbassadorImages(
+/** A stored number, clamped to its sane range; anything else falls back. */
+function clampNumber(
   value: unknown,
-  options: { allowEmpty?: boolean } = {},
-): AmbassadorImage[] {
-  if (!Array.isArray(value)) return [];
-  const images: AmbassadorImage[] = [];
-  value.forEach((raw, i) => {
-    if (!isRecord(raw)) return;
-    const image = str(raw.image);
-    if (!image && !options.allowEmpty) return;
-    images.push({
-      id: str(raw.id) || `a${i + 1}`,
-      image,
-      alt: str(raw.alt) || undefined,
-      href: str(raw.href) || undefined,
-    });
-  });
-  return images;
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(value)));
 }
 
 /**
@@ -404,9 +381,9 @@ export function siteContentFromRow(
     invoiceNote: string | null;
     topBanner: unknown;
     switcher: unknown;
-    ambassadorImages: unknown;
-    ambassadorFormTitle: string | null;
-    ambassadorFormIntro: string | null;
+    brandsPreviewHeight: number | null;
+    brandsPreviewColumns: number | null;
+    brandsPreviewRows: number | null;
   } | null,
 ): SiteContent {
   const base = DEFAULT_SITE_CONTENT[version];
@@ -434,13 +411,27 @@ export function siteContentFromRow(
         ? base.topBanner
         : normalizeTopBanner(row.topBanner, []),
     switcher: normalizeSwitcher(row.switcher, base.switcher),
-    // A stored (even empty) list wins: clearing every image in the admin
-    // removes the images instead of bringing the defaults back; the form copy
-    // falls back per field.
-    ambassador: {
-      images: normalizeAmbassadorImages(row.ambassadorImages),
-      formTitle: row.ambassadorFormTitle?.trim() || base.ambassador.formTitle,
-      formIntro: row.ambassadorFormIntro?.trim() || base.ambassador.formIntro,
+    // The /brands preview grid, clamped to sane ranges; anything missing falls
+    // back to the defaults (100px tiles, 4 columns × 2 rows).
+    brandsPage: {
+      previewHeight: clampNumber(
+        row.brandsPreviewHeight,
+        40,
+        600,
+        base.brandsPage.previewHeight,
+      ),
+      previewColumns: clampNumber(
+        row.brandsPreviewColumns,
+        2,
+        6,
+        base.brandsPage.previewColumns,
+      ),
+      previewRows: clampNumber(
+        row.brandsPreviewRows,
+        1,
+        10,
+        base.brandsPage.previewRows,
+      ),
     },
   };
 }

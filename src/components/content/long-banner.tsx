@@ -136,25 +136,58 @@ export function LongBanner({ banners }: LongBannerProps) {
   );
 }
 
-/** One admin-configured banner block (see the page builder's long banner). */
-export interface LongBannerBlock {
+/**
+ * One admin-configured banner cell (see the page builder's long banner).
+ * `banner` is null when no banner is available to show.
+ */
+export interface LongBannerCell {
   id: string;
-  banners: LongBannerItem[];
+  banner: LongBannerItem | null;
 }
 
 /**
- * The long-banner section's blocks, stacked: the admin can split the section
- * into up to two banner areas and point each at its own banners. A block
- * without banners renders nothing, so a half-configured section stays quiet.
+ * The long-banner section's two cells: side by side on desktop, stacked on
+ * phones, inside the original section container (92% / 1560px cap, 8px inset,
+ * 100px top margin) so the section keeps the original strip's placement. Each
+ * cell holds exactly one banner, rendered at the original strip's proportions
+ * (the desktop art is a wide strip, the mobile art a shorter one) so the strip
+ * keeps its original height whatever the upload's own ratio.
  */
-export function LongBannerBlocks({ blocks }: { blocks: LongBannerBlock[] }) {
-  const visible = (blocks ?? []).filter((b) => b.banners.length > 0);
+export function LongBannerCells({ cells }: { cells: LongBannerCell[] }) {
+  const visible = (cells ?? []).filter(
+    (cell): cell is LongBannerCell & { banner: LongBannerItem } =>
+      Boolean(cell.banner),
+  );
   if (visible.length === 0) return null;
+
   return (
-    <div className="space-y-[10px]">
-      {visible.map((block) => (
-        <LongBanner key={block.id} banners={block.banners} />
-      ))}
+    <div className="long-banner">
+      <div className="grid gap-[10px] md:grid-cols-2">
+        {visible.map((cell) => (
+          <Link
+            key={cell.id}
+            href={cell.banner.href ?? "/"}
+            className="block aspect-[800/210] overflow-hidden rounded-2xl md:aspect-[2172/260]"
+          >
+            <Image
+              src={cell.banner.image}
+              alt={cell.banner.alt}
+              width={2172}
+              height={260}
+              unoptimized
+              className="hidden h-full w-full object-cover md:block"
+            />
+            <Image
+              src={cell.banner.mobileImage}
+              alt={cell.banner.alt}
+              width={800}
+              height={210}
+              unoptimized
+              className="h-full w-full object-cover md:hidden"
+            />
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

@@ -990,11 +990,10 @@ model SiteConfig {
   topBanner Json?
   // The store-picker popup: heading, note and one block per store.
   switcher  Json?
-  // /ambassador: the ordered long-form images beside the application form.
-  ambassadorImages Json? @map("ambassador_images")
-  // /ambassador: the form's heading and supporting line.
-  ambassadorFormTitle String? @map("ambassador_form_title")
-  ambassadorFormIntro String? @map("ambassador_form_intro")
+  // /brands: the preview grid's tile height (px), columns and rows.
+  brandsPreviewHeight  Int? @map("brands_preview_height")
+  brandsPreviewColumns Int? @map("brands_preview_columns")
+  brandsPreviewRows    Int? @map("brands_preview_rows")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

@@ -12,6 +12,7 @@ import {
 } from "@/lib/page-builder/types";
 import type { SectionFormOptions } from "./fields";
 import {
+  AmbassadorForm,
   HeroForm,
   InstagramForm,
   LongBannerForm,
@@ -50,6 +51,10 @@ export const ADMIN_SECTION_TYPES: Record<SectionType, AdminSectionType> = {
   "tabbed-showcase": {
     meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],
     adminForm: TabbedShowcaseForm,
+  },
+  ambassador: {
+    meta: SECTION_TYPE_META_BY_TYPE.ambassador,
+    adminForm: AmbassadorForm,
   },
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],

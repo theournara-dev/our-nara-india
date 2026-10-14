@@ -365,6 +365,22 @@ export async function getProductsBySlugs(
 }
 
 /**
+ * Lightweight product list for pickers outside the catalog UI (the ambassador
+ * application's "product you would promote" select), following the store's
+ * show flag.
+ */
+export async function getProductPickerOptions(
+  version: SiteVersion,
+): Promise<{ name: string; brand: string }[]> {
+  const rows = await db.product.findMany({
+    where: shownWhere(version),
+    orderBy: { name: "asc" },
+    select: { name: true, brand: { select: { name: true } } },
+  });
+  return rows.map((p) => ({ name: p.name, brand: p.brand.name }));
+}
+
+/**
  * One product by slug, regardless of either store's show flag — the product
  * page resolves the request's store and 404s when it is hidden there
  * (`visibleForVersion`).

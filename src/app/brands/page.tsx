@@ -5,6 +5,8 @@ import { BrandBrowser } from "@/components/brands/brand-browser";
 import { Container } from "@/components/ui/container";
 import { getBrandTopBanners } from "@/data/banners";
 import { getBrands } from "@/data/brands";
+import { getSiteConfig } from "@/lib/site-config";
+import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const metadata: Metadata = { title: "Shop by Brand" };
 
@@ -14,13 +16,16 @@ export const dynamic = "force-dynamic";
 
 /**
  * /brands (client slide 8): title → up to two banners in one row → group tabs
- * → brand image grid → A–Z index. The heading and page margins match the
- * category pages.
+ * → brand preview grid → A–Z index → brand list. The heading and page margins
+ * match the category pages; the preview grid's tile height, columns and rows
+ * are set under Site settings → Brands page.
  */
 export default async function BrandsPage() {
-  const [brands, banners] = await Promise.all([
+  const version = await getRequestSiteVersion();
+  const [brands, banners, site] = await Promise.all([
     getBrands(),
     getBrandTopBanners(),
+    getSiteConfig(version),
   ]);
 
   return (
@@ -66,7 +71,7 @@ export default async function BrandsPage() {
         </div>
       )}
 
-      <BrandBrowser brands={brands} />
+      <BrandBrowser brands={brands} preview={site.brandsPage} />
     </Container>
   );
 }

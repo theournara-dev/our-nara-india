@@ -6,7 +6,6 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   DEFAULT_SWITCHER_CONTENT,
-  normalizeAmbassadorImages,
   normalizeSwitcher,
   normalizeTopBanner,
   SWITCHER_NUDGE_ICONS,
@@ -42,12 +41,12 @@ const contentInput = z.object({
     .nullable()
     .optional(),
   dispatchCutoffHour: z.coerce.number().int().min(0).max(23).optional(),
-  // ── /ambassador page ───────────────────────────────────────────────────
-  ambassador: z
+  // ── /brands preview grid ──────────────────────────────────────────────
+  brandsPage: z
     .object({
-      images: z.array(z.unknown()).max(50, "At most 50 images"),
-      formTitle: safeText(120).optional(),
-      formIntro: safeText(300).optional(),
+      previewHeight: z.coerce.number().int().min(40).max(600).optional(),
+      previewColumns: z.coerce.number().int().min(2).max(6).optional(),
+      previewRows: z.coerce.number().int().min(1).max(10).optional(),
     })
     .optional(),
   // ── Invoice "from" block ────────────────────────────────────────────────
@@ -102,13 +101,17 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
     ...(data.dispatchCutoffHour !== undefined
       ? { dispatchCutoffHour: data.dispatchCutoffHour }
       : {}),
-    ...(data.ambassador
+    ...(data.brandsPage
       ? {
-          ambassadorImages: normalizeAmbassadorImages(data.ambassador.images, {
-            allowEmpty: true,
-          }),
-          ambassadorFormTitle: data.ambassador.formTitle?.trim() || null,
-          ambassadorFormIntro: data.ambassador.formIntro?.trim() || null,
+          ...(data.brandsPage.previewHeight !== undefined
+            ? { brandsPreviewHeight: data.brandsPage.previewHeight }
+            : {}),
+          ...(data.brandsPage.previewColumns !== undefined
+            ? { brandsPreviewColumns: data.brandsPage.previewColumns }
+            : {}),
+          ...(data.brandsPage.previewRows !== undefined
+            ? { brandsPreviewRows: data.brandsPage.previewRows }
+            : {}),
         }
       : {}),
     ...(data.invoice

@@ -1,8 +1,9 @@
 import "server-only";
 import type { ComponentType } from "react";
+import { AmbassadorSection } from "@/components/ambassador/ambassador-section";
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { InstagramSection } from "@/components/content/instagram-section";
-import { LongBannerBlocks } from "@/components/content/long-banner";
+import { LongBannerCells } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
@@ -14,12 +15,16 @@ import {
   getAvailableNow,
   getFeaturedProducts,
   getPreOrderProducts,
+  getProductPickerOptions,
   getProductsByBrandSlug,
   getProductsByCategorySlug,
   getProductsBySlugs,
 } from "@/data/products";
 import {
+  DEFAULT_AMBASSADOR_FORM_INTRO,
+  DEFAULT_AMBASSADOR_FORM_TITLE,
   SECTION_TYPE_META_BY_TYPE,
+  type AmbassadorImageConfig,
   type HeroSlide,
   type InstagramItem,
   type ProductSource,
@@ -153,28 +158,37 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
     load: async (config) => {
       const c = config as {
-        rows?: { id: string; bannerIds?: string[] }[];
+        cells?: { id: string; bannerId?: string }[];
         bannerIds?: string[];
       };
-      // Sections stored before the block split carry only `bannerIds` — fold
-      // that into a single block so old pages render unchanged.
-      const rows =
-        c.rows && c.rows.length > 0
-          ? c.rows
-          : [{ id: "legacy", bannerIds: c.bannerIds ?? [] }];
-      const blocks = await Promise.all(
-        rows.map(async (row) => ({
-          id: row.id,
-          banners: await getLongBanners(
-            row.bannerIds && row.bannerIds.length > 0
-              ? row.bannerIds
-              : undefined,
-          ),
+      // Sections stored before the cell split carry a carousel selection —
+      // fold its first two entries into the two cells so old pages render.
+      const cells =
+        c.cells && c.cells.length > 0
+          ? c.cells
+          : [
+              { id: "cell-1", bannerId: c.bannerIds?.[0] ?? "" },
+              { id: "cell-2", bannerId: c.bannerIds?.[1] ?? "" },
+            ];
+      const all = await getLongBanners();
+      // A cell left on "automatic" takes the next active banner no other cell
+      // uses, so two empty cells show the first two banners rather than the
+      // same one twice.
+      const used = new Set(cells.map((cell) => cell.bannerId).filter(Boolean));
+      const auto = all.filter((b) => !used.has(b.id));
+      return {
+        cells: cells.map((cell) => ({
+          id: cell.id,
+          banner:
+            (cell.bannerId
+              ? all.find((b) => b.id === cell.bannerId)
+              : undefined) ??
+            auto.shift() ??
+            null,
         })),
-      );
-      return { blocks };
+      };
     },
-    component: LongBannerBlocks,
+    component: LongBannerCells,
   },
   "tabbed-showcase": {
     meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],
@@ -201,6 +215,24 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
       };
     },
     component: TabbedShowcase,
+  },
+  ambassador: {
+    meta: SECTION_TYPE_META_BY_TYPE.ambassador,
+    load: async (config) => {
+      const c = config as {
+        images?: AmbassadorImageConfig[];
+        formTitle?: string;
+        formIntro?: string;
+      };
+      const version = await getRequestSiteVersion();
+      return {
+        images: c.images ?? [],
+        formTitle: c.formTitle ?? DEFAULT_AMBASSADOR_FORM_TITLE,
+        formIntro: c.formIntro ?? DEFAULT_AMBASSADOR_FORM_INTRO,
+        products: await getProductPickerOptions(version),
+      };
+    },
+    component: AmbassadorSection,
   },
   reviews: {
     meta: SECTION_TYPE_META_BY_TYPE.reviews,

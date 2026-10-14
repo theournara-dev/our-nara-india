@@ -14,8 +14,7 @@ import {
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
-  AmbassadorContent,
-  AmbassadorImage,
+  BrandsPageContent,
   SiteContent,
   SwitcherBlock,
   SwitcherContent,
@@ -119,7 +118,7 @@ function SiteSettingsInner({
         phone: current.phone,
         address: current.address,
         topBanner: current.topBanner,
-        ambassador: current.ambassador,
+        brandsPage: current.brandsPage,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
         dispatchCutoffHour: current.dispatchCutoffHour,
@@ -130,7 +129,7 @@ function SiteSettingsInner({
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
     gate.registerHandler("banner", () => saveStore("banner"));
-    gate.registerHandler("ambassador", () => saveStore("ambassador"));
+    gate.registerHandler("brands", () => saveStore("brands"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
     gate.registerHandler("switcher", () =>
@@ -391,12 +390,12 @@ function SiteSettingsInner({
         disabled={saving !== null}
       />
 
-      {/* ── Ambassador page ─────────────────────────────────────────────── */}
-      <AmbassadorEditor
-        content={current.ambassador}
-        onChange={(ambassador) => patch({ ambassador })}
-        onSave={() => void gate.save("ambassador")}
-        saving={saving === "ambassador"}
+      {/* ── Brands page ─────────────────────────────────────────────────── */}
+      <BrandsPageEditor
+        content={current.brandsPage}
+        onChange={(brandsPage) => patch({ brandsPage })}
+        onSave={() => void gate.save("brands")}
+        saving={saving === "brands"}
         disabled={saving !== null}
       />
 
@@ -691,156 +690,78 @@ function TopBannerEditor({
   );
 }
 
-/** Editor for the /ambassador page: the image column and the form copy. */
-function AmbassadorEditor({
+/** Editor for the /brands preview grid's size (per store). */
+function BrandsPageEditor({
   content,
   onChange,
   onSave,
   saving,
   disabled,
 }: {
-  content: AmbassadorContent;
-  onChange: (content: AmbassadorContent) => void;
+  content: BrandsPageContent;
+  onChange: (content: BrandsPageContent) => void;
   onSave: () => void;
   saving: boolean;
   disabled: boolean;
 }) {
-  const images = content.images;
-
-  function setImages(next: AmbassadorImage[]) {
-    onChange({ ...content, images: next });
-  }
-
-  function update(index: number, patchImage: Partial<AmbassadorImage>) {
-    setImages(
-      images.map((img, i) => (i === index ? { ...img, ...patchImage } : img)),
-    );
-  }
-
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= images.length) return;
-    const next = [...images];
-    [next[index], next[target]] = [next[target], next[index]];
-    setImages(next);
-  }
-
   return (
     <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-      <h2 className="mb-1 text-sm font-semibold text-zinc-900">
-        Ambassador page
-      </h2>
+      <h2 className="mb-1 text-sm font-semibold text-zinc-900">Brands page</h2>
       <p className="mb-4 text-xs text-zinc-400">
-        The images that fill the left half of this store&apos;s /ambassador page
-        and change as the visitor scrolls the form, in order — upload as many as
-        you need. Empty shows the built-in perks list instead.
+        The brand preview grid under the tabs on /brands: how tall each tile is
+        and how many previews to show. The rest stay in the list below the A–Z
+        circles.
       </p>
-
-      <div className="space-y-3">
-        {images.map((img, i) => (
-          <div
-            key={img.id}
-            className="space-y-3 rounded-lg border border-zinc-100 bg-zinc-50/60 p-3"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="rounded bg-white px-2 py-0.5 text-xs font-semibold text-zinc-600">
-                Image {i + 1}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => move(i, -1)}
-                  disabled={disabled || i === 0}
-                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
-                  aria-label={`Move image ${i + 1} up`}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  onClick={() => move(i, 1)}
-                  disabled={disabled || i === images.length - 1}
-                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-50 disabled:opacity-40"
-                  aria-label={`Move image ${i + 1} down`}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setImages(images.filter((_, j) => j !== i))}
-                  disabled={disabled}
-                  className="rounded border border-zinc-200 bg-white px-2 py-1 text-xs text-rose-500 hover:bg-rose-50 disabled:opacity-40"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-            <ImageField
-              label="Image"
-              value={img.image}
-              onChange={(image) => update(i, { image })}
-              hint="Full-width long-form artwork."
-            />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className={labelCls}>Alt text (optional)</span>
-                <input
-                  value={img.alt ?? ""}
-                  onChange={(e) =>
-                    update(i, { alt: e.target.value || undefined })
-                  }
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Link (optional)</span>
-                <input
-                  value={img.href ?? ""}
-                  onChange={(e) =>
-                    update(i, { href: e.target.value || undefined })
-                  }
-                  placeholder="/products/… or https://…"
-                  className={inputCls}
-                />
-              </label>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        onClick={() => setImages([...images, { id: newId("amb"), image: "" }])}
-        disabled={disabled}
-        className="mt-3 rounded border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:border-point-300 hover:text-point-600 disabled:opacity-60"
-      >
-        + Add image
-      </button>
-
-      {/* The form's own copy, also editable. */}
-      <div className="mt-5 space-y-3 border-t border-zinc-100 pt-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <label className="block">
-          <span className={labelCls}>Form heading</span>
+          <span className={labelCls}>Tile height (px)</span>
           <input
-            value={content.formTitle}
+            type="number"
+            min={40}
+            max={600}
+            value={content.previewHeight}
             onChange={(e) =>
-              onChange({ ...content, formTitle: e.target.value })
+              onChange({
+                ...content,
+                previewHeight: Number(e.target.value) || 100,
+              })
             }
             className={inputCls}
           />
         </label>
         <label className="block">
-          <span className={labelCls}>Form introduction</span>
+          <span className={labelCls}>Columns</span>
           <input
-            value={content.formIntro}
+            type="number"
+            min={2}
+            max={6}
+            value={content.previewColumns}
             onChange={(e) =>
-              onChange({ ...content, formIntro: e.target.value })
+              onChange({
+                ...content,
+                previewColumns: Number(e.target.value) || 4,
+              })
+            }
+            className={inputCls}
+          />
+        </label>
+        <label className="block">
+          <span className={labelCls}>Rows</span>
+          <input
+            type="number"
+            min={1}
+            max={10}
+            value={content.previewRows}
+            onChange={(e) =>
+              onChange({
+                ...content,
+                previewRows: Number(e.target.value) || 2,
+              })
             }
             className={inputCls}
           />
         </label>
       </div>
-
       <div className="mt-4">
         <button
           type="button"
@@ -848,7 +769,7 @@ function AmbassadorEditor({
           disabled={disabled}
           className={saveBtnCls}
         >
-          {saving ? "Saving…" : "Save ambassador page"}
+          {saving ? "Saving…" : "Save brands page"}
         </button>
       </div>
     </section>

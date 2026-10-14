@@ -12,6 +12,7 @@ import { tripleBannerTabs } from "../src/data/triple-banner";
 import { defaultHeroSlides } from "../src/data/hero";
 import { defaultShortsItems } from "../src/data/shorts";
 import { defaultInstagramItems } from "../src/data/instagram";
+import { SECTION_TYPE_META_BY_TYPE } from "../src/lib/page-builder/types";
 
 function image(label: string, color = "e7c6a0"): string {
   return `https://placehold.co/600x600/${color}/2a2a2a?text=${encodeURIComponent(label)}`;
@@ -477,6 +478,9 @@ async function main() {
   console.log("Seeding home page…");
   await seedHomePage();
 
+  console.log("Seeding ambassador page…");
+  await seedAmbassadorPage();
+
   console.log(
     `Done. ${brands.length} brands, ${categories.length} categories, ${products.length} products, ${banners.length} banners, ${popups.length} popups.`,
   );
@@ -608,6 +612,35 @@ async function seedHomePage() {
       sortOrder: i,
       isActive: true,
     })),
+  });
+}
+
+/**
+ * Seed the `ambassador` Page with a single ambassador-stage section (its copy
+ * and images live in the builder). Never clobbers admin edits: the page is
+ * upserted and the section is only created while the page has none.
+ */
+async function seedAmbassadorPage() {
+  const page = await db.page.upsert({
+    where: { slug: "ambassador" },
+    create: { slug: "ambassador", title: "Ambassador", isActive: true },
+    update: {},
+  });
+  const existing = await db.pageSection.count({ where: { pageId: page.id } });
+  if (existing > 0) {
+    console.log(`  ${existing} sections already exist — skipped`);
+    return;
+  }
+  await db.pageSection.create({
+    data: {
+      pageId: page.id,
+      type: "ambassador",
+      title: "Ambassador stage",
+      config:
+        SECTION_TYPE_META_BY_TYPE.ambassador.defaultConfig() as Prisma.InputJsonValue,
+      sortOrder: 0,
+      isActive: true,
+    },
   });
 }
 
