@@ -32,7 +32,9 @@ function getClient(): PrismaClient {
 // Proxy defers PrismaClient instantiation until the first query, so merely
 // importing `db` (e.g. during `next build`) does not require DATABASE_URL.
 export const db = new Proxy({} as PrismaClient, {
-  get(_target, prop, receiver) {
+  // The proxy deliberately binds against the real client (not the proxy), so
+  // the trap's own `receiver` isn't needed.
+  get(_target, prop) {
     const client = getClient();
     const value = Reflect.get(client, prop, client);
     return typeof value === "function" ? value.bind(client) : value;

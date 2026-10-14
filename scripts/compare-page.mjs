@@ -25,11 +25,6 @@ async function extract(url) {
         r.height > 0
       );
     };
-    const rect = (el) => {
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
-    };
     const clean = (t) => (t || "").replace(/\s+/g, " ").trim();
 
     // All images (visible), in DOM order

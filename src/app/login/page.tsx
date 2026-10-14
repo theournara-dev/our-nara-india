@@ -76,6 +76,7 @@ export default function LoginPage() {
         return;
       }
       notify.success(id, "Welcome back!");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
       window.location.assign("/account");
     } catch (err) {
       const isRateLimited =
@@ -111,6 +112,7 @@ export default function LoginPage() {
         return;
       }
       notify.success(id, "Email verified!", "Welcome back to OUR:NARA.");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
       window.location.assign("/account");
     } catch {
       notify.error(id, "Verification failed", "Something went wrong.");

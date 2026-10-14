@@ -180,6 +180,7 @@ export default function JoinPage() {
         // Full page navigation so the freshly-set session cookie is committed
         // before the browser loads /account (client-side push can race the
         // cookie write and land on /login).
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
         window.location.assign("/account");
       }
     } catch (err) {
@@ -212,7 +213,8 @@ export default function JoinPage() {
         notify.error(id, "Verification failed", data.error ?? "Try again.");
         return;
       }
-      notify.success(id, "Email verified!", "Welcome to OUR:NARA.");
+      notify.success(id, "Email verified!", "Welcome back to OUR:NARA.");
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
       window.location.assign("/account");
     } catch {
       notify.error(id, "Verification failed", "Something went wrong.");
