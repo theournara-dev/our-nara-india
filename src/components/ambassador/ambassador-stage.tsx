@@ -28,9 +28,6 @@ export function AmbassadorStage({
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
-  // Which images have finished loading, for the progress bar: the sequence can
-  // hold very large artwork, so the bar doubles as a loading cue.
-  const [loaded, setLoaded] = useState<Record<string, true>>({});
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -100,11 +97,6 @@ export function AmbassadorStage({
                       unoptimized
                       sizes="50vw"
                       className="object-cover"
-                      onLoad={() =>
-                        setLoaded((prev) =>
-                          prev[image.id] ? prev : { ...prev, [image.id]: true },
-                        )
-                      }
                     />
                   );
                   return (
@@ -125,28 +117,6 @@ export function AmbassadorStage({
                     </div>
                   );
                 })}
-
-                {/* A small progress bar: one segment per image, the active one
-                    pulsing until its (possibly very large) file has loaded. */}
-                {images.length > 1 && (
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-4 bottom-4 flex gap-1.5 drop-shadow"
-                  >
-                    {images.map((image, i) => (
-                      <span
-                        key={image.id}
-                        className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                          i > active
-                            ? "bg-white/40"
-                            : i === active && !loaded[image.id]
-                              ? "animate-pulse bg-white/70"
-                              : "bg-white"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* Phones: every image, stacked. */}
@@ -180,9 +150,7 @@ export function AmbassadorStage({
 
             {/* Right half: the form, scrolling inside its own column on desktop. */}
             <div className="min-w-0 lg:h-full lg:overflow-y-auto">
-              <div className="p-5 md:p-6 lg:p-8">
-                <div className="mx-auto max-w-xl">{children}</div>
-              </div>
+              <div className="p-5 md:p-6 lg:p-8">{children}</div>
             </div>
           </div>
         </div>

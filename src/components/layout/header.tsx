@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import type { NavCategory } from "@/data/categories";
@@ -134,6 +135,88 @@ export function Header({
     : isPending
       ? null
       : logStateLinks;
+
+  // ── Category nav strip: horizontal scrolling with edge arrows ─────────────
+  // Below 1200px the strip is a native scroller (it already was). From 1200px
+  // up it is clipped so the hover submenus can escape it, and the arrows shift
+  // the strip with a transform instead. Either way the arrows only show while
+  // there is content to reach in that direction — tablets used to clip the
+  // rightmost items (B2B, AMBASSADOR) with no way to reach them.
+  const navViewportRef = useRef<HTMLDivElement>(null);
+  const navListRef = useRef<HTMLUListElement>(null);
+  const [navShift, setNavShift] = useState(0);
+  const [navEdges, setNavEdges] = useState({ left: false, right: false });
+
+  const navMaxShift = useCallback(() => {
+    const list = navListRef.current;
+    const viewport = navViewportRef.current;
+    const last = list?.lastElementChild as HTMLElement | null;
+    if (!list || !viewport || !last) return 0;
+    return Math.max(
+      0,
+      last.offsetLeft + last.offsetWidth - viewport.clientWidth,
+    );
+  }, []);
+
+  useEffect(() => {
+    const list = navListRef.current;
+    const viewport = navViewportRef.current;
+    if (!list || !viewport) return;
+    const isDesktop = () => window.matchMedia("(min-width: 1200px)").matches;
+    const compute = () => {
+      if (!isDesktop()) {
+        // Leaving the desktop layout hands the strip back to the native
+        // scroller.
+        if (navShift !== 0) setNavShift(0);
+        const max = navMaxShift();
+        setNavEdges({
+          left: list.scrollLeft > 2,
+          right: list.scrollLeft < max - 2,
+        });
+        return;
+      }
+      const max = navMaxShift();
+      if (navShift > max) {
+        // The window grew (or the menu shrank): pull the strip back in.
+        setNavShift(max);
+        return;
+      }
+      setNavEdges({ left: navShift > 2, right: navShift < max - 2 });
+    };
+    compute();
+    const observer = new ResizeObserver(compute);
+    observer.observe(list);
+    observer.observe(viewport);
+    list.addEventListener("scroll", compute, { passive: true });
+    window.addEventListener("resize", compute);
+    return () => {
+      observer.disconnect();
+      list.removeEventListener("scroll", compute);
+      window.removeEventListener("resize", compute);
+    };
+  }, [navShift, navItems, navMaxShift]);
+
+  function scrollNav(dir: -1 | 1) {
+    const list = navListRef.current;
+    const viewport = navViewportRef.current;
+    if (!list || !viewport) return;
+    const step = Math.round(viewport.clientWidth * 0.7);
+    if (window.matchMedia("(min-width: 1200px)").matches) {
+      const max = navMaxShift();
+      setNavShift((cur) => Math.min(Math.max(cur + dir * step, 0), max));
+      return;
+    }
+    list.scrollBy({ left: dir * step, behavior: "smooth" });
+  }
+
+  /** Trackpads: a clear sideways swipe nudges the strip like the arrows do. */
+  function onNavWheel(e: React.WheelEvent) {
+    if (!window.matchMedia("(min-width: 1200px)").matches) return;
+    if (Math.abs(e.deltaX) < 4 || Math.abs(e.deltaX) < Math.abs(e.deltaY))
+      return;
+    const max = navMaxShift();
+    setNavShift((cur) => Math.min(Math.max(cur + e.deltaX, 0), max));
+  }
 
   return (
     <div>
@@ -273,8 +356,20 @@ export function Header({
 
               {/* Category nav */}
               <div className="relative mr-2.5 flex h-20 w-[calc(100%-60px)] min-w-0 items-center lg:mr-0 lg:w-[calc(100%-50px)] max-[1200px]:mr-0 max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:min-w-0">
-                <div className="relative z-[39] min-w-0 max-[1200px]:w-full max-[1200px]:min-w-0">
-                  <ul className="flex items-center overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden min-[1200px]:overflow-x-clip max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:gap-4 max-[1200px]:overflow-y-hidden">
+                <div
+                  ref={navViewportRef}
+                  onWheel={onNavWheel}
+                  className="relative z-[39] min-w-0 max-[1200px]:w-full max-[1200px]:min-w-0 min-[1200px]:overflow-x-clip"
+                >
+                  <ul
+                    ref={navListRef}
+                    style={
+                      navShift > 0
+                        ? { transform: `translateX(-${navShift}px)` }
+                        : undefined
+                    }
+                    className="flex items-center overflow-x-auto whitespace-nowrap min-[1200px]:w-max min-[1200px]:overflow-x-visible min-[1200px]:transition-transform min-[1200px]:duration-300 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden max-[1200px]:h-9 max-[1200px]:w-full max-[1200px]:gap-4 max-[1200px]:overflow-y-hidden"
+                  >
                     {navItems.map((item, index) => (
                       <li
                         key={item.href}
@@ -328,6 +423,29 @@ export function Header({
                       </li>
                     ))}
                   </ul>
+
+                  {/* Scroll arrows: shown only while the strip has more to
+                      reach in that direction (any width). */}
+                  {navEdges.left && (
+                    <button
+                      type="button"
+                      aria-label="Scroll categories left"
+                      onClick={() => scrollNav(-1)}
+                      className="absolute left-0 top-1/2 z-[40] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#e9e9e9] bg-white text-[#222] shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-colors hover:bg-zinc-50 max-[1200px]:h-7 max-[1200px]:w-7"
+                    >
+                      <MdKeyboardArrowLeft size={20} />
+                    </button>
+                  )}
+                  {navEdges.right && (
+                    <button
+                      type="button"
+                      aria-label="Scroll categories right"
+                      onClick={() => scrollNav(1)}
+                      className="absolute right-0 top-1/2 z-[40] flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-[#e9e9e9] bg-white text-[#222] shadow-[0_1px_4px_rgba(0,0,0,0.12)] transition-colors hover:bg-zinc-50 max-[1200px]:h-7 max-[1200px]:w-7"
+                    >
+                      <MdKeyboardArrowRight size={20} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

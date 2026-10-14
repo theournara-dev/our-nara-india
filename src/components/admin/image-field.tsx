@@ -254,13 +254,6 @@ export function ImageListField({
           placeholder="Paste image URL…"
           className={inputCls}
         />
-        <button
-          type="button"
-          onClick={addUrl}
-          className="inline-flex h-9 shrink-0 items-center rounded border border-zinc-200 bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-100"
-        >
-          Add URL
-        </button>
         <input
           ref={fileRef}
           type="file"
@@ -459,13 +452,6 @@ export function ImageField({
         placeholder="Paste image URL…"
         className={inputCls}
       />
-      <button
-        type="button"
-        onClick={() => applyUrl(urlInput)}
-        className="inline-flex h-9 shrink-0 items-center rounded border border-zinc-200 bg-white px-3 text-sm text-zinc-700 hover:bg-zinc-100"
-      >
-        Set URL
-      </button>
       <input
         ref={fileRef}
         type="file"
