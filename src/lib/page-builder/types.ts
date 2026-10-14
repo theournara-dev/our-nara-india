@@ -187,8 +187,20 @@ export const sectionConfigSchemas = {
     moreLabel: z.string().optional(),
   }),
   "long-banner": z.object({
-    // Specific banners to show (from the Banners admin). Empty = auto: show
-    // all active `long` placement banners.
+    // The banner blocks: each renders its own full-width carousel. A block
+    // with nothing selected shows every active "long" banner, so the section
+    // is never unexpectedly empty.
+    rows: z
+      .array(
+        z.object({
+          id: z.string(),
+          bannerIds: z.array(z.string()).default([]),
+        }),
+      )
+      .max(4)
+      .default([]),
+    // Legacy single selection from before the rows split; folded into the
+    // first block when a stored section has no rows yet.
     bannerIds: z.array(z.string()).default([]),
   }),
   reviews: z.object({}),
@@ -270,7 +282,10 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     label: "Long banner",
     description: "Full-width banner carousel from the Banners admin.",
     configSchema: sectionConfigSchemas["long-banner"],
-    defaultConfig: () => ({ bannerIds: [] }),
+    defaultConfig: () => ({
+      rows: [{ id: "block-1", bannerIds: [] }],
+      bannerIds: [],
+    }),
   },
   {
     type: "reviews",

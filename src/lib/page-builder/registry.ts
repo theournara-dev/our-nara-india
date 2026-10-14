@@ -2,7 +2,7 @@ import "server-only";
 import type { ComponentType } from "react";
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { InstagramSection } from "@/components/content/instagram-section";
-import { LongBanner } from "@/components/content/long-banner";
+import { LongBannerBlocks } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
@@ -152,10 +152,29 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   "long-banner": {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
     load: async (config) => {
-      const ids = (config as { bannerIds?: string[] })?.bannerIds ?? [];
-      return { banners: await getLongBanners(ids.length ? ids : undefined) };
+      const c = config as {
+        rows?: { id: string; bannerIds?: string[] }[];
+        bannerIds?: string[];
+      };
+      // Sections stored before the block split carry only `bannerIds` — fold
+      // that into a single block so old pages render unchanged.
+      const rows =
+        c.rows && c.rows.length > 0
+          ? c.rows
+          : [{ id: "legacy", bannerIds: c.bannerIds ?? [] }];
+      const blocks = await Promise.all(
+        rows.map(async (row) => ({
+          id: row.id,
+          banners: await getLongBanners(
+            row.bannerIds && row.bannerIds.length > 0
+              ? row.bannerIds
+              : undefined,
+          ),
+        })),
+      );
+      return { blocks };
     },
-    component: LongBanner,
+    component: LongBannerBlocks,
   },
   "tabbed-showcase": {
     meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],

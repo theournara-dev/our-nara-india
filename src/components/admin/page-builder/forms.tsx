@@ -60,16 +60,66 @@ export function ShortsForm({ config, onChange }: FormProps) {
 }
 
 export function LongBannerForm({ config, onChange, options }: FormProps) {
+  // Sections saved before the block split carry only `bannerIds`; show them as
+  // the first block so editing never loses the old selection.
+  const rows: { id: string; bannerIds: string[] }[] =
+    config.rows && config.rows.length > 0
+      ? config.rows
+      : [{ id: "block-1", bannerIds: config.bannerIds ?? [] }];
+
+  function updateRows(next: { id: string; bannerIds: string[] }[]) {
+    // Keep the legacy field in step with the first block for older readers.
+    onChange({ ...config, rows: next, bannerIds: next[0]?.bannerIds ?? [] });
+  }
+
   return (
     <div className="space-y-3">
-      <BannersField
-        value={config.bannerIds ?? []}
-        onChange={(bannerIds) => onChange({ ...config, bannerIds })}
-        options={options}
-      />
+      {rows.map((row, i) => (
+        <div key={row.id} className="rounded-lg border border-zinc-200 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-700">
+              Banner block {i + 1}
+            </span>
+            {rows.length > 1 && (
+              <button
+                type="button"
+                onClick={() => updateRows(rows.filter((r) => r.id !== row.id))}
+                className="text-xs font-medium text-red-500 hover:underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <BannersField
+            label={`Banners in block ${i + 1}`}
+            value={row.bannerIds}
+            onChange={(bannerIds) =>
+              updateRows(
+                rows.map((r) => (r.id === row.id ? { ...r, bannerIds } : r)),
+              )
+            }
+            options={options}
+          />
+        </div>
+      ))}
+      {rows.length < 4 && (
+        <button
+          type="button"
+          onClick={() =>
+            updateRows([
+              ...rows,
+              { id: `block-${rows.length + 1}-${Date.now()}`, bannerIds: [] },
+            ])
+          }
+          className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
+        >
+          + Add block
+        </button>
+      )}
       <p className="text-xs leading-5 text-zinc-400">
-        Leave empty to automatically show all active &quot;Long banner&quot;
-        banners from the Banners admin.
+        Each block renders its own full-width carousel. A block left empty shows
+        every active &quot;Long banner&quot; from the Banners admin — assign
+        specific banners when you use more than one block.
       </p>
     </div>
   );

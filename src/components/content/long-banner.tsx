@@ -42,7 +42,9 @@ export function LongBanner({ banners }: LongBannerProps) {
     if (!el) return;
 
     const swiper = new Swiper(el, {
-      modules: hasMultiple ? [Autoplay, Navigation, Pagination] : [Autoplay, Navigation],
+      modules: hasMultiple
+        ? [Autoplay, Navigation, Pagination]
+        : [Autoplay, Navigation],
       speed: 600,
       spaceBetween: 0,
       centeredSlides: true,
@@ -50,7 +52,12 @@ export function LongBanner({ banners }: LongBannerProps) {
       grabCursor: true,
       autoplay: { delay: 3000, disableOnInteraction: false },
       ...(hasMultiple
-        ? { pagination: { el: paginationRef.current as HTMLElement, clickable: true } }
+        ? {
+            pagination: {
+              el: paginationRef.current as HTMLElement,
+              clickable: true,
+            },
+          }
         : {}),
       navigation: {
         prevEl: prevRef.current as HTMLElement,
@@ -119,9 +126,35 @@ export function LongBanner({ banners }: LongBannerProps) {
         </button>
 
         {hasMultiple && (
-          <div ref={paginationRef} className="swiper-pagination long-banner-pagination" />
+          <div
+            ref={paginationRef}
+            className="swiper-pagination long-banner-pagination"
+          />
         )}
       </div>
+    </div>
+  );
+}
+
+/** One admin-configured banner block (see the page builder's long banner). */
+export interface LongBannerBlock {
+  id: string;
+  banners: LongBannerItem[];
+}
+
+/**
+ * The long-banner section's blocks, stacked: the admin can split the section
+ * into up to two banner areas and point each at its own banners. A block
+ * without banners renders nothing, so a half-configured section stays quiet.
+ */
+export function LongBannerBlocks({ blocks }: { blocks: LongBannerBlock[] }) {
+  const visible = (blocks ?? []).filter((b) => b.banners.length > 0);
+  if (visible.length === 0) return null;
+  return (
+    <div className="space-y-[10px]">
+      {visible.map((block) => (
+        <LongBanner key={block.id} banners={block.banners} />
+      ))}
     </div>
   );
 }

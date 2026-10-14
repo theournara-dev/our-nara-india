@@ -44,6 +44,8 @@ type BannerFormProps = {
   backHref: string;
   /** Categories the scoped placements can attach to. */
   categories?: { id: string; name: string }[];
+  /** Prefills from the list's filters (e.g. the "Page banners" shortcut). */
+  defaults?: { placement?: string; categoryId?: string };
 };
 
 /** Create/edit form for a banner; images upload when the form is saved. */
@@ -59,13 +61,18 @@ function BannerFormInner({
   banner,
   backHref,
   categories = [],
+  defaults,
 }: BannerFormProps) {
   const isEdit = Boolean(banner);
   const [pending, startTransition] = useTransition();
 
   const [title, setTitle] = useState(banner?.title ?? "");
-  const [placement, setPlacement] = useState(banner?.placement ?? "long");
-  const [categoryId, setCategoryId] = useState(banner?.categoryId ?? "");
+  const [placement, setPlacement] = useState(
+    banner?.placement ?? defaults?.placement ?? "long",
+  );
+  const [categoryId, setCategoryId] = useState(
+    banner?.categoryId ?? defaults?.categoryId ?? "",
+  );
   const [image, setImage] = useState(banner?.image ?? "");
   const [mobileImage, setMobileImage] = useState(banner?.mobileImage ?? "");
   const [alt, setAlt] = useState(banner?.alt ?? "");

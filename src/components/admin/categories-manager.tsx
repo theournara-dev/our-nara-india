@@ -3,7 +3,16 @@
 import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Pencil, Plus, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronDown,
+  ChevronUp,
+  Image as ImageIcon,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { notify } from "@/lib/toast";
@@ -254,6 +263,18 @@ function CategoryRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {/* The category page's banner pair + long carousel are managed in the
+            Banners admin, scoped to this category. */}
+        {category.parentId === null && (
+          <Link
+            href={`/admin/banners?category=${category.id}`}
+            title="Manage this category page's banners"
+            aria-label="Page banners"
+            className="grid h-8 w-8 place-items-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+          >
+            <ImageIcon className="h-4 w-4" aria-hidden />
+          </Link>
+        )}
         <button
           type="button"
           aria-label="Move up"

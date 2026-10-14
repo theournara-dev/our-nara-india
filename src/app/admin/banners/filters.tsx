@@ -7,11 +7,15 @@ import { PLACEMENT_LABELS, BANNER_PLACEMENTS } from "./lib";
 export function BannerFilters({
   search,
   placement,
+  category,
   active,
+  categories,
 }: {
   search: string;
   placement: string;
+  category: string;
   active: string;
+  categories: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -23,9 +27,11 @@ export function BannerFilters({
     const sp = new URLSearchParams();
     const s = String(fd.get("search") ?? "").trim();
     const p = String(fd.get("placement") ?? "");
+    const c = String(fd.get("category") ?? "");
     const a = String(fd.get("active") ?? "");
     if (s) sp.set("search", s);
     if (p) sp.set("placement", p);
+    if (c) sp.set("category", c);
     if (a) sp.set("active", a);
     const qs = sp.toString();
     startTransition(() => router.push(`/admin/banners${qs ? `?${qs}` : ""}`));
@@ -69,6 +75,21 @@ export function BannerFilters({
           ))}
         </select>
       </label>
+      {categories.length > 0 && (
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-500">
+            Category page
+          </span>
+          <select name="category" defaultValue={category} className={fieldCls}>
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-zinc-500">
           Status

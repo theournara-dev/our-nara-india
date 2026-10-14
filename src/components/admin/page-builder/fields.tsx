@@ -1624,10 +1624,12 @@ export function BannersField({
   value,
   onChange,
   options,
+  label = "Banners",
 }: {
   value: string[];
   onChange: (ids: string[]) => void;
   options: SectionFormOptions;
+  label?: string;
 }) {
   return (
     <SearchableCheckboxList
@@ -1644,7 +1646,7 @@ export function BannersField({
       getThumbnail={(b) => b.image}
       placeholder="Search banners…"
       emptyText="No banners match."
-      label="Banners"
+      label={label}
     />
   );
 }

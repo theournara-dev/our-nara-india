@@ -336,9 +336,10 @@ async function main() {
 
   console.log("Seeding banners & popups…");
   // Content seeds are wiped and recreated on each run so re-seeding always
-  // matches this baseline. Only the original long banner is active (keeps the
-  // homepage visually identical); everything else ships inactive so you can
-  // enable it from the admin dashboard (`/admin/banners`, `/admin/popups`).
+  // matches this baseline. All three long banners ship active (the homepage's
+  // long-banner blocks show every active one when left unselected); the hero
+  // and popup extras ship inactive so you can enable them from the admin
+  // dashboard (`/admin/banners`, `/admin/popups`).
   const banners = [
     {
       title: "OUR:NARA",
@@ -358,7 +359,7 @@ async function main() {
       alt: "Sunscreen care from LA THEORIE",
       href: "/brand/la-theorie",
       sortOrder: 1,
-      isActive: false,
+      isActive: true,
     },
     {
       title: "Cica Panthenol Soothing Cream",
@@ -368,7 +369,7 @@ async function main() {
       alt: "Cica panthenol soothing cream from HE:ARIM",
       href: "/brand/hearim",
       sortOrder: 2,
-      isActive: false,
+      isActive: true,
     },
     {
       title: "Peptide Volume Master Essence",

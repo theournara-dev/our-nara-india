@@ -1,5 +1,11 @@
 /** Query params that make up the banners list's filter state. */
-export const FILTER_KEYS = ["search", "placement", "active", "page"] as const;
+export const FILTER_KEYS = [
+  "search",
+  "placement",
+  "category",
+  "active",
+  "page",
+] as const;
 
 /**
  * Build a `/admin/banners` URL that preserves the current list filters, so the

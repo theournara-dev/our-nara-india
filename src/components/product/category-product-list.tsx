@@ -494,14 +494,14 @@ function SubTile({
       aria-pressed={active}
       className="group flex w-[76px] shrink-0 cursor-pointer flex-col items-center gap-1.5 md:w-[92px]"
     >
-      <span
-        className={`grid h-[62px] w-[62px] place-items-center overflow-hidden rounded-full border-2 bg-white transition-colors md:h-[76px] md:w-[76px] ${
-          active
-            ? "border-point-500"
-            : "border-transparent group-hover:border-[#e9e9e9]"
-        }`}
-      >
-        {image ? (
+      {/* With artwork the tile renders the image as-is (the client's slide 7
+          follow-up); only the letter fallback keeps the circle. */}
+      {image ? (
+        <span
+          className={`block h-[62px] w-[62px] overflow-hidden rounded-xl transition-shadow md:h-[76px] md:w-[76px] ${
+            active ? "ring-2 ring-point-500 ring-offset-2" : ""
+          }`}
+        >
           <Image
             src={image}
             alt=""
@@ -510,7 +510,15 @@ function SubTile({
             unoptimized
             className="h-full w-full object-cover"
           />
-        ) : (
+        </span>
+      ) : (
+        <span
+          className={`grid h-[62px] w-[62px] place-items-center overflow-hidden rounded-full border-2 bg-white transition-colors md:h-[76px] md:w-[76px] ${
+            active
+              ? "border-point-500"
+              : "border-transparent group-hover:border-[#e9e9e9]"
+          }`}
+        >
           <span
             className={`text-[11px] font-semibold md:text-xs ${
               active ? "text-point-500" : "text-[#999]"
@@ -519,8 +527,8 @@ function SubTile({
           >
             {label.slice(0, 1).toUpperCase()}
           </span>
-        )}
-      </span>
+        </span>
+      )}
       <span
         className={`line-clamp-2 text-center text-[12px] leading-4 md:text-[13px] ${
           active ? "font-semibold text-point-500" : "text-[#555]"

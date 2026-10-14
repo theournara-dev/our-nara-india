@@ -35,6 +35,7 @@ type SearchParams = Promise<{
   page?: string;
   search?: string;
   placement?: string;
+  category?: string;
   active?: string;
 }>;
 
@@ -47,6 +48,7 @@ export default async function AdminBannersPage({
   const page = Math.max(1, Number(params.page) || 1);
   const search = params.search?.trim() ?? "";
   const placement = params.placement ?? "";
+  const category = params.category ?? "";
   const active = params.active ?? "";
 
   const where = {
@@ -59,6 +61,7 @@ export default async function AdminBannersPage({
         }
       : {}),
     ...(placement ? { placement } : {}),
+    ...(category ? { categoryId: category } : {}),
     ...(active === "active"
       ? { isActive: true }
       : active === "inactive"
@@ -66,14 +69,20 @@ export default async function AdminBannersPage({
         : {}),
   };
 
-  const [banners, total] = await Promise.all([
+  const [banners, total, categories] = await Promise.all([
     db.banner.findMany({
       where,
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       orderBy: [{ placement: "asc" }, { sortOrder: "asc" }],
+      include: { category: { select: { name: true } } },
     }),
     db.banner.count({ where }),
+    db.category.findMany({
+      where: { parentId: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -81,6 +90,7 @@ export default async function AdminBannersPage({
   const filterQuery = currentQuery({
     search,
     placement,
+    category,
     active,
     page: String(page),
   });
@@ -89,6 +99,7 @@ export default async function AdminBannersPage({
     const sp = new URLSearchParams();
     if (search) sp.set("search", search);
     if (placement) sp.set("placement", placement);
+    if (category) sp.set("category", category);
     if (active) sp.set("active", active);
     for (const [k, v] of Object.entries(overrides)) {
       if (v) sp.set(k, v);
@@ -120,7 +131,13 @@ export default async function AdminBannersPage({
         </Link>
       </div>
 
-      <BannerFilters search={search} placement={placement} active={active} />
+      <BannerFilters
+        search={search}
+        placement={placement}
+        category={category}
+        active={active}
+        categories={categories}
+      />
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-100 bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -178,8 +195,14 @@ export default async function AdminBannersPage({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-zinc-600">
-                    {PLACEMENT_LABELS[b.placement as keyof typeof PLACEMENT_LABELS] ??
-                      b.placement}
+                    {PLACEMENT_LABELS[
+                      b.placement as keyof typeof PLACEMENT_LABELS
+                    ] ?? b.placement}
+                    {b.category && (
+                      <span className="mt-0.5 block text-xs text-zinc-400">
+                        {b.category.name}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-zinc-600">{b.sortOrder}</td>
                   <td className="px-4 py-3">
