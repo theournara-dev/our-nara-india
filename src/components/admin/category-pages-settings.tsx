@@ -52,7 +52,8 @@ export interface CategoryPageSettings {
   /** Block keys this page hides ("long", "promo"). */
   hidden: string[];
   long: string[];
-  promo: string[];
+  /** The promo banner this page shows; null when it has none. */
+  promoId: string | null;
   longHeight: number;
   promoHeight: number;
 }
@@ -60,7 +61,7 @@ export interface CategoryPageSettings {
 /** The blocks every category page shows (the all-pages configuration). */
 export interface CategoryPageDefaults {
   long: string[];
-  promo: string[];
+  promoId: string | null;
   longHeight: number;
   promoHeight: number;
 }
@@ -259,7 +260,7 @@ export function CategoryPagesSettings({
     3,
   );
   const previewLongHeight = source.longHeight ?? 0;
-  const previewPromoId = hidden.has("promo") ? "" : (source.promo?.[0] ?? "");
+  const previewPromoId = hidden.has("promo") ? "" : (source.promoId ?? "");
   const previewPromoHeight = source.promoHeight ?? 0;
 
   const filtered = banners.filter((b) =>
@@ -290,7 +291,7 @@ export function CategoryPagesSettings({
     startTransition(async () => {
       const result = await setCategoryPageDefaults({
         long: allPages.long ?? [],
-        promo: allPages.promo ?? [],
+        promo: allPages.promoId ?? undefined,
         longHeight: allPages.longHeight ?? 0,
         promoHeight: allPages.promoHeight ?? 0,
       });
@@ -310,7 +311,7 @@ export function CategoryPagesSettings({
         mode: page.mode,
         hidden: page.hidden as ("long" | "promo")[],
         long: page.long ?? [],
-        promo: page.promo ?? [],
+        promo: page.promoId ?? undefined,
         longHeight: page.longHeight ?? 0,
         promoHeight: page.promoHeight ?? 0,
       });
@@ -561,28 +562,26 @@ export function CategoryPagesSettings({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className={labelCls}>Image</span>
+              {/* Every banner is offered, including ones the long banner uses:
+                  the promo references them instead of claiming them. */}
               <select
-                value={draft.promo?.[0] ?? ""}
-                onChange={(e) =>
-                  patch({ promo: e.target.value ? [e.target.value] : [] })
-                }
+                value={draft.promoId ?? ""}
+                onChange={(e) => patch({ promoId: e.target.value || null })}
                 className={inputCls}
               >
                 <option value="">None</option>
-                {banners
-                  .filter((b) => !(draft.long ?? []).includes(b.id))
-                  .map((b) => {
-                    const home = bannerHome(
-                      b,
-                      isAll ? null : active!.id,
-                      categoryNames,
-                    );
-                    return (
-                      <option key={b.id} value={b.id}>
-                        {home ? `${b.title} · ${home}` : b.title}
-                      </option>
-                    );
-                  })}
+                {banners.map((b) => {
+                  const home = bannerHome(
+                    b,
+                    isAll ? null : active!.id,
+                    categoryNames,
+                  );
+                  return (
+                    <option key={b.id} value={b.id}>
+                      {home ? `${b.title} · ${home}` : b.title}
+                    </option>
+                  );
+                })}
               </select>
             </label>
             <label className="block">

@@ -23,6 +23,8 @@ export interface CategorySummary {
   hiddenBlocks: string[];
   /** Custom long banner height; 0 keeps each banner's own proportions. */
   longBannerHeight: number;
+  /** The banner this page's promo block shows; null when it has none. */
+  promoBannerId: string | null;
   /** Custom promo block height; 0 keeps the artwork's own proportions. */
   promoHeight: number;
 }
@@ -56,6 +58,7 @@ const CATEGORY_SELECT = {
   pageBannersMode: true,
   hiddenBlocks: true,
   longBannerHeight: true,
+  promoBannerId: true,
   promoHeight: true,
 } as const;
 

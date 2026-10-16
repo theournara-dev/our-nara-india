@@ -2,7 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { CategoryPagesSettings } from "@/components/admin/category-pages-settings";
 import { db } from "@/lib/db";
-import { getCategoryPageDefaultHeights } from "@/data/banners";
+import { getCategoryPageDefaults } from "@/data/banners";
 import { resolveRequestSiteVersion } from "@/lib/site-version";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +53,7 @@ export default async function AdminCategoryPagesSettings({
         pageBannersMode: true,
         hiddenBlocks: true,
         longBannerHeight: true,
+        promoBannerId: true,
         promoHeight: true,
       },
     }),
@@ -73,8 +74,9 @@ export default async function AdminCategoryPagesSettings({
   const version = resolveRequestSiteVersion(
     requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
   );
-  // The all-pages picks carry no category; their heights live on the site config.
-  const defaultHeights = await getCategoryPageDefaultHeights(version);
+  // The all-pages strip picks carry no category; their heights and promo live on
+  // the site config.
+  const siteDefaults = await getCategoryPageDefaults(version);
 
   const pages = categories.map((c) => ({
     id: c.id,
@@ -86,16 +88,16 @@ export default async function AdminCategoryPagesSettings({
         : ("default" as const),
     hidden: c.hiddenBlocks,
     long: picks(c.id, "category-long"),
-    promo: picks(c.id, "category-promo"),
+    promoId: c.promoBannerId,
     longHeight: c.longBannerHeight,
     promoHeight: c.promoHeight,
   }));
 
   const defaults = {
     long: picks(null, "category-long"),
-    promo: picks(null, "category-promo"),
-    longHeight: defaultHeights.long,
-    promoHeight: defaultHeights.promo,
+    promoId: siteDefaults.promoId,
+    longHeight: siteDefaults.longHeight,
+    promoHeight: siteDefaults.promoHeight,
   };
 
   return (

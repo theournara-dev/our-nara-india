@@ -184,8 +184,8 @@ model Category {
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")
   // The listing's own blocks when it is customised (client's slide 4). The
-  // artwork is picked on this category ("category-long" / "category-promo"
-  // banners) and these two hold the strip heights, 0 keeping each banner's own
+  // artwork is picked on this category ("category-long" banners) and these hold
+  // the strip height and the promo reference, 0 keeping each banner's own
   // proportions. Every other listing follows the all-pages blocks instead.
   // "default" | "custom": a page set to default shows what the all-pages
   // configuration picks and can hide a block on its own (hiddenBlocks).
@@ -194,6 +194,10 @@ model Category {
   // "promo"). Set on the page, so one listing can drop what every other shows.
   hiddenBlocks     String[] @default([]) @map("hidden_blocks")
   longBannerHeight Int      @default(0) @map("long_banner_height")
+  // The promo is a *reference* to a banner, not a claim on it: the same image
+  // can be a long-banner picture, another page's promo, or both (client's
+  // follow-up), which a placement could not express.
+  promoBannerId    String?  @map("promo_banner_id")
   promoHeight      Int      @default(0) @map("promo_height")
 
   products         Product[]
@@ -1061,14 +1065,15 @@ model SiteConfig {
   // /brands: the banners above the directory, in order (client's slide 3 —
   // the page picks its banners instead of the banner declaring a placement).
   brandsBannerIds      String[] @map("brands_banner_ids")
-  // The "all category pages" blocks (client's slide 4): the heights every
-  // category listing shows unless it is customised. The banners themselves are
-  // the "category-long" / "category-promo" picks with no category attached,
-  // so a banner still sits in one place only. Written to every version's row
-  // (like the store picker), because the listing pages are the same store to
-  // store.
-  categoryLongBannerHeight Int @default(0) @map("category_long_banner_height")
-  categoryPromoHeight      Int @default(0) @map("category_promo_height")
+  // The "all category pages" blocks (client's slide 4): the heights and the
+  // promo every category listing shows unless it is customised. The long-banner
+  // pictures are the "category-long" picks with no category attached, so they
+  // still sit in one place only; the promo is a reference to a banner, so it can
+  // be reused anywhere. Written to every version's row (like the store picker),
+  // because the listing pages are the same store to store.
+  categoryLongBannerHeight Int     @default(0) @map("category_long_banner_height")
+  categoryPromoBannerId    String? @map("category_promo_banner_id")
+  categoryPromoHeight      Int     @default(0) @map("category_promo_height")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

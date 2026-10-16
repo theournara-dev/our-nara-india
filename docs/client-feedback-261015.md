@@ -116,16 +116,21 @@ preview in the editor:
   a section of its own) is gone: two columns of the long banner are exactly that,
   and the editor no longer offers the same thing twice. Banners that sat in a
   top pair were returned to the standalone pool by the migration.
-- **“Ad block” is now the promo block** — the placement key is
-  `category-promo`, the labels in the admin and the component (`PromoBanner`)
-  follow, and the heights column is `promo_height`.
+- **“Ad block” is now the promo block**, and it is a _reference_ to a banner
+  rather than a claim on it: the picker offers **every** banner — including the
+  ones the long banner uses — and picking one never pulls it out of the strip
+  (client's follow-up). The labels in the admin and the component
+  (`PromoBanner`) follow the rename, and the heights column is `promo_height`.
 
-New storage (migration `20261016223000_category_page_defaults`):
-`Category.pageBannersMode` (`default` | `custom`), `Category.hiddenBlocks`,
+New storage (migrations `20261016223000_category_page_defaults` and
+`20261016233000_promo_banner_reference`): `Category.pageBannersMode` (`default`
+| `custom`), `Category.hiddenBlocks`, `Category.promoBannerId`,
 `Category.promoHeight` (renamed from `ad_banner_height`), and
-`SiteConfig.categoryLongBannerHeight` + `categoryPromoHeight` for the all-pages
-heights. The all-pages _picks_ are the same `category-long` / `category-promo`
-placements with no category attached, so a banner still sits in one place only.
+`SiteConfig.categoryLongBannerHeight` + `categoryPromoBannerId` +
+`categoryPromoHeight` for the all-pages blocks. The long banner's _pictures_ are
+still the `category-long` placements with no category attached, so a picture
+still sits in one strip only; the promo's reference is why the same image can be
+in both.
 
 **Follow-up — page configuration lives under Pages.** The Pages screen is now
 the single home for per-page settings, and one list of every configurable page

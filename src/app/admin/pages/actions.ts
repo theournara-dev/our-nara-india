@@ -174,7 +174,8 @@ const categoryBannersInput = z.object({
     .default([])
     .transform((keys) => [...new Set(keys)]),
   long: z.array(safeText(100)).default([]),
-  promo: z.array(safeText(100)).default([]),
+  /** The promo banner, referenced (not claimed) so it can be reused. */
+  promo: safeText(100).optional(),
   /** Strip height in pixels; 0 keeps each banner's own proportions. */
   longHeight: z.coerce.number().int().min(0).max(600).default(0),
   /** Promo height in pixels; 0 keeps the artwork's own proportions. */
@@ -213,26 +214,30 @@ export async function setCategoryPageBanners(
     };
   }
 
-  // Drop blanks and duplicates; the strip keeps its first three columns, the
-  // promo its single pick. A banner picked in both lists stays in the strip.
+  // Drop blanks and duplicates; the strip keeps its first three columns. The
+  // promo is a single reference — a banner used by the strip can be it too, so
+  // nothing is filtered out of that list (client's follow-up).
   const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
   const long = cleanIds(data.long).slice(0, 3);
-  const promo = cleanIds(data.promo)
-    .filter((id) => !long.includes(id))
-    .slice(0, 1);
+  const promo = data.promo?.trim() || null;
+  if (promo) {
+    const exists = await db.banner.findUnique({
+      where: { id: promo },
+      select: { id: true },
+    });
+    if (!exists)
+      return { ok: false, message: "That promo banner no longer exists." };
+  }
 
-  // Anything still attached to this page but no longer picked comes off it.
-  // Detached, not deleted, so the banner stays available to other pages. A page
-  // following the all-pages setting keeps its own picks, so switching back to
-  // "custom" still finds them.
+  // Anything still attached to this page's strip but no longer picked comes off
+  // it. Detached, not deleted, so the banner stays available to other pages. A
+  // page following the all-pages setting keeps its own picks, so switching back
+  // to "custom" still finds them.
   const attached = await db.banner.findMany({
-    where: {
-      categoryId,
-      placement: { in: ["category-long", "category-promo"] },
-    },
+    where: { categoryId, placement: "category-long" },
     select: { id: true },
   });
-  const picked = new Set([...long, ...promo]);
+  const picked = new Set(long);
   const detach =
     data.mode === "custom" ? attached.filter((b) => !picked.has(b.id)) : [];
 
@@ -243,25 +248,20 @@ export async function setCategoryPageBanners(
         data: { placement: "category-long", categoryId, sortOrder: i },
       }),
     ),
-    ...promo.map((id) =>
-      db.banner.update({
-        where: { id },
-        data: { placement: "category-promo", categoryId, sortOrder: 0 },
-      }),
-    ),
     ...detach.map((b) =>
       db.banner.update({
         where: { id: b.id },
         data: { placement: "", categoryId: null },
       }),
     ),
-    // The mode, the hides and the heights live on the page (client's slide 4).
+    // The mode, the hides, the promo reference and the heights live on the page.
     db.category.update({
       where: { id: categoryId },
       data: {
         pageBannersMode: data.mode,
         hiddenBlocks: data.hidden,
         longBannerHeight: data.longHeight,
+        promoBannerId: promo,
         promoHeight: data.promoHeight,
       },
     }),
@@ -287,13 +287,15 @@ export async function setCategoryPageBanners(
 
 /**
  * The blocks every category page shows unless it is customised (client's slide
- * 4): the same two heights as a page, plus the banners picked with no category
- * attached. Written to every store's config row — the listings are the same
- * store to store — while claiming the banners the same way a page does.
+ * 4): the same two heights as a page plus the promo reference. The long-banner
+ * pictures are picked with no category attached (so they still sit in one place
+ * only); the promo is only referenced, so any banner can be it, including one
+ * the strip already uses. Written to every store's config row — the listings are
+ * the same store to store.
  */
 const categoryDefaultsInput = z.object({
   long: z.array(safeText(100)).default([]),
-  promo: z.array(safeText(100)).default([]),
+  promo: safeText(100).optional(),
   longHeight: z.coerce.number().int().min(0).max(600).default(0),
   promoHeight: z.coerce.number().int().min(0).max(600).default(0),
 });
@@ -315,31 +317,28 @@ export async function setCategoryPageDefaults(
 
   const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
   const long = cleanIds(data.long).slice(0, 3);
-  const promo = cleanIds(data.promo)
-    .filter((id) => !long.includes(id))
-    .slice(0, 1);
+  const promo = data.promo?.trim() || null;
+  if (promo) {
+    const exists = await db.banner.findUnique({
+      where: { id: promo },
+      select: { id: true },
+    });
+    if (!exists)
+      return { ok: false, message: "That promo banner no longer exists." };
+  }
 
-  // The all-pages picks are the same placements with no category attached.
+  // The all-pages strip picks are the same placement with no category attached.
   const attached = await db.banner.findMany({
-    where: {
-      categoryId: null,
-      placement: { in: ["category-long", "category-promo"] },
-    },
+    where: { categoryId: null, placement: "category-long" },
     select: { id: true },
   });
-  const picked = new Set([...long, ...promo]);
+  const picked = new Set(long);
 
   const writes = [
     ...long.map((id, i) =>
       db.banner.update({
         where: { id },
         data: { placement: "category-long", categoryId: null, sortOrder: i },
-      }),
-    ),
-    ...promo.map((id) =>
-      db.banner.update({
-        where: { id },
-        data: { placement: "category-promo", categoryId: null, sortOrder: 0 },
       }),
     ),
     ...attached
@@ -357,10 +356,12 @@ export async function setCategoryPageDefaults(
         create: {
           version,
           categoryLongBannerHeight: data.longHeight,
+          categoryPromoBannerId: promo,
           categoryPromoHeight: data.promoHeight,
         },
         update: {
           categoryLongBannerHeight: data.longHeight,
+          categoryPromoBannerId: promo,
           categoryPromoHeight: data.promoHeight,
         },
       }),

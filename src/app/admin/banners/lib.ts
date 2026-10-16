@@ -34,7 +34,6 @@ export const BANNER_PLACEMENTS = [
   "hero",
   "triple",
   "category-long",
-  "category-promo",
   "brand-top",
   "brand-section",
 ] as const;
@@ -45,16 +44,15 @@ export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
   hero: "Hero carousel",
   triple: "Triple banner",
   "category-long": "Category page — long banner",
-  "category-promo": "Category page — promo block",
   "brand-top": "Brands page — top pair",
   "brand-section": "Brand section (home) — row above a brand",
 };
 
-/** Placements that need a category to attach to. */
-export const CATEGORY_PLACEMENTS: BannerPlacement[] = [
-  "category-long",
-  "category-promo",
-];
+/**
+ * Placements that need a category to attach to. The promo block is not one of
+ * them: it references a banner, so the same image can sit in several places.
+ */
+export const CATEGORY_PLACEMENTS: BannerPlacement[] = ["category-long"];
 
 /**
  * Placements that need a brand to attach to: the promo row above a brand's

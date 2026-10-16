@@ -147,27 +147,36 @@ export interface CategoryPageBlocks {
 }
 
 /**
- * The all-pages block heights (stored on the site config, shared by both
- * stores — the category listings are the same store to store).
+ * The all-pages blocks (stored on the site config, shared by both stores — the
+ * category listings are the same store to store): the two heights and the promo
+ * banner reference.
  */
-export async function getCategoryPageDefaultHeights(
-  version: SiteVersion,
-): Promise<{ long: number; promo: number }> {
+export async function getCategoryPageDefaults(version: SiteVersion): Promise<{
+  longHeight: number;
+  promoId: string | null;
+  promoHeight: number;
+}> {
   const row = await db.siteConfig.findUnique({
     where: { version },
-    select: { categoryLongBannerHeight: true, categoryPromoHeight: true },
+    select: {
+      categoryLongBannerHeight: true,
+      categoryPromoBannerId: true,
+      categoryPromoHeight: true,
+    },
   });
   return {
-    long: row?.categoryLongBannerHeight ?? 0,
-    promo: row?.categoryPromoHeight ?? 0,
+    longHeight: row?.categoryLongBannerHeight ?? 0,
+    promoId: row?.categoryPromoBannerId ?? null,
+    promoHeight: row?.categoryPromoHeight ?? 0,
   };
 }
 
 /**
  * The banners of one category page: the long banner (one banner per column, up
- * to three — the same strip the home page uses) and the single promo block.
- * Picked under Pages → Category pages; the component owns the placement, and a
- * banner with no category attached is an all-pages pick.
+ * to three — the same strip the home page uses) and the single promo block. The
+ * long banner's pictures are picked under Pages → Category pages and belong to
+ * one place only (a banner with no category attached is an all-pages pick); the
+ * promo references a banner, so the same one can also sit elsewhere.
  */
 export async function getCategoryPageBlocks(
   category: {
@@ -175,35 +184,44 @@ export async function getCategoryPageBlocks(
     pageBannersMode: string;
     hiddenBlocks: string[];
     longBannerHeight: number;
+    promoBannerId: string | null;
     promoHeight: number;
   },
   version: SiteVersion,
 ): Promise<CategoryPageBlocks> {
   const custom = category.pageBannersMode === "custom";
   const hidden = new Set(category.hiddenBlocks ?? []);
-  const rows = await db.banner.findMany({
-    where: {
-      ...liveWindow(new Date()),
-      // The page's own picks when it is customised, the all-pages ones otherwise.
-      categoryId: custom ? category.id : null,
-      placement: { in: ["category-long", "category-promo"] },
-    },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: { ...BANNER_FIELDS, placement: true },
-  });
+  const defaults = custom ? null : await getCategoryPageDefaults(version);
+  const promoId = custom ? category.promoBannerId : defaults!.promoId;
 
-  const of = (placement: string) =>
-    rows.filter((b) => b.placement === placement).map(toLongBanner);
-  const heights = custom
-    ? { long: category.longBannerHeight, promo: category.promoHeight }
-    : await getCategoryPageDefaultHeights(version);
+  const [longRows, promoRow] = await Promise.all([
+    hidden.has("long")
+      ? []
+      : db.banner.findMany({
+          where: {
+            ...liveWindow(new Date()),
+            // The page's own picks when it is customised, all-pages ones else.
+            categoryId: custom ? category.id : null,
+            placement: "category-long",
+          },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          // The strip takes three columns at most; extra picks are invisible.
+          take: 3,
+          select: BANNER_FIELDS,
+        }),
+    hidden.has("promo") || !promoId
+      ? null
+      : db.banner.findFirst({
+          where: { ...liveWindow(new Date()), id: promoId },
+          select: BANNER_FIELDS,
+        }),
+  ]);
 
   return {
-    // The strip takes three columns at most; extra picks would be invisible.
-    long: hidden.has("long") ? [] : of("category-long").slice(0, 3),
-    promo: hidden.has("promo") ? null : (of("category-promo")[0] ?? null),
-    longHeight: heights.long,
-    promoHeight: heights.promo,
+    long: longRows.map(toLongBanner),
+    promo: promoRow ? toLongBanner(promoRow) : null,
+    longHeight: custom ? category.longBannerHeight : defaults!.longHeight,
+    promoHeight: custom ? category.promoHeight : defaults!.promoHeight,
   };
 }
 
