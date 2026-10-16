@@ -35,6 +35,7 @@ export const BANNER_PLACEMENTS = [
   "triple",
   "category-top",
   "category-long",
+  "category-ad",
   "brand-top",
   "brand-section",
 ] as const;
@@ -45,7 +46,8 @@ export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
   hero: "Hero carousel",
   triple: "Triple banner",
   "category-top": "Category page — top pair",
-  "category-long": "Category page — long carousel",
+  "category-long": "Category page — long banner",
+  "category-ad": "Category page — ad block",
   "brand-top": "Brands page — top pair",
   "brand-section": "Brand section (home) — row above a brand",
 };
@@ -54,6 +56,7 @@ export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
 export const CATEGORY_PLACEMENTS: BannerPlacement[] = [
   "category-top",
   "category-long",
+  "category-ad",
 ];
 
 /**

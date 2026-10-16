@@ -154,7 +154,7 @@ function BrandPreview({
           </>
         ) : (
           // Without artwork the tile is the name alone.
-          <span className="grid h-full place-items-center px-4 text-center font-display text-xl font-semibold text-[#222] transition-colors group-hover:text-point-500">
+          <span className="grid h-full place-items-center px-4 text-center font-category text-xl font-semibold text-[#222] transition-colors group-hover:text-point-500">
             {brand.name}
           </span>
         )}

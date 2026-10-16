@@ -70,7 +70,7 @@ export default async function BoardPage({
         </nav>
 
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="font-display text-3xl font-semibold text-ink">
+          <h1 className="font-category text-3xl font-semibold text-ink">
             {name}
           </h1>
           <Link

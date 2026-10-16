@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
-import { LongBanner } from "@/components/content/long-banner";
+import { AdBanner } from "@/components/banners/ad-banner";
+import { LongBannerCells } from "@/components/content/long-banner";
 import { getCategoryBanners } from "@/data/banners";
 import {
   getCategoryById,
@@ -124,7 +125,25 @@ export default async function CategoryPage({
           ) : null
         }
         longBanner={
-          banners.long.length > 0 ? <LongBanner banners={banners.long} /> : null
+          // The home page's column strip (client's slide 4): one banner per
+          // column, so one runs full width and two or three share the row. The
+          // height comes from the category's own page settings.
+          banners.long.length > 0 ? (
+            <LongBannerCells
+              framed={false}
+              columns={banners.long.length}
+              height={category.longBannerHeight}
+              cells={banners.long.map((banner, i) => ({
+                id: `cell-${i + 1}`,
+                banner,
+              }))}
+            />
+          ) : null
+        }
+        adBanner={
+          banners.ad ? (
+            <AdBanner banner={banners.ad} height={category.adBannerHeight} />
+          ) : null
         }
       />
     </Container>

@@ -161,7 +161,7 @@ export default function LoginPage() {
     <div>
       <Container className="py-12">
         <div className="mx-auto max-w-md">
-          <h1 className="mb-1 text-center font-display text-3xl font-semibold text-ink">
+          <h1 className="mb-1 text-center font-category text-3xl font-semibold text-ink">
             Login
           </h1>
           <p className="mb-8 text-center text-sm text-[#888]">

@@ -38,7 +38,7 @@ export default async function SearchPage({
           ? `${results.length} result${results.length === 1 ? "" : "s"}`
           : "Search"}
       </p>
-      <h1 className="font-display mb-6 text-3xl font-semibold text-zinc-900">
+      <h1 className="font-category mb-6 text-3xl font-semibold text-zinc-900">
         {query ? `Results for “${query}”` : "Search products"}
       </h1>
 

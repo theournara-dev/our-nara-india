@@ -78,8 +78,42 @@ fields — labels, images, headlines, links and product lists are untouched.
 
 The category page's banners and the brands page's banners used to be assigned by the banner's own placement. Since that field is gone, each page now picks its own:
 
-- **Category pages**: `/admin/categories` → edit a top-level category → **Page banners** (a top pair + a searchable list for the long carousel). Picking a banner that sits on another category moves it, and unpicking detaches it (never deletes it) — `setCategoryBanners` writes the same `placement`/`categoryId` the storefront already reads.
+- **Category pages**: `/admin/categories` → edit a top-level category → **Page banners** (a top pair + a searchable list for the long banner and a pick for the ad block). Picking a banner that sits on another category moves it, and unpicking detaches it (never deletes it) — `setCategoryBanners` writes the same `placement`/`categoryId` the storefront already reads.
 - **Brands page**: Site settings → Brands page → **Top banner 1/2**, stored with the rest of that page's settings.
+
+### Slide 4 — page titles, and the category page's long banner and ad block
+
+**Titles.** Every start-of-page title renders in Pretendard. The category pages,
+brand pages and the brands page already did; the last serif holdouts are fixed
+too: `/search` (“Search products”), `/community` and its boards, `/help`,
+`/login`, `/join`, the 404/error pages, the product page's “More from <brand>”
+heading, and the brand-name fallback tiles on `/brands`. Everything without an
+explicit font class already used Pretendard (the body font), so the audit was
+“every remaining `font-display` heading on a storefront page”.
+
+**Category page: long banner below the filters + one ad block.** Both are
+admin-controlled from `/admin/categories` → edit a top-level category → **Page
+banners**, and both render under the mid-level filter tiles (the block position
+the slide-8 reference showed), inside the page container so they line up with
+the filter sidebar and the product grid:
+
+- **Long banner** — the same strip the home page uses (one banner per column:
+  one runs full width, two or three share the row, phones stack). Up to three
+  picks, plus a **Height (px)** setting (`0` keeps each banner's own proportions,
+  which is also the current behaviour). It renders through the shared
+  `LongBannerCells` + `BannerArtwork`, so the banner content the client asked to
+  “copy here” — heading, subheading, text placement, colour and scrim — shows on
+  the category page exactly as on the home page. The old auto-rotating carousel
+  (arrows, bullets) is gone with it: it was the one place that ignored those
+  controls. `LongBannerCells` takes a `framed` prop so the home page keeps its own
+  92% container while the listings render it bare.
+- **Ad block** — a single image below the long banner, picked the same way, with
+  its own **Height (px)** setting (“just height for now”); `0` keeps the artwork's
+  proportions. It links to the banner's own destination when it has one.
+
+New: `Category.longBannerHeight` + `Category.adBannerHeight` (migration
+`20261016210000_category_page_blocks`, both default `0`) and a `category-ad`
+banner placement (scoped to a category, like the top pair and the long banner).
 
 ## New / changed infrastructure
 
@@ -130,6 +164,23 @@ The category page's banners and the brands page's banners used to be assigned by
    because the same shared components serve them and the client asked for
    exactly that; the ambassador slide (12) and the "remove spacing between
    detail images" slide (4) were not touched.
+4. **Slide 4 items that need the deck's screenshots (implemented, but worth a
+   glance):**
+   - **“All products page”** — no page by that name exists in this project. The
+     rule was applied to _every_ storefront title instead, so whatever page it
+     is, it is covered if it exists; if the client means a page we do not have
+     at all (a shop-all listing), it is a new page, not a styling fix.
+   - **“Long banner below filters”** — the block sits under the mid-level
+     category tiles (the filters in the listing), where the original site's
+     long carousel was. If the deck means _below the filter sidebar / sort row_,
+     that is a one-line move in `CategoryProductList`.
+   - **Order of the two blocks** — the long banner renders first, the ad block
+     under it, following the order of the client's sentence. Swapping them is a
+     two-line change in the same file.
+   - **Carousel** — the category page's arrows/bullets carousel was replaced by
+     the home-style strip (it was the only renderer ignoring the banner's own
+     content controls). If the client wants it back for days with more than
+     three banners, it is in git (`src/components/content/long-banner.tsx`).
 
 ## Checked in a browser
 

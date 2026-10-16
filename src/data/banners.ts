@@ -131,31 +131,35 @@ export async function getStandaloneBanners(): Promise<LongBanner[]> {
 }
 
 /**
- * The banners of one category page: up to two "category-top" images rendered
- * side by side under the mid-level tiles, and the "category-long" carousel
- * below them (any number of images). Picked on the category itself
- * (/admin/categories → Page banners); the component owns the placement.
+ * The banners of one category page (client's slide 4): up to two "category-top"
+ * images rendered side by side under the mid-level tiles, the "category-long"
+ * picks below them as the same column strip the home page uses (one to three,
+ * one banner per column), and the single "category-ad" image under that. Picked
+ * on the category itself (/admin/categories → Page banners); the component owns
+ * the placement.
  */
 export async function getCategoryBanners(
   categorySlug: string,
-): Promise<{ top: LongBanner[]; long: LongBanner[] }> {
+): Promise<{ top: LongBanner[]; long: LongBanner[]; ad: LongBanner | null }> {
   const now = new Date();
   const rows = await db.banner.findMany({
     where: {
       ...liveWindow(now),
-      placement: { in: ["category-top", "category-long"] },
+      placement: { in: ["category-top", "category-long", "category-ad"] },
       category: { slug: categorySlug },
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: { ...BANNER_FIELDS, placement: true },
   });
 
+  const of = (placement: string) =>
+    rows.filter((b) => b.placement === placement).map(toLongBanner);
+
   return {
-    top: rows
-      .filter((b) => b.placement === "category-top")
-      .slice(0, 2)
-      .map(toLongBanner),
-    long: rows.filter((b) => b.placement === "category-long").map(toLongBanner),
+    top: of("category-top").slice(0, 2),
+    // The strip takes three columns at most; extra picks would be invisible.
+    long: of("category-long").slice(0, 3),
+    ad: of("category-ad")[0] ?? null,
   };
 }
 

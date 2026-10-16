@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { headers } from "next/headers";
-import { getVersionConfig, resolveRequestSiteVersion } from "@/lib/site-version";
+import {
+  getVersionConfig,
+  resolveRequestSiteVersion,
+} from "@/lib/site-version";
 
 export const metadata: Metadata = { title: "Help" };
 
@@ -64,7 +67,7 @@ export default async function HelpPage() {
           </ol>
         </nav>
 
-        <h1 className="mb-8 font-display text-3xl font-semibold text-ink">
+        <h1 className="mb-8 font-category text-3xl font-semibold text-ink">
           HELP
         </h1>
 

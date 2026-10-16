@@ -41,8 +41,14 @@ export interface AdminCategory {
   productCount: number;
   /** This page's top-pair picks (placement "category-top"), in slot order. */
   topBannerIds: string[];
-  /** This page's long-carousel picks (placement "category-long"), in order. */
+  /** This page's long-banner picks (placement "category-long"), in order. */
   longBannerIds: string[];
+  /** This page's ad-block pick (placement "category-ad"), at most one. */
+  adBannerIds: string[];
+  /** Long banner height in pixels; 0 keeps each banner's own proportions. */
+  longBannerHeight: number;
+  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
+  adBannerHeight: number;
 }
 
 /** One banner the category page pickers can choose from. */
@@ -53,6 +59,15 @@ export interface AdminBannerOption {
   placement: string;
   /** The category page it sits on right now; null when it sits elsewhere. */
   categoryId: string | null;
+}
+
+/** A top-level category page's banner picks and block heights (slide 4). */
+export interface CategoryPageBanners {
+  top: string[];
+  long: string[];
+  ad: string[];
+  longHeight: number;
+  adHeight: number;
 }
 
 const inputCls =
@@ -245,7 +260,7 @@ function CategoryRow({
   onCancel: () => void;
   onSave: (
     input: Record<string, unknown>,
-    pageBanners?: { top: string[]; long: string[] },
+    pageBanners?: CategoryPageBanners,
   ) => void;
   onMove: (direction: "up" | "down") => void;
   onDelete: () => void;
@@ -375,7 +390,7 @@ function CategoryForm({
   pending: boolean;
   onSubmit: (
     input: Record<string, unknown>,
-    pageBanners?: { top: string[]; long: string[] },
+    pageBanners?: CategoryPageBanners,
   ) => void;
   onCancel?: () => void;
   onDone?: () => void;
@@ -389,7 +404,16 @@ function CategoryForm({
     category?.topBannerIds.slice(0, 2) ?? [],
   );
   const [longBannerIds, setLongBannerIds] = useState<string[]>(
-    category?.longBannerIds ?? [],
+    category?.longBannerIds.slice(0, 3) ?? [],
+  );
+  const [adBannerIds, setAdBannerIds] = useState<string[]>(
+    category?.adBannerIds.slice(0, 1) ?? [],
+  );
+  const [longBannerHeight, setLongBannerHeight] = useState(
+    category?.longBannerHeight ?? 0,
+  );
+  const [adBannerHeight, setAdBannerHeight] = useState(
+    category?.adBannerHeight ?? 0,
   );
 
   const effectiveSlug = slugTouched ? slug : slugify(name);
@@ -414,7 +438,15 @@ function CategoryForm({
         sortOrder: category?.sortOrder ?? 999,
         isActive,
       },
-      showPageBanners ? { top: topBannerIds, long: longBannerIds } : undefined,
+      showPageBanners
+        ? {
+            top: topBannerIds,
+            long: longBannerIds,
+            ad: adBannerIds,
+            longHeight: longBannerHeight,
+            adHeight: adBannerHeight,
+          }
+        : undefined,
     );
     onDone?.();
   }
@@ -486,8 +518,14 @@ function CategoryForm({
           categories={categories ?? []}
           top={topBannerIds}
           long={longBannerIds}
+          ad={adBannerIds}
+          longHeight={longBannerHeight}
+          adHeight={adBannerHeight}
           onTopChange={setTopBannerIds}
           onLongChange={setLongBannerIds}
+          onAdChange={setAdBannerIds}
+          onLongHeightChange={setLongBannerHeight}
+          onAdHeightChange={setAdBannerHeight}
         />
       )}
 
@@ -530,9 +568,12 @@ function bannerHome(
 }
 
 /**
- * The page-banner pickers of one top-level category: the top pair rendered
- * side by side and the long carousel under it. Saved together with the
- * category form; the server moves banners that sit on another page.
+ * The page blocks of one top-level category (client's slide 4): the top pair
+ * rendered side by side, the long banner under the filters — one banner per
+ * column, exactly like the home page's strip — and the single ad block below
+ * it. The banners are picked here; each banner's own image and text are edited
+ * in /admin/banners. Saved together with the category form; the server moves
+ * banners that sit on another page.
  */
 function PageBannersFields({
   categoryId,
@@ -540,16 +581,28 @@ function PageBannersFields({
   categories,
   top,
   long,
+  ad,
+  longHeight,
+  adHeight,
   onTopChange,
   onLongChange,
+  onAdChange,
+  onLongHeightChange,
+  onAdHeightChange,
 }: {
   categoryId: string;
   banners: AdminBannerOption[];
   categories: AdminCategory[];
   top: string[];
   long: string[];
+  ad: string[];
+  longHeight: number;
+  adHeight: number;
   onTopChange: (ids: string[]) => void;
   onLongChange: (ids: string[]) => void;
+  onAdChange: (ids: string[]) => void;
+  onLongHeightChange: (height: number) => void;
+  onAdHeightChange: (height: number) => void;
 }) {
   const [query, setQuery] = useState("");
   const categoryNames = useMemo(
@@ -561,6 +614,8 @@ function PageBannersFields({
   const filtered = banners.filter((b) =>
     b.title.toLowerCase().includes(query.trim().toLowerCase()),
   );
+  // The strip renders at most three columns, so it picks at most three.
+  const atCap = long.length >= 3;
 
   /** Set one of the two top slots ("" clears it) and keep the pair dense. */
   function setTopSlot(slot: 0 | 1, id: string) {
@@ -569,11 +624,11 @@ function PageBannersFields({
     onTopChange(next.filter(Boolean));
   }
 
-  /** Checkbox toggle; keeps the picks in list order (their carousel order). */
+  /** Checkbox toggle; keeps the picks in list order (their column order). */
   function toggleLong(id: string) {
     const next = new Set(selectedLong);
     if (next.has(id)) next.delete(id);
-    else next.add(id);
+    else if (!atCap) next.add(id);
     onLongChange(banners.filter((b) => next.has(b.id)).map((b) => b.id));
   }
 
@@ -613,8 +668,12 @@ function PageBannersFields({
 
       <div className="mt-3">
         <span className="mb-1 block text-xs font-medium text-zinc-500">
-          Long carousel
+          Long banner (below the filters)
         </span>
+        <p className="mb-1 text-xs text-zinc-400">
+          One banner per column: one runs full width, two or three share the row
+          and phones stack them. Up to three.
+        </p>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -636,6 +695,7 @@ function PageBannersFields({
                   <input
                     type="checkbox"
                     checked={selectedLong.has(b.id)}
+                    disabled={!selectedLong.has(b.id) && atCap}
                     onChange={() => toggleLong(b.id)}
                     className="h-4 w-4 rounded border-zinc-300 accent-point-500"
                   />
@@ -658,9 +718,75 @@ function PageBannersFields({
             })
           )}
         </div>
-        <span className="mt-1 block text-xs text-zinc-400">
-          {long.length} selected
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="text-xs text-zinc-400">
+            {long.length} of 3 selected
+          </span>
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-zinc-500">Height (px)</span>
+            <input
+              type="number"
+              min={0}
+              max={600}
+              value={longHeight}
+              onChange={(e) =>
+                onLongHeightChange(
+                  Math.max(0, Math.min(600, Number(e.target.value) || 0)),
+                )
+              }
+              className={`${inputCls} w-20`}
+            />
+          </label>
+        </div>
+        <span className="mt-0.5 block text-xs text-zinc-400">
+          Height 0 keeps each banner&apos;s own proportions.
         </span>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-500">
+            Ad block
+          </span>
+          <select
+            value={ad[0] ?? ""}
+            onChange={(e) => onAdChange(e.target.value ? [e.target.value] : [])}
+            className={inputCls}
+          >
+            <option value="">None</option>
+            {banners
+              .filter((b) => !top.includes(b.id) && !selectedLong.has(b.id))
+              .map((b) => {
+                const home = bannerHome(b, categoryId, categoryNames);
+                return (
+                  <option key={b.id} value={b.id}>
+                    {home ? `${b.title} · ${home}` : b.title}
+                  </option>
+                );
+              })}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-500">
+            Ad height (px)
+          </span>
+          <input
+            type="number"
+            min={0}
+            max={600}
+            value={adHeight}
+            onChange={(e) =>
+              onAdHeightChange(
+                Math.max(0, Math.min(600, Number(e.target.value) || 0)),
+              )
+            }
+            className={inputCls}
+          />
+          <span className="mt-1 block text-xs text-zinc-400">
+            One image below the long banner. 0 keeps the artwork&apos;s own
+            proportions.
+          </span>
+        </label>
       </div>
     </div>
   );

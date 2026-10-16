@@ -25,7 +25,7 @@ export default function AppError({
       <p className="text-sm font-medium uppercase tracking-widest text-zinc-400">
         Oops
       </p>
-      <h1 className="font-display text-4xl font-semibold text-zinc-900">
+      <h1 className="font-category text-4xl font-semibold text-zinc-900">
         Something went wrong
       </h1>
       <p className="max-w-md text-zinc-600">

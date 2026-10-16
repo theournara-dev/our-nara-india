@@ -31,10 +31,10 @@ export default async function AdminCategoriesPage() {
     }),
   ]);
 
-  /** Ids of one category's picks for one of the two page placements. */
+  /** Ids of one category's picks for one of the page's banner placements. */
   const pickIds = (
     categoryId: string,
-    placement: "category-top" | "category-long",
+    placement: "category-top" | "category-long" | "category-ad",
   ) =>
     bannerRows
       .filter((b) => b.categoryId === categoryId && b.placement === placement)
@@ -69,6 +69,9 @@ export default async function AdminCategoriesPage() {
           productCount: r._count.subcategoryLinks,
           topBannerIds: pickIds(r.id, "category-top"),
           longBannerIds: pickIds(r.id, "category-long"),
+          adBannerIds: pickIds(r.id, "category-ad"),
+          longBannerHeight: r.longBannerHeight,
+          adBannerHeight: r.adBannerHeight,
         }))}
         banners={bannerRows}
       />

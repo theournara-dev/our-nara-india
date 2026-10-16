@@ -44,7 +44,7 @@ export default function CommunityPage() {
           </ol>
         </nav>
 
-        <h1 className="mb-8 font-display text-3xl font-semibold text-ink">
+        <h1 className="mb-8 font-category text-3xl font-semibold text-ink">
           COMMUNITY
         </h1>
 

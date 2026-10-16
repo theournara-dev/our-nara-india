@@ -207,21 +207,28 @@ export async function moveCategory(
 }
 
 /**
- * Banner picks for one category page: the "top pair" rendered side by side
- * and the long carousel under it. Placement editing moved off the banner edit
- * form, so the category screen owns its page's banners. A banner sits on at
- * most one page (`categoryId` is a single column), so a pick that is already
- * attached elsewhere moves here.
+ * Banner picks for one category page: the "top pair" rendered side by side,
+ * the long banner under it (up to three, one banner per column — the same strip
+ * the home page uses) and the single ad block under that, plus the two heights
+ * (client's slide 4). Placement editing moved off the banner edit form, so the
+ * category screen owns its page's banners. A banner sits on at most one page
+ * (`categoryId` is a single column), so a pick that is already attached
+ * elsewhere moves here.
  */
 const categoryBannersInput = z.object({
   top: z.array(safeText(100)).default([]),
   long: z.array(safeText(100)).default([]),
+  ad: z.array(safeText(100)).default([]),
+  /** Strip height in pixels; 0 keeps each banner's own proportions. */
+  longHeight: z.coerce.number().int().min(0).max(600).default(0),
+  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
+  adHeight: z.coerce.number().int().min(0).max(600).default(0),
 });
 
-/** Save one top-level category page's banner picks (top pair + carousel). */
+/** Save one top-level category page's banner picks (pair + long banner + ad). */
 export async function setCategoryBanners(
   categoryId: string,
-  input: { top: string[]; long: string[] },
+  input: z.input<typeof categoryBannersInput>,
 ): Promise<CategoryActionResult> {
   await requireAdmin();
 
@@ -246,19 +253,28 @@ export async function setCategoryBanners(
     };
   }
 
-  // Drop blanks and duplicates; the pair keeps its first two slots. A banner
-  // picked in both lists stays up top — the more specific pick wins.
+  // Drop blanks and duplicates; the pair keeps its first two slots, the strip
+  // its first three columns and the ad its single pick. A banner picked in
+  // several lists stays in the earlier one — the more specific pick wins.
   const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
   const top = cleanIds(data.top).slice(0, 2);
-  const long = cleanIds(data.long).filter((id) => !top.includes(id));
+  const long = cleanIds(data.long)
+    .filter((id) => !top.includes(id))
+    .slice(0, 3);
+  const ad = cleanIds(data.ad)
+    .filter((id) => !top.includes(id) && !long.includes(id))
+    .slice(0, 1);
 
   // Anything still attached to this page but no longer picked comes off it.
   // Detached, not deleted, so the banner stays available to other pages.
   const attached = await db.banner.findMany({
-    where: { categoryId, placement: { in: ["category-top", "category-long"] } },
+    where: {
+      categoryId,
+      placement: { in: ["category-top", "category-long", "category-ad"] },
+    },
     select: { id: true },
   });
-  const picked = new Set([...top, ...long]);
+  const picked = new Set([...top, ...long, ...ad]);
   const detach = attached.filter((b) => !picked.has(b.id));
 
   const writes = [
@@ -274,17 +290,31 @@ export async function setCategoryBanners(
         data: { placement: "category-long", categoryId, sortOrder: i },
       }),
     ),
+    ...ad.map((id) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-ad", categoryId, sortOrder: 0 },
+      }),
+    ),
     ...detach.map((b) =>
       db.banner.update({
         where: { id: b.id },
         data: { placement: "", categoryId: null },
       }),
     ),
+    // The heights live on the page itself, not on the banner (client's slide 4).
+    db.category.update({
+      where: { id: categoryId },
+      data: {
+        longBannerHeight: data.longHeight,
+        adBannerHeight: data.adHeight,
+      },
+    }),
   ];
 
   try {
     // One transaction so a failed pick cannot leave the page half-saved.
-    if (writes.length > 0) await db.$transaction(writes);
+    await db.$transaction(writes);
   } catch (err) {
     console.error(`[categories] banner picks failed for ${categoryId}:`, err);
     return { ok: false, message: "Could not save the page banners." };

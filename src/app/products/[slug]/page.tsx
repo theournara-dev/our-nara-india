@@ -177,7 +177,7 @@ export default async function ProductPage({
 
         {relatedOthers.length > 0 && (
           <section className="mx-auto mt-20 box-border w-[92%] max-w-[1560px] px-2">
-            <h2 className="mb-6 font-display text-2xl font-semibold text-ink">
+            <h2 className="mb-6 font-category text-2xl font-semibold text-ink">
               More from {product.brand.name}
             </h2>
             <ProductGrid products={relatedOthers} />

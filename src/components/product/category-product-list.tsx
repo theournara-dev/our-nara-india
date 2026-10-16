@@ -42,6 +42,8 @@ interface CategoryProductListProps {
   /** Category-page banners, rendered by the server page above the toolbar. */
   topBanners?: React.ReactNode;
   longBanner?: React.ReactNode;
+  /** The single ad block under the long banner (client's slide 4). */
+  adBanner?: React.ReactNode;
 }
 
 type SortKey =
@@ -73,6 +75,7 @@ export function CategoryProductList({
   initialFilters,
   topBanners,
   longBanner,
+  adBanner,
 }: CategoryProductListProps) {
   const [sort, setSort] = useState<SortKey>("new");
   const [filters, setFilters] = useState<CategoryFilters>(
@@ -194,10 +197,11 @@ export function CategoryProductList({
         </div>
       )}
 
-      {/* Category banners (admin-managed): the top pair then the long
-          carousel, both under the mid-level tiles. */}
+      {/* Category banners (admin-managed): the top pair, then the long banner
+          strip and the ad block, all under the mid-level tiles. */}
       {topBanners && <div className="mb-3">{topBanners}</div>}
-      {longBanner && <div className="mb-4">{longBanner}</div>}
+      {longBanner && <div className="mb-3">{longBanner}</div>}
+      {adBanner && <div className="mb-4">{adBanner}</div>}
 
       <div className="flex items-start gap-8">
         {/* Sidebar (desktop) */}
