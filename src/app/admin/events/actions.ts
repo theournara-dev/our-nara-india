@@ -5,6 +5,11 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  EVENT_ZOOM_MAX,
+  EVENT_ZOOM_MIN,
+  eventBackground,
+} from "@/lib/event-background";
 import { parseInput, safeMultiline, safeText } from "@/lib/validation";
 
 /**
@@ -18,6 +23,16 @@ const eventInput = z.object({
   text: safeMultiline(600).optional(),
   dateLabel: safeText(80).optional(),
   image: safeText(2000).optional(),
+  // Framing for that artwork (client's slide 6): the point it focuses on, as the
+  // percentages `object-position` reads, and a zoom where 100 is plain cover.
+  imageFocusX: z.coerce.number().int().min(0).max(100).default(50),
+  imageFocusY: z.coerce.number().int().min(0).max(100).default(50),
+  imageZoom: z.coerce
+    .number()
+    .int()
+    .min(EVENT_ZOOM_MIN)
+    .max(EVENT_ZOOM_MAX)
+    .default(100),
   // Hex background for cards without artwork, e.g. "#6f2dbd".
   color: safeText(20).optional(),
   href: safeText(2000).optional(),
@@ -39,11 +54,21 @@ function toDate(value: string | undefined): Date | null {
 }
 
 function fields(data: EventInput) {
+  // Repaired the same way the storefront repairs a stored row, so neither can
+  // act on a framing the card cannot draw.
+  const framing = eventBackground({
+    focusX: data.imageFocusX,
+    focusY: data.imageFocusY,
+    zoom: data.imageZoom,
+  });
   return {
     title: data.title.trim(),
     text: data.text?.trim() || null,
     dateLabel: data.dateLabel?.trim() || null,
     image: data.image?.trim() || null,
+    imageFocusX: framing.focusX,
+    imageFocusY: framing.focusY,
+    imageZoom: framing.zoom,
     color: data.color?.trim() || null,
     href: data.href?.trim() || null,
     isActive: data.isActive,

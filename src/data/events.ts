@@ -11,6 +11,10 @@ export interface EventCard {
   text: string | null;
   dateLabel: string | null;
   image: string | null;
+  /** How the artwork fills the card (client's slide 6); see `event-background.ts`. */
+  imageFocusX: number;
+  imageFocusY: number;
+  imageZoom: number;
   /** Hex background for cards without artwork. */
   color: string | null;
   href: string | null;
@@ -32,6 +36,9 @@ export async function getEvents(): Promise<EventCard[]> {
       text: true,
       dateLabel: true,
       image: true,
+      imageFocusX: true,
+      imageFocusY: true,
+      imageZoom: true,
       color: true,
       href: true,
     },

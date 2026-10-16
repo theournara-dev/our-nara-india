@@ -4,7 +4,9 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
+import { eventBackground, type EventBackground } from "@/lib/event-background";
 import { ImageField } from "@/components/admin/image-field";
+import { EventBackgroundEditor } from "@/components/admin/event-background-editor";
 import {
   LinkField,
   type LinkFieldOptions,
@@ -32,6 +34,9 @@ type EventModel = {
   image: string | null;
   color: string | null;
   href: string | null;
+  imageFocusX: number;
+  imageFocusY: number;
+  imageZoom: number;
   isActive: boolean;
   startsAt: Date | null;
   expiresAt: Date | null;
@@ -43,6 +48,10 @@ const DEFAULT_COLOR = "#6f2dbd";
 /**
  * Create/edit form for an /event card, with a live preview of the exact block
  * the storefront renders; images upload when the form is saved.
+ *
+ * The preview is the card itself at the size /event's grid gives it, with the
+ * background framing tools attached (client's slide 6), so an editor frames the
+ * artwork while looking at what visitors get.
  */
 export function EventForm({
   event,
@@ -76,12 +85,24 @@ function EventFormInner({
   const [text, setText] = useState(event?.text ?? "");
   const [dateLabel, setDateLabel] = useState(event?.dateLabel ?? "");
   const [image, setImage] = useState(event?.image ?? "");
+  // A picked-but-unsaved file, so the card previews it before the upload lands.
+  const [pickedImage, setPickedImage] = useState<string | null>(null);
+  const [framing, setFraming] = useState<EventBackground>(() =>
+    eventBackground({
+      focusX: event?.imageFocusX,
+      focusY: event?.imageFocusY,
+      zoom: event?.imageZoom,
+    }),
+  );
   const [color, setColor] = useState(event?.color ?? DEFAULT_COLOR);
   const [href, setHref] = useState(event?.href ?? "");
   const [isActive, setIsActive] = useState(event?.isActive ?? true);
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(event?.startsAt));
   const [expiresAt, setExpiresAt] = useState(toDatetimeLocal(event?.expiresAt));
   const gate = useUploadGate();
+
+  /** What the card shows: the uploaded URL, or the file still waiting to upload. */
+  const previewImage = pickedImage ?? (image.trim() || null);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -96,6 +117,9 @@ function EventFormInner({
       text: text.trim() || undefined,
       dateLabel: dateLabel.trim() || undefined,
       image: image.trim() || undefined,
+      imageFocusX: framing.focusX,
+      imageFocusY: framing.focusY,
+      imageZoom: framing.zoom,
       color: color.trim() || undefined,
       href: href.trim() || undefined,
       isActive,
@@ -204,8 +228,9 @@ function EventFormInner({
               <ImageField
                 value={image}
                 onChange={setImage}
-                label="Card image (optional)"
-                hint="Any size; it fills the card's fixed-height block. Without one the card uses the colour above."
+                onPreviewChange={setPickedImage}
+                label="Background image"
+                hint="Covers the whole card (cropped to fill it). Any size works; frame it in the preview on the right."
               />
             </div>
           </section>
@@ -251,21 +276,32 @@ function EventFormInner({
           </section>
         </div>
 
-        {/* Live preview of the block exactly as /event renders it. */}
+        {/* The card exactly as /event renders it, with the framing tools on it. */}
         <div className="min-w-0 lg:sticky lg:top-6">
           <p className={labelCls}>Preview</p>
-          <EventCardView
-            event={{
-              title,
-              text,
-              dateLabel,
-              image: image || null,
-              color,
-              href: href || null,
-            }}
-          />
+          <EventBackgroundEditor
+            value={framing}
+            onChange={(next) => setFraming((f) => ({ ...f, ...next }))}
+            disabled={!previewImage}
+          >
+            <EventCardView
+              event={{
+                title,
+                text,
+                dateLabel,
+                image: previewImage,
+                color,
+                href: href || null,
+                imageFocusX: framing.focusX,
+                imageFocusY: framing.focusY,
+                imageZoom: framing.zoom,
+              }}
+            />
+          </EventBackgroundEditor>
           <p className="mt-2 text-xs text-zinc-400">
-            Shown at the same size as the /event grid.
+            The /event card at the width its grid gives it (600px), scaled to
+            fit this panel — the page&apos;s own corner, type and crop. Phones
+            show one card per row.
           </p>
         </div>
       </div>

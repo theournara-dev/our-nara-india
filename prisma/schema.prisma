@@ -846,6 +846,12 @@ model Event {
   // Free-text date shown with the card, e.g. "Ongoing" or "Dec 1 – 31".
   dateLabel String?   @map("date_label")
   image     String?
+  // How that artwork fills the card (client slide 6): the point it focuses on,
+  // as the percentages `object-position` reads, and a zoom where 100 is the
+  // plain cover the card rendered before the tools existed.
+  imageFocusX Int    @default(50) @map("image_focus_x")
+  imageFocusY Int    @default(50) @map("image_focus_y")
+  imageZoom   Int    @default(100) @map("image_zoom")
   // Background colour for cards without artwork (hex).
   color     String?
   href      String?

@@ -190,6 +190,29 @@ Migration `20261016235500_brands_page_blocks`: renames `brands_banner_ids` →
 used the old `brand-top` placement (now removed from the placement list) to the
 standalone pool.
 
+**The same slide: the event card's background image.** `/admin/events` → new/
+edit now lets an admin upload artwork that covers the whole card and _frame_ it:
+the card in the right-hand column is the storefront's own component rendered at
+the 600px box `/event`'s grid gives it and scaled to fit the panel, so its
+corner, type and crop are the page's (that is what the “too round” note was
+about — a preview drawn at the panel's own width reads rounder and larger than
+the page). Dragging it moves the artwork, and three sliders (horizontal,
+vertical, zoom) do the same from the keyboard, with **Reset framing** back to
+plain cover. The image always covers the card (`object-cover`), the focus is the
+`object-position` the storefront uses, and the zoom magnifies around that same
+focus point, so zooming never walks away from what was picked.
+
+- `src/lib/event-background.ts` holds the rules — defaults (50% / 50% / 100%,
+  giving exactly the cover the cards already rendered), clamps, the style the
+  card carries, the reference box and the preview scale — and both the card and
+  the editor's preview read it, so they cannot drift.
+- Migration `20261017020000_event_background_framing`: `events.image_focus_x`,
+  `image_focus_y` (percentages) and `image_zoom` (100–250), all defaulted, so
+  existing rows render unchanged.
+- The old bug where a picked-but-unsaved file never reached the card preview is
+  gone (`ImageField`'s `onPreviewChange` is wired up), and the hover zoom now
+  sits on a frame _around_ the image so the admin's framing cannot overwrite it.
+
 ## New / changed infrastructure
 
 - **Slide 3 migrations** (both additive, run `npx prisma migrate deploy` when
@@ -227,7 +250,8 @@ standalone pool.
   tiles, brand images and event artwork. (The **brands directory's** own banners
   are picked under Pages → Brands page — the long banner and the promo block —
   and stay empty until something is chosen.)
-- Event artwork: square uploads fit the new 1:1 cards best.
+- Event artwork: any ratio works — the card is a 1:1 box and the admin's
+  background tools frame the crop (or it just covers, as before).
 
 ## Flagged / needs the missing deck
 
@@ -286,3 +310,13 @@ standalone pool.
   cells (2 × 692.6 × 82.9 at 1440px, level with the page container) and the
   1395 × 100 promo under them, from the per-store config — the same geometry as
   before the JSON move. `/brands` and the category listings both answer 200.
+- Event card framing: with a temporary image on both events, `/event` rendered
+  `object-position: 20% 80%` with `transform: scale(1.6)` and
+  `transform-origin: 20% 80%` on every card, and the cards measured 600 × 600 at
+  1440px — the preview's reference box. The editor's panel was then rendered at
+  its real 360px width: the stage measured 360 × 360 with a 9.6px corner (= the
+  card's own 16px at the 0.6 scale, so the clip cannot round it off), and a real
+  mouse drag moved the focus 20% → 0% / 80% → 63% exactly as the maths says
+  (`delta / scale / 600 × 100`). The sliders moved the zoom and the vertical
+  focus the same way. The temporary image and framing were then restored and the
+  throwaway script deleted.
