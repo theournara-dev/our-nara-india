@@ -157,29 +157,35 @@ export async function reorderSections(
 // ── Page settings (listings that are not built from sections) ───────────────
 
 /**
- * The blocks of one category page (client's slides 4): the "top pair" rendered
- * side by side, the long banner under the filter tiles (up to three, one banner
- * per column — the same strip the home page uses) and the single ad block under
- * that, plus the two heights. Page settings live under Pages; the category tree
- * in /admin/categories no longer edits them. A banner sits on at most one page
+ * The blocks of one category page (client's slide 4): the long banner under
+ * the filter tiles (up to three, one banner per column — the same strip the
+ * home page uses) and the single promo block under it, plus the two heights.
+ * A page either follows the all-pages configuration or uses its own picks, and
+ * either way it can hide a block on its own. A banner sits on at most one page
  * (`categoryId` is a single column), so a pick that is already attached
  * elsewhere moves here.
  */
 const categoryBannersInput = z.object({
-  top: z.array(safeText(100)).default([]),
+  /** "default" follows the all-pages blocks, "custom" uses this page's own. */
+  mode: z.enum(["default", "custom"]).default("default"),
+  /** Block keys hidden on this page whatever the mode ("long", "promo"). */
+  hidden: z
+    .array(z.enum(["long", "promo"]))
+    .default([])
+    .transform((keys) => [...new Set(keys)]),
   long: z.array(safeText(100)).default([]),
-  ad: z.array(safeText(100)).default([]),
+  promo: z.array(safeText(100)).default([]),
   /** Strip height in pixels; 0 keeps each banner's own proportions. */
   longHeight: z.coerce.number().int().min(0).max(600).default(0),
-  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
-  adHeight: z.coerce.number().int().min(0).max(600).default(0),
+  /** Promo height in pixels; 0 keeps the artwork's own proportions. */
+  promoHeight: z.coerce.number().int().min(0).max(600).default(0),
 });
 
 export type CategoryPageBanners = z.input<typeof categoryBannersInput>;
 
 export type PageSettingsResult = { ok: true } | { ok: false; message: string };
 
-/** Save one category page's banner picks (pair + long banner + ad). */
+/** Save one category page: its mode, hides, picks and heights. */
 export async function setCategoryPageBanners(
   categoryId: string,
   input: CategoryPageBanners,
@@ -207,47 +213,40 @@ export async function setCategoryPageBanners(
     };
   }
 
-  // Drop blanks and duplicates; the pair keeps its first two slots, the strip
-  // its first three columns and the ad its single pick. A banner picked in
-  // several lists stays in the earlier one — the more specific pick wins.
+  // Drop blanks and duplicates; the strip keeps its first three columns, the
+  // promo its single pick. A banner picked in both lists stays in the strip.
   const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
-  const top = cleanIds(data.top).slice(0, 2);
-  const long = cleanIds(data.long)
-    .filter((id) => !top.includes(id))
-    .slice(0, 3);
-  const ad = cleanIds(data.ad)
-    .filter((id) => !top.includes(id) && !long.includes(id))
+  const long = cleanIds(data.long).slice(0, 3);
+  const promo = cleanIds(data.promo)
+    .filter((id) => !long.includes(id))
     .slice(0, 1);
 
   // Anything still attached to this page but no longer picked comes off it.
-  // Detached, not deleted, so the banner stays available to other pages.
+  // Detached, not deleted, so the banner stays available to other pages. A page
+  // following the all-pages setting keeps its own picks, so switching back to
+  // "custom" still finds them.
   const attached = await db.banner.findMany({
     where: {
       categoryId,
-      placement: { in: ["category-top", "category-long", "category-ad"] },
+      placement: { in: ["category-long", "category-promo"] },
     },
     select: { id: true },
   });
-  const picked = new Set([...top, ...long, ...ad]);
-  const detach = attached.filter((b) => !picked.has(b.id));
+  const picked = new Set([...long, ...promo]);
+  const detach =
+    data.mode === "custom" ? attached.filter((b) => !picked.has(b.id)) : [];
 
   const writes = [
-    ...top.map((id, i) =>
-      db.banner.update({
-        where: { id },
-        data: { placement: "category-top", categoryId, sortOrder: i },
-      }),
-    ),
     ...long.map((id, i) =>
       db.banner.update({
         where: { id },
         data: { placement: "category-long", categoryId, sortOrder: i },
       }),
     ),
-    ...ad.map((id) =>
+    ...promo.map((id) =>
       db.banner.update({
         where: { id },
-        data: { placement: "category-ad", categoryId, sortOrder: 0 },
+        data: { placement: "category-promo", categoryId, sortOrder: 0 },
       }),
     ),
     ...detach.map((b) =>
@@ -256,12 +255,14 @@ export async function setCategoryPageBanners(
         data: { placement: "", categoryId: null },
       }),
     ),
-    // The heights live on the page itself, not on the banner (client's slide 4).
+    // The mode, the hides and the heights live on the page (client's slide 4).
     db.category.update({
       where: { id: categoryId },
       data: {
+        pageBannersMode: data.mode,
+        hiddenBlocks: data.hidden,
         longBannerHeight: data.longHeight,
-        adBannerHeight: data.adHeight,
+        promoHeight: data.promoHeight,
       },
     }),
   ];
@@ -280,6 +281,101 @@ export async function setCategoryPageBanners(
   revalidatePath("/admin/pages");
   revalidatePath("/admin/banners");
   // Every category listing page renders these picks.
+  revalidatePath("/category", "layout");
+  return { ok: true };
+}
+
+/**
+ * The blocks every category page shows unless it is customised (client's slide
+ * 4): the same two heights as a page, plus the banners picked with no category
+ * attached. Written to every store's config row — the listings are the same
+ * store to store — while claiming the banners the same way a page does.
+ */
+const categoryDefaultsInput = z.object({
+  long: z.array(safeText(100)).default([]),
+  promo: z.array(safeText(100)).default([]),
+  longHeight: z.coerce.number().int().min(0).max(600).default(0),
+  promoHeight: z.coerce.number().int().min(0).max(600).default(0),
+});
+
+export type CategoryPageDefaults = z.input<typeof categoryDefaultsInput>;
+
+/** Save the blocks every category page shows (the all-pages configuration). */
+export async function setCategoryPageDefaults(
+  input: CategoryPageDefaults,
+): Promise<PageSettingsResult> {
+  await requireAdmin();
+
+  let data: z.infer<typeof categoryDefaultsInput>;
+  try {
+    data = parseInput(categoryDefaultsInput, input, "category page defaults");
+  } catch {
+    return { ok: false, message: "Check the selected banners." };
+  }
+
+  const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
+  const long = cleanIds(data.long).slice(0, 3);
+  const promo = cleanIds(data.promo)
+    .filter((id) => !long.includes(id))
+    .slice(0, 1);
+
+  // The all-pages picks are the same placements with no category attached.
+  const attached = await db.banner.findMany({
+    where: {
+      categoryId: null,
+      placement: { in: ["category-long", "category-promo"] },
+    },
+    select: { id: true },
+  });
+  const picked = new Set([...long, ...promo]);
+
+  const writes = [
+    ...long.map((id, i) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-long", categoryId: null, sortOrder: i },
+      }),
+    ),
+    ...promo.map((id) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-promo", categoryId: null, sortOrder: 0 },
+      }),
+    ),
+    ...attached
+      .filter((b) => !picked.has(b.id))
+      .map((b) =>
+        db.banner.update({
+          where: { id: b.id },
+          data: { placement: "", categoryId: null },
+        }),
+      ),
+    // Both stores show the same category listings, so both rows carry these.
+    ...["local" as const, "global" as const].map((version) =>
+      db.siteConfig.upsert({
+        where: { version },
+        create: {
+          version,
+          categoryLongBannerHeight: data.longHeight,
+          categoryPromoHeight: data.promoHeight,
+        },
+        update: {
+          categoryLongBannerHeight: data.longHeight,
+          categoryPromoHeight: data.promoHeight,
+        },
+      }),
+    ),
+  ];
+
+  try {
+    await db.$transaction(writes);
+  } catch (err) {
+    console.error("[pages] category page defaults failed:", err);
+    return { ok: false, message: "Could not save the all-pages blocks." };
+  }
+
+  revalidatePath("/admin/pages");
+  revalidatePath("/admin/banners");
   revalidatePath("/category", "layout");
   return { ok: true };
 }

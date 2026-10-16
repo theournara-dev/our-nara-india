@@ -40,10 +40,9 @@ interface CategoryProductListProps {
   /** Filters parsed from the URL, so a shared link opens pre-filtered. */
   initialFilters?: CategoryFilters;
   /** Category-page banners, rendered by the server page above the toolbar. */
-  topBanners?: React.ReactNode;
   longBanner?: React.ReactNode;
-  /** The single ad block under the long banner (client's slide 4). */
-  adBanner?: React.ReactNode;
+  /** The promo block under the long banner (client's slide 4). */
+  promoBanner?: React.ReactNode;
 }
 
 type SortKey =
@@ -73,9 +72,8 @@ export function CategoryProductList({
   columns = 5,
   subcategories = [],
   initialFilters,
-  topBanners,
   longBanner,
-  adBanner,
+  promoBanner,
 }: CategoryProductListProps) {
   const [sort, setSort] = useState<SortKey>("new");
   const [filters, setFilters] = useState<CategoryFilters>(
@@ -197,11 +195,10 @@ export function CategoryProductList({
         </div>
       )}
 
-      {/* Category banners (admin-managed): the top pair, then the long banner
-          strip and the ad block, all under the mid-level tiles. */}
-      {topBanners && <div className="mb-3">{topBanners}</div>}
+      {/* Category banners (admin-managed): the long banner strip and the promo
+          block, both under the mid-level tiles. */}
       {longBanner && <div className="mb-3">{longBanner}</div>}
-      {adBanner && <div className="mb-4">{adBanner}</div>}
+      {promoBanner && <div className="mb-4">{promoBanner}</div>}
 
       <div className="flex items-start gap-8">
         {/* Sidebar (desktop) */}

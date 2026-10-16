@@ -91,28 +91,41 @@ heading, and the brand-name fallback tiles on `/brands`. Everything without an
 explicit font class already used Pretendard (the body font), so the audit was
 “every remaining `font-display` heading on a storefront page”.
 
-**Category page: long banner below the filters + one ad block.** Both are
-admin-controlled, and both render under the mid-level filter tiles (the block
-position the slide-8 reference showed), inside the page container so they line
-up with the filter sidebar and the product grid:
+**Category pages: a long banner and a promo block, set once for all of them.**
+Both are admin-controlled, both render under the mid-level filter tiles (the
+block position the slide-8 reference showed) inside the page container, so they
+line up with the filter sidebar and the product grid, and both have a live
+preview in the editor:
 
-- **Long banner** — the same strip the home page uses (one banner per column:
-  one runs full width, two or three share the row, phones stack). Up to three
-  picks, plus a **Height (px)** setting (`0` keeps each banner's own proportions,
-  which is also the current behaviour). It renders through the shared
-  `LongBannerCells` + `BannerArtwork`, so the banner content the client asked to
-  “copy here” — heading, subheading, text placement, colour and scrim — shows on
-  the category page exactly as on the home page. The old auto-rotating carousel
-  (arrows, bullets) is gone with it: it was the one place that ignored those
-  controls. `LongBannerCells` takes a `framed` prop so the home page keeps its own
-  92% container while the listings render it bare.
-- **Ad block** — a single image below the long banner, picked the same way, with
-  its own **Height (px)** setting (“just height for now”); `0` keeps the artwork's
-  proportions. It links to the banner's own destination when it has one.
+- **All category pages** (the screen's first tab) is the default: the long
+  banner (one banner per column — one runs full width, two or three share the
+  row, phones stack — up to three picks, plus a **Height (px)** setting where `0`
+  keeps each banner's own proportions) and the promo block (one image + its own
+  height). Every listing renders these blocks.
+- **A single listing** either follows that default or is **customised**: the
+  customise button opens the same editor for that page, and while it follows the
+  default it can **hide** either block on its own — so an all-pages promo can be
+  switched off on one listing without touching the rest.
+- The strip is the shared `LongBannerCells` + `BannerArtwork`, so the banner
+  content the client asked to “copy here” — heading, subheading, text placement,
+  colour and scrim — shows on the category pages exactly as on the home page.
+  The old auto-rotating carousel (arrows, bullets) went with it: it was the one
+  place that ignored those controls. `LongBannerCells` takes a `framed` prop so
+  the home page keeps its own 92% container while the listings render it bare.
+- **One banner block, not two.** The old “top pair” (two side-by-side images in
+  a section of its own) is gone: two columns of the long banner are exactly that,
+  and the editor no longer offers the same thing twice. Banners that sat in a
+  top pair were returned to the standalone pool by the migration.
+- **“Ad block” is now the promo block** — the placement key is
+  `category-promo`, the labels in the admin and the component (`PromoBanner`)
+  follow, and the heights column is `promo_height`.
 
-New: `Category.longBannerHeight` + `Category.adBannerHeight` (migration
-`20261016210000_category_page_blocks`, both default `0`) and a `category-ad`
-banner placement (scoped to a category, like the top pair and the long banner).
+New storage (migration `20261016223000_category_page_defaults`):
+`Category.pageBannersMode` (`default` | `custom`), `Category.hiddenBlocks`,
+`Category.promoHeight` (renamed from `ad_banner_height`), and
+`SiteConfig.categoryLongBannerHeight` + `categoryPromoHeight` for the all-pages
+heights. The all-pages _picks_ are the same `category-long` / `category-promo`
+placements with no category attached, so a banner still sits in one place only.
 
 **Follow-up — page configuration lives under Pages.** The Pages screen is now
 the single home for per-page settings, and one list of every configurable page
@@ -128,19 +141,18 @@ and carry a **Hidden** chip when the page is off. Each row opens its screen:
   details, top banner, store picker, delivery, tax, invoice). This is where the
   slide-4 follow-up landed for it, and it now lives with the banner pickers it
   belongs to.
-- `/admin/pages/category` — **one** screen for every category listing: pick the
-  page at the top (a `?category=<slug>` opens it on that one), then set that
-  page's top pair, long banner (up to three picks + height) and ad block
-  (+ height). They all do the same thing and differ only in which banners they
-  hold, so one screen serves them all, and edits for the other pages are kept
-  while you switch.
+- `/admin/pages/category` — **one** screen for every category listing: the
+  first tab is the all-pages default, each listing tab follows it, hides a block
+  or is customised (a `?category=<slug>` opens it on that one). They all do the
+  same thing and differ only in which banners they hold, so one screen serves
+  them all, and edits for the other pages are kept while you switch.
 
 `/admin/categories` is back to the tree alone — name, slug, tile, order,
 visibility and subcategories — with a gear shortcut on each top-level row that
-opens its page settings. Nothing about the storefront changed: the same
-`placement`/`categoryId` picks and the same `SiteConfig` columns are written,
-just from the new screens (`setCategoryPageBanners`, `saveBrandsPage` in
-`src/app/admin/pages/actions.ts`).
+opens its page settings. The storefront reads the same `placement`/`categoryId`
+picks as before, now resolved against the page's mode and hides
+(`getCategoryPageBlocks`); the saves are `setCategoryPageBanners` (one page) and
+`setCategoryPageDefaults` (all pages) in `src/app/admin/pages/actions.ts`.
 
 ## New / changed infrastructure
 

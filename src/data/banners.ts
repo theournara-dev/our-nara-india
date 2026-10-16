@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ShowcaseBanner } from "@/lib/page-builder/types";
+import type { SiteVersion } from "@/lib/site-version";
 
 /**
  * Home page long banner content. Reproduces the original theme's
@@ -131,22 +132,61 @@ export async function getStandaloneBanners(): Promise<LongBanner[]> {
 }
 
 /**
- * The banners of one category page (client's slide 4): up to two "category-top"
- * images rendered side by side under the mid-level tiles, the "category-long"
- * picks below them as the same column strip the home page uses (one to three,
- * one banner per column), and the single "category-ad" image under that. Picked
- * on the category itself (/admin/categories → Page banners); the component owns
- * the placement.
+ * The blocks one category listing shows (client's slide 4). A page set to
+ * "custom" uses its own picks and heights; every other page follows the
+ * all-category-pages configuration — the same placements with no category
+ * attached — minus the blocks that page hides on its own.
  */
-export async function getCategoryBanners(
-  categorySlug: string,
-): Promise<{ top: LongBanner[]; long: LongBanner[]; ad: LongBanner | null }> {
-  const now = new Date();
+export interface CategoryPageBlocks {
+  long: LongBanner[];
+  promo: LongBanner | null;
+  /** Strip height in pixels; 0 keeps each banner's own proportions. */
+  longHeight: number;
+  /** Promo block height in pixels; 0 keeps the artwork's own proportions. */
+  promoHeight: number;
+}
+
+/**
+ * The all-pages block heights (stored on the site config, shared by both
+ * stores — the category listings are the same store to store).
+ */
+export async function getCategoryPageDefaultHeights(
+  version: SiteVersion,
+): Promise<{ long: number; promo: number }> {
+  const row = await db.siteConfig.findUnique({
+    where: { version },
+    select: { categoryLongBannerHeight: true, categoryPromoHeight: true },
+  });
+  return {
+    long: row?.categoryLongBannerHeight ?? 0,
+    promo: row?.categoryPromoHeight ?? 0,
+  };
+}
+
+/**
+ * The banners of one category page: the long banner (one banner per column, up
+ * to three — the same strip the home page uses) and the single promo block.
+ * Picked under Pages → Category pages; the component owns the placement, and a
+ * banner with no category attached is an all-pages pick.
+ */
+export async function getCategoryPageBlocks(
+  category: {
+    id: string;
+    pageBannersMode: string;
+    hiddenBlocks: string[];
+    longBannerHeight: number;
+    promoHeight: number;
+  },
+  version: SiteVersion,
+): Promise<CategoryPageBlocks> {
+  const custom = category.pageBannersMode === "custom";
+  const hidden = new Set(category.hiddenBlocks ?? []);
   const rows = await db.banner.findMany({
     where: {
-      ...liveWindow(now),
-      placement: { in: ["category-top", "category-long", "category-ad"] },
-      category: { slug: categorySlug },
+      ...liveWindow(new Date()),
+      // The page's own picks when it is customised, the all-pages ones otherwise.
+      categoryId: custom ? category.id : null,
+      placement: { in: ["category-long", "category-promo"] },
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     select: { ...BANNER_FIELDS, placement: true },
@@ -154,12 +194,16 @@ export async function getCategoryBanners(
 
   const of = (placement: string) =>
     rows.filter((b) => b.placement === placement).map(toLongBanner);
+  const heights = custom
+    ? { long: category.longBannerHeight, promo: category.promoHeight }
+    : await getCategoryPageDefaultHeights(version);
 
   return {
-    top: of("category-top").slice(0, 2),
     // The strip takes three columns at most; extra picks would be invisible.
-    long: of("category-long").slice(0, 3),
-    ad: of("category-ad")[0] ?? null,
+    long: hidden.has("long") ? [] : of("category-long").slice(0, 3),
+    promo: hidden.has("promo") ? null : (of("category-promo")[0] ?? null),
+    longHeight: heights.long,
+    promoHeight: heights.promo,
   };
 }
 

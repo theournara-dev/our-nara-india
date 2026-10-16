@@ -24,7 +24,7 @@ const bannerInput = z.object({
    * banner form no longer sends them, so an ordinary edit leaves them alone.
    */
   placement: z.enum(BANNER_PLACEMENTS).optional(),
-  /** The category page a "category-top"/"category-long" banner belongs to. */
+  /** The category page a "category-long"/"category-promo" banner belongs to. */
   categoryId: z.string().optional(),
   /** The brand section a "brand-section" banner sits above. */
   brandId: z.string().optional(),

@@ -17,10 +17,14 @@ export interface CategorySummary {
   parentId: string | null;
   image: string | null;
   isActive: boolean;
-  /** The page's long banner height; 0 keeps each banner's own proportions. */
+  /** "default" follows the all-pages blocks, "custom" uses this page's own. */
+  pageBannersMode: string;
+  /** Block keys this page hides while it follows the all-pages setting. */
+  hiddenBlocks: string[];
+  /** Custom long banner height; 0 keeps each banner's own proportions. */
   longBannerHeight: number;
-  /** The page's ad block height; 0 keeps the artwork's own proportions. */
-  adBannerHeight: number;
+  /** Custom promo block height; 0 keeps the artwork's own proportions. */
+  promoHeight: number;
 }
 
 /** A mid-level category as the listing shows it: tile image + product count. */
@@ -49,8 +53,10 @@ const CATEGORY_SELECT = {
   parentId: true,
   image: true,
   isActive: true,
+  pageBannersMode: true,
+  hiddenBlocks: true,
   longBannerHeight: true,
-  adBannerHeight: true,
+  promoHeight: true,
 } as const;
 
 /** The store's own "shown" filter, mirroring `src/data/products.ts`. */

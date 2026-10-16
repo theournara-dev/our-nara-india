@@ -3,13 +3,13 @@ import { BannerArtwork } from "@/components/banners/banner-artwork";
 import type { LongBanner } from "@/data/banners";
 
 /**
- * The single ad block under a category page's long banner (client's slide 4).
- * One banner image, shown at the height the admin set on the category — 0 keeps
- * the artwork's own proportions, any pixel value crops it to that height. The
- * banner's own link is used when it has one, otherwise the artwork renders
- * plain, the same rule the brands page uses for its top banners.
+ * The single promo block under a category page's long banner (client's slide 4,
+ * where it used to be the "ad block"). One banner image, shown at the height the
+ * admin set — 0 keeps the artwork's own proportions, any pixel value crops it to
+ * that height. The banner's own link is used when it has one, otherwise the
+ * artwork renders plain, the same rule the brands page uses for its top banners.
  */
-export function AdBanner({
+export function PromoBanner({
   banner,
   height = 0,
 }: {

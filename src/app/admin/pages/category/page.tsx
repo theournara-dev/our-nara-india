@@ -1,16 +1,38 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { CategoryPagesSettings } from "@/components/admin/category-pages-settings";
 import { db } from "@/lib/db";
+import { getCategoryPageDefaultHeights } from "@/data/banners";
+import { resolveRequestSiteVersion } from "@/lib/site-version";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ category?: string }>;
 
+/** The banner columns the pickers and previews need. */
+const BANNER_OPTION_SELECT = {
+  id: true,
+  title: true,
+  image: true,
+  mobileImage: true,
+  alt: true,
+  href: true,
+  placement: true,
+  categoryId: true,
+  style: true,
+  heading: true,
+  subheading: true,
+  textAlign: true,
+  textVAlign: true,
+  textColor: true,
+  scrim: true,
+} as const;
+
 /**
  * Page settings for the category listings (client's slide 4): every top-level
- * category page is configured on this one screen — they all do the same thing
- * and differ only in which banners they hold. The category's own record (name,
- * slug, tile, order) stays in /admin/categories.
+ * category page is configured on this one screen, and the first tab is the
+ * configuration all of them follow unless they are customised. The category's
+ * own record (name, slug, tile, order) stays in /admin/categories.
  */
 export default async function AdminCategoryPagesSettings({
   searchParams,
@@ -28,39 +50,53 @@ export default async function AdminCategoryPagesSettings({
         id: true,
         slug: true,
         name: true,
+        pageBannersMode: true,
+        hiddenBlocks: true,
         longBannerHeight: true,
-        adBannerHeight: true,
+        promoHeight: true,
       },
     }),
-    // Every banner feeds the page's pickers.
+    // Every banner feeds the pickers and the previews.
     db.banner.findMany({
       orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-      select: {
-        id: true,
-        title: true,
-        image: true,
-        placement: true,
-        categoryId: true,
-      },
+      select: BANNER_OPTION_SELECT,
     }),
   ]);
 
-  /** This page's picks for one of its three banner slots, in display order. */
-  const picks = (categoryId: string, placement: string) =>
+  /** Picks for one banner slot, in display order: a page's own or all-pages. */
+  const picks = (categoryId: string | null, placement: string) =>
     bannerRows
       .filter((b) => b.categoryId === categoryId && b.placement === placement)
       .map((b) => b.id);
+
+  const requestHeaders = await headers();
+  const version = resolveRequestSiteVersion(
+    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
+  );
+  // The all-pages picks carry no category; their heights live on the site config.
+  const defaultHeights = await getCategoryPageDefaultHeights(version);
 
   const pages = categories.map((c) => ({
     id: c.id,
     slug: c.slug,
     name: c.name,
-    top: picks(c.id, "category-top"),
+    mode:
+      c.pageBannersMode === "custom"
+        ? ("custom" as const)
+        : ("default" as const),
+    hidden: c.hiddenBlocks,
     long: picks(c.id, "category-long"),
-    ad: picks(c.id, "category-ad"),
+    promo: picks(c.id, "category-promo"),
     longHeight: c.longBannerHeight,
-    adHeight: c.adBannerHeight,
+    promoHeight: c.promoHeight,
   }));
+
+  const defaults = {
+    long: picks(null, "category-long"),
+    promo: picks(null, "category-promo"),
+    longHeight: defaultHeights.long,
+    promoHeight: defaultHeights.promo,
+  };
 
   return (
     <div className="max-w-3xl">
@@ -77,13 +113,14 @@ export default async function AdminCategoryPagesSettings({
           Category pages
         </h1>
         <p className="text-sm text-zinc-500">
-          The banner blocks above the products on each listing. Pick a page, set
-          its blocks, save.
+          The long banner and promo block above the products on each listing.
+          They render on every category page unless a page is customised.
         </p>
       </div>
 
       <CategoryPagesSettings
         pages={pages}
+        defaults={defaults}
         banners={bannerRows}
         categories={categories}
         initialId={
