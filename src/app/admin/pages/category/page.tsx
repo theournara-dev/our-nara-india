@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { headers } from "next/headers";
 import { CategoryPagesSettings } from "@/components/admin/category-pages-settings";
+import type { BannerBlocksValue } from "@/components/admin/banner-blocks-fields";
 import { db } from "@/lib/db";
-import { getCategoryPageDefaults } from "@/data/banners";
-import { resolveRequestSiteVersion } from "@/lib/site-version";
+import { getCategoryAllPagesBlocks } from "@/data/banners";
+import type { CategoryPageBlocksConfig } from "@/lib/category-page-blocks";
+import type { SiteVersion } from "@/lib/site-version";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +29,22 @@ const BANNER_OPTION_SELECT = {
   scrim: true,
 } as const;
 
+/** A store's all-pages blocks, reduced to what the block pickers edit. */
+function pickerValue(config: CategoryPageBlocksConfig): BannerBlocksValue {
+  return {
+    long: config.long,
+    promoId: config.promoId,
+    longHeight: config.longHeight,
+    promoHeight: config.promoHeight,
+  };
+}
+
 /**
  * Page settings for the category listings (client's slide 4): every top-level
- * category page is configured on this one screen, and the first tab is the
- * configuration all of them follow unless they are customised. The category's
- * own record (name, slug, tile, order) stays in /admin/categories.
+ * category page is configured on this one screen, per store like the brands
+ * page, and the first tab is the configuration all of them follow unless they
+ * are customised. The category's own record (name, slug, tile, order) stays in
+ * /admin/categories.
  */
 export default async function AdminCategoryPagesSettings({
   searchParams,
@@ -41,63 +53,34 @@ export default async function AdminCategoryPagesSettings({
 }) {
   const { category: initialSlug } = await searchParams;
 
-  const [categories, bannerRows] = await Promise.all([
-    // Top-level categories own a page each; mid-level ones are its filters.
-    db.category.findMany({
-      where: { parentId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        slug: true,
-        name: true,
-        pageBannersMode: true,
-        hiddenBlocks: true,
-        longBannerHeight: true,
-        promoBannerId: true,
-        promoHeight: true,
-      },
-    }),
-    // Every banner feeds the pickers and the previews.
-    db.banner.findMany({
-      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-      select: BANNER_OPTION_SELECT,
-    }),
-  ]);
-
-  /** Picks for one banner slot, in display order: a page's own or all-pages. */
-  const picks = (categoryId: string | null, placement: string) =>
-    bannerRows
-      .filter((b) => b.categoryId === categoryId && b.placement === placement)
-      .map((b) => b.id);
-
-  const requestHeaders = await headers();
-  const version = resolveRequestSiteVersion(
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"),
-  );
-  // The all-pages strip picks carry no category; their heights and promo live on
-  // the site config.
-  const siteDefaults = await getCategoryPageDefaults(version);
+  const [categories, bannerRows, localDefaults, globalDefaults] =
+    await Promise.all([
+      // Top-level categories own a page each; mid-level ones are its filters.
+      db.category.findMany({
+        where: { parentId: null },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, slug: true, name: true, pageBanners: true },
+      }),
+      // Every banner feeds the pickers and the previews.
+      db.banner.findMany({
+        orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+        select: BANNER_OPTION_SELECT,
+      }),
+      // The all-pages blocks are per store, on each store's site config.
+      getCategoryAllPagesBlocks("local"),
+      getCategoryAllPagesBlocks("global"),
+    ]);
 
   const pages = categories.map((c) => ({
     id: c.id,
     slug: c.slug,
     name: c.name,
-    mode:
-      c.pageBannersMode === "custom"
-        ? ("custom" as const)
-        : ("default" as const),
-    hidden: c.hiddenBlocks,
-    long: picks(c.id, "category-long"),
-    promoId: c.promoBannerId,
-    longHeight: c.longBannerHeight,
-    promoHeight: c.promoHeight,
+    pageBanners: c.pageBanners,
   }));
 
-  const defaults = {
-    long: picks(null, "category-long"),
-    promoId: siteDefaults.promoId,
-    longHeight: siteDefaults.longHeight,
-    promoHeight: siteDefaults.promoHeight,
+  const defaults: Record<SiteVersion, BannerBlocksValue> = {
+    local: pickerValue(localDefaults),
+    global: pickerValue(globalDefaults),
   };
 
   return (
@@ -115,8 +98,9 @@ export default async function AdminCategoryPagesSettings({
           Category pages
         </h1>
         <p className="text-sm text-zinc-500">
-          The long banner and promo block above the products on each listing.
-          They render on every category page unless a page is customised.
+          The long banner and promo block above the products on each listing,
+          per store. They render on every category page of that store unless a
+          page is customised.
         </p>
       </div>
 

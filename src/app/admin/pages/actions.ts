@@ -6,6 +6,11 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import {
+  categoryPageBlocksSchema,
+  withCategoryPageBlocks,
+  type CategoryPageBlocksConfig,
+} from "@/lib/category-page-blocks";
+import {
   SECTION_TYPE_META_BY_TYPE,
   type PageSectionRow,
   type SectionType,
@@ -14,6 +19,12 @@ import { parseSiteVersion } from "@/lib/site-version";
 import { parseInput, safeText } from "@/lib/validation";
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
+
+/**
+ * A stored JSON value. The shapes we write are plain data, so the only thing
+ * standing between them and Prisma's JSON columns is its recursive type.
+ */
+const asJson = (value: unknown) => value as Prisma.InputJsonValue;
 
 /** Convert an optional `datetime-local` string to a Date or null. */
 function toDate(value: string | undefined): Date | null {
@@ -157,36 +168,22 @@ export async function reorderSections(
 // ── Page settings (listings that are not built from sections) ───────────────
 
 /**
- * The blocks of one category page (client's slide 4): the long banner under
- * the filter tiles (up to three, one banner per column — the same strip the
- * home page uses) and the single promo block under it, plus the two heights.
- * A page either follows the all-pages configuration or uses its own picks, and
- * either way it can hide a block on its own. A banner sits on at most one page
- * (`categoryId` is a single column), so a pick that is already attached
- * elsewhere moves here.
+ * The blocks of one category page (client's slide 4), per store: the long
+ * banner under the filter tiles (up to three, one banner per column — the same
+ * strip the home page and /brands use) and the single promo block under it. A
+ * page either follows the all-pages blocks of that store or keeps its own, and
+ * either way it can hide a block on its own. Everything is a reference, so a
+ * banner can be used in several places at once.
  */
-const categoryBannersInput = z.object({
-  /** "default" follows the all-pages blocks, "custom" uses this page's own. */
-  mode: z.enum(["default", "custom"]).default("default"),
-  /** Block keys hidden on this page whatever the mode ("long", "promo"). */
-  hidden: z
-    .array(z.enum(["long", "promo"]))
-    .default([])
-    .transform((keys) => [...new Set(keys)]),
-  long: z.array(safeText(100)).default([]),
-  /** The promo banner, referenced (not claimed) so it can be reused. */
-  promo: safeText(100).optional(),
-  /** Strip height in pixels; 0 keeps each banner's own proportions. */
-  longHeight: z.coerce.number().int().min(0).max(600).default(0),
-  /** Promo height in pixels; 0 keeps the artwork's own proportions. */
-  promoHeight: z.coerce.number().int().min(0).max(600).default(0),
+const categoryBannersInput = categoryPageBlocksSchema.extend({
+  version: z.string(),
 });
 
 export type CategoryPageBanners = z.input<typeof categoryBannersInput>;
 
 export type PageSettingsResult = { ok: true } | { ok: false; message: string };
 
-/** Save one category page: its mode, hides, picks and heights. */
+/** Save one store's blocks for one category page. */
 export async function setCategoryPageBanners(
   categoryId: string,
   input: CategoryPageBanners,
@@ -200,9 +197,12 @@ export async function setCategoryPageBanners(
     return { ok: false, message: "Check the selected banners." };
   }
 
+  const version = parseSiteVersion(data.version);
+  if (!version) return { ok: false, message: "Unknown store." };
+
   const category = await db.category.findUnique({
     where: { id: categoryId },
-    select: { parentId: true },
+    select: { parentId: true, pageBanners: true },
   });
   if (!category)
     return { ok: false, message: "This category no longer exists." };
@@ -214,95 +214,49 @@ export async function setCategoryPageBanners(
     };
   }
 
-  // Drop blanks and duplicates; the strip keeps its first three columns. The
-  // promo is a single reference — a banner used by the strip can be it too, so
-  // nothing is filtered out of that list (client's follow-up).
-  const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
-  const long = cleanIds(data.long).slice(0, 3);
-  const promo = data.promo?.trim() || null;
-  if (promo) {
-    const exists = await db.banner.findUnique({
-      where: { id: promo },
-      select: { id: true },
-    });
-    if (!exists)
-      return { ok: false, message: "That promo banner no longer exists." };
-  }
-
-  // Anything still attached to this page's strip but no longer picked comes off
-  // it. Detached, not deleted, so the banner stays available to other pages. A
-  // page following the all-pages setting keeps its own picks, so switching back
-  // to "custom" still finds them.
-  const attached = await db.banner.findMany({
-    where: { categoryId, placement: "category-long" },
-    select: { id: true },
-  });
-  const picked = new Set(long);
-  const detach =
-    data.mode === "custom" ? attached.filter((b) => !picked.has(b.id)) : [];
-
-  const writes = [
-    ...long.map((id, i) =>
-      db.banner.update({
-        where: { id },
-        data: { placement: "category-long", categoryId, sortOrder: i },
-      }),
-    ),
-    ...detach.map((b) =>
-      db.banner.update({
-        where: { id: b.id },
-        data: { placement: "", categoryId: null },
-      }),
-    ),
-    // The mode, the hides, the promo reference and the heights live on the page.
-    db.category.update({
-      where: { id: categoryId },
-      data: {
-        pageBannersMode: data.mode,
-        hiddenBlocks: data.hidden,
-        longBannerHeight: data.longHeight,
-        promoBannerId: promo,
-        promoHeight: data.promoHeight,
-      },
-    }),
-  ];
+  const blocks: CategoryPageBlocksConfig = {
+    mode: data.mode,
+    hidden: data.hidden,
+    long: [...new Set(data.long.filter(Boolean))].slice(0, 3),
+    longHeight: data.longHeight,
+    promoId: data.promoId?.trim() || null,
+    promoHeight: data.promoHeight,
+  };
+  const missing = await missingBanners(blocks);
+  if (missing) return { ok: false, message: missing };
 
   try {
-    // One transaction so a failed pick cannot leave the page half-saved.
-    await db.$transaction(writes);
+    await db.category.update({
+      where: { id: categoryId },
+      data: {
+        pageBanners: asJson(
+          withCategoryPageBlocks(category.pageBanners, version, blocks),
+        ),
+      },
+    });
   } catch (err) {
-    console.error(
-      `[pages] category banner picks failed for ${categoryId}:`,
-      err,
-    );
+    console.error(`[pages] category blocks failed for ${categoryId}:`, err);
     return { ok: false, message: "Could not save the page banners." };
   }
 
   revalidatePath("/admin/pages");
-  revalidatePath("/admin/banners");
   // Every category listing page renders these picks.
   revalidatePath("/category", "layout");
   return { ok: true };
 }
 
 /**
- * The blocks every category page shows unless it is customised (client's slide
- * 4): the same two heights as a page plus the promo reference. The long-banner
- * pictures are picked with no category attached (so they still sit in one place
- * only); the promo is only referenced, so any banner can be it, including one
- * the strip already uses. Written to every store's config row — the listings are
- * the same store to store.
+ * The blocks every category page of one store shows (client's slide 4): the
+ * same shape as a page's own, on that store's config row. References again, so
+ * a banner can be in the all-pages blocks and a page at once.
  */
-const categoryDefaultsInput = z.object({
-  long: z.array(safeText(100)).default([]),
-  promo: safeText(100).optional(),
-  longHeight: z.coerce.number().int().min(0).max(600).default(0),
-  promoHeight: z.coerce.number().int().min(0).max(600).default(0),
+const categoryDefaultsInput = categoryPageBlocksSchema.extend({
+  version: z.string(),
 });
 
 export type CategoryPageDefaults = z.input<typeof categoryDefaultsInput>;
 
-/** Save the blocks every category page shows (the all-pages configuration). */
+/** Save one store's all-category-pages blocks. */
 export async function setCategoryPageDefaults(
   input: CategoryPageDefaults,
 ): Promise<PageSettingsResult> {
@@ -315,70 +269,56 @@ export async function setCategoryPageDefaults(
     return { ok: false, message: "Check the selected banners." };
   }
 
-  const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
-  const long = cleanIds(data.long).slice(0, 3);
-  const promo = data.promo?.trim() || null;
-  if (promo) {
-    const exists = await db.banner.findUnique({
-      where: { id: promo },
-      select: { id: true },
-    });
-    if (!exists)
-      return { ok: false, message: "That promo banner no longer exists." };
-  }
+  const version = parseSiteVersion(data.version);
+  if (!version) return { ok: false, message: "Unknown store." };
 
-  // The all-pages strip picks are the same placement with no category attached.
-  const attached = await db.banner.findMany({
-    where: { categoryId: null, placement: "category-long" },
-    select: { id: true },
-  });
-  const picked = new Set(long);
+  const blocks: CategoryPageBlocksConfig = {
+    mode: "default",
+    hidden: [],
+    long: [...new Set(data.long.filter(Boolean))].slice(0, 3),
+    longHeight: data.longHeight,
+    promoId: data.promoId?.trim() || null,
+    promoHeight: data.promoHeight,
+  };
+  const missing = await missingBanners(blocks);
+  if (missing) return { ok: false, message: missing };
 
-  const writes = [
-    ...long.map((id, i) =>
-      db.banner.update({
-        where: { id },
-        data: { placement: "category-long", categoryId: null, sortOrder: i },
-      }),
-    ),
-    ...attached
-      .filter((b) => !picked.has(b.id))
-      .map((b) =>
-        db.banner.update({
-          where: { id: b.id },
-          data: { placement: "", categoryId: null },
-        }),
-      ),
-    // Both stores show the same category listings, so both rows carry these.
-    ...["local" as const, "global" as const].map((version) =>
-      db.siteConfig.upsert({
-        where: { version },
-        create: {
-          version,
-          categoryLongBannerHeight: data.longHeight,
-          categoryPromoBannerId: promo,
-          categoryPromoHeight: data.promoHeight,
-        },
-        update: {
-          categoryLongBannerHeight: data.longHeight,
-          categoryPromoBannerId: promo,
-          categoryPromoHeight: data.promoHeight,
-        },
-      }),
-    ),
-  ];
+  const fields = {
+    categoryLongBannerIds: blocks.long,
+    categoryLongBannerHeight: blocks.longHeight,
+    categoryPromoBannerId: blocks.promoId,
+    categoryPromoHeight: blocks.promoHeight,
+  };
 
   try {
-    await db.$transaction(writes);
+    await db.siteConfig.upsert({
+      where: { version },
+      create: { version, ...fields },
+      update: fields,
+    });
   } catch (err) {
-    console.error("[pages] category page defaults failed:", err);
+    console.error(`[pages] category page defaults failed (${version}):`, err);
     return { ok: false, message: "Could not save the all-pages blocks." };
   }
 
   revalidatePath("/admin/pages");
-  revalidatePath("/admin/banners");
   revalidatePath("/category", "layout");
   return { ok: true };
+}
+
+/** Refuse to store a banner id nothing can render. */
+async function missingBanners(
+  blocks: CategoryPageBlocksConfig,
+): Promise<string | null> {
+  const ids = [...blocks.long, ...(blocks.promoId ? [blocks.promoId] : [])];
+  if (ids.length === 0) return null;
+  const found = await db.banner.findMany({
+    where: { id: { in: ids } },
+    select: { id: true },
+  });
+  return found.length === ids.length
+    ? null
+    : "Those banners no longer exist — reopen the page.";
 }
 
 /**

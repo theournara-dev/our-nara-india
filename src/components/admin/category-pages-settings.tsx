@@ -11,26 +11,39 @@ import {
   type AdminBannerOption,
   type BannerBlocksValue,
 } from "@/components/admin/banner-blocks-fields";
+import { categoryPageBlocksFor } from "@/lib/category-page-blocks";
 import { notify } from "@/lib/toast";
+import type { SiteVersion } from "@/lib/site-version";
 
-/** One category listing's page settings, as the screen receives them. */
-export interface CategoryPageSettings extends BannerBlocksValue {
-  id: string;
-  slug: string;
-  name: string;
-  /** "default" follows the all-pages blocks, "custom" uses this page's own. */
+/** The stores the storefront serves, in the order the tabs show them. */
+const VERSIONS: { key: SiteVersion; label: string }[] = [
+  { key: "local", label: "India" },
+  { key: "global", label: "International" },
+];
+
+/** One category listing's blocks for one store. */
+interface PageBlocks extends BannerBlocksValue {
   mode: "default" | "custom";
   /** Block keys this page hides ("long", "promo"). */
   hidden: string[];
 }
 
+/** A category as the screen receives it: its stored blocks, per store. */
+export interface CategoryPageRow {
+  id: string;
+  slug: string;
+  name: string;
+  /** The category row's `pageBanners` JSON (both stores inside). */
+  pageBanners: unknown;
+}
+
 /**
- * The category listings' page settings (client's slide 4). The first tab is
- * every page's default — the long banner and the promo block all listings show
- * — and each listing then either follows it or carries its own blocks, with the
- * option to hide a block on its own. The blocks themselves (pickers, heights,
- * previews) are the shared `BannerBlocksFields`, the same component /brands
- * uses.
+ * The category listings' page settings (client's slide 4), per store like the
+ * brands page (slide 6). The first page tab is every page's default — the long
+ * banner and the promo block all listings of that store show — and each listing
+ * then either follows it or carries its own blocks, with the option to hide a
+ * block on its own. The blocks themselves (pickers, heights, previews) are the
+ * shared `BannerBlocksFields`.
  */
 export function CategoryPagesSettings({
   pages,
@@ -39,24 +52,29 @@ export function CategoryPagesSettings({
   categories,
   initialId,
 }: {
-  pages: CategoryPageSettings[];
-  defaults: BannerBlocksValue;
+  pages: CategoryPageRow[];
+  defaults: Record<SiteVersion, BannerBlocksValue>;
   banners: AdminBannerOption[];
   /** Every category, so the pickers can name the page a banner sits on. */
   categories: { id: string; name: string }[];
   /** The page to open on (from the ?category= the admin came in with). */
   initialId?: string;
 }) {
+  const [version, setVersion] = useState<SiteVersion>("local");
   const [activeId, setActiveId] = useState(
     initialId && pages.some((p) => p.id === initialId)
       ? initialId
       : (pages[0]?.id ?? ""),
   );
-  const [allPages, setAllPages] = useState<BannerBlocksValue>(defaults);
-  const [state, setState] = useState<Record<string, CategoryPageSettings>>(() =>
-    Object.fromEntries(pages.map((p) => [p.id, { ...p }])),
-  );
-  const [saving, setSaving] = useState<"all" | "page" | null>(null);
+  const [allPages, setAllPages] =
+    useState<Record<SiteVersion, BannerBlocksValue>>(defaults);
+  const [state, setState] = useState<
+    Record<SiteVersion, Record<string, PageBlocks>>
+  >(() => ({
+    local: buildPages(pages, "local"),
+    global: buildPages(pages, "global"),
+  }));
+  const [saving, setSaving] = useState(false);
   const [, startTransition] = useTransition();
 
   const categoryNames = useMemo(
@@ -74,40 +92,51 @@ export function CategoryPagesSettings({
     );
   }
 
-  // What the open tab edits: the all-pages defaults, or the page's own blocks.
-  const draft = isAll ? allPages : state[active!.id];
-  const custom = !isAll && state[active!.id].mode === "custom";
+  // What the open tab edits: the store's all-pages defaults, or the page's own.
+  const storeDefaults = allPages[version];
+  const draft = isAll ? storeDefaults : state[version][active!.id];
+  const custom = !isAll && state[version][active!.id].mode === "custom";
   /** The pickers are live in these two states; otherwise the block previews. */
   const editing = isAll || custom;
 
-  // A page that follows the all-pages setting previews the defaults minus the
-  // blocks it hides; a custom page previews what it stores.
-  const hidden = new Set(isAll ? [] : state[active!.id].hidden);
+  // A page that follows the all-pages setting previews the store's defaults
+  // minus the blocks it hides; a custom page previews what it stores.
+  const hidden = new Set(isAll ? [] : state[version][active!.id].hidden);
   const shown: BannerBlocksValue = editing
     ? (draft as BannerBlocksValue)
     : {
-        long: hidden.has("long") ? [] : allPages.long,
-        promoId: hidden.has("promo") ? null : allPages.promoId,
-        longHeight: allPages.longHeight,
-        promoHeight: allPages.promoHeight,
+        long: hidden.has("long") ? [] : storeDefaults.long,
+        promoId: hidden.has("promo") ? null : storeDefaults.promoId,
+        longHeight: storeDefaults.longHeight,
+        promoHeight: storeDefaults.promoHeight,
       };
 
-  function patch(next: Partial<CategoryPageSettings>) {
-    if (isAll) setAllPages((d) => ({ ...d, ...next }));
+  function patch(next: Partial<PageBlocks>) {
+    if (isAll)
+      setAllPages((d) => ({ ...d, [version]: { ...d[version], ...next } }));
     else
-      setState((s) => ({ ...s, [active!.id]: { ...s[active!.id], ...next } }));
+      setState((s) => ({
+        ...s,
+        [version]: {
+          ...s[version],
+          [active!.id]: { ...s[version][active!.id], ...next },
+        },
+      }));
   }
 
   function saveAllPages() {
-    setSaving("all");
+    setSaving(true);
     startTransition(async () => {
       const result = await setCategoryPageDefaults({
-        long: allPages.long,
-        promo: allPages.promoId ?? undefined,
-        longHeight: allPages.longHeight,
-        promoHeight: allPages.promoHeight,
+        version,
+        mode: "default",
+        hidden: [],
+        long: storeDefaults.long,
+        longHeight: storeDefaults.longHeight,
+        promoId: storeDefaults.promoId,
+        promoHeight: storeDefaults.promoHeight,
       });
-      setSaving(null);
+      setSaving(false);
       if (result.ok)
         notify.success("Saved", "Every category page follows these blocks.");
       else notify.error("Could not save", result.message);
@@ -116,18 +145,19 @@ export function CategoryPagesSettings({
 
   function savePage() {
     if (!active) return;
-    setSaving("page");
+    setSaving(true);
     startTransition(async () => {
-      const page = state[active.id];
+      const page = state[version][active.id];
       const result = await setCategoryPageBanners(active.id, {
+        version,
         mode: page.mode,
         hidden: page.hidden as ("long" | "promo")[],
         long: page.long,
-        promo: page.promoId ?? undefined,
         longHeight: page.longHeight,
+        promoId: page.promoId,
         promoHeight: page.promoHeight,
       });
-      setSaving(null);
+      setSaving(false);
       if (result.ok) notify.success("Saved", `${active.name} page updated.`);
       else notify.error("Could not save", result.message);
     });
@@ -136,14 +166,32 @@ export function CategoryPagesSettings({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2">
+        {VERSIONS.map((v) => (
+          <button
+            key={v.key}
+            type="button"
+            onClick={() => setVersion(v.key)}
+            aria-pressed={version === v.key}
+            className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
+              version === v.key
+                ? "bg-point-500 text-white"
+                : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => setActiveId("all")}
           aria-pressed={isAll}
           className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
             isAll
-              ? "bg-point-500 text-white"
-              : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+              ? "bg-ink text-white"
+              : "border border-zinc-200 bg-white text-zinc-600 hover:border-ink hover:text-ink"
           }`}
         >
           All category pages
@@ -156,8 +204,8 @@ export function CategoryPagesSettings({
             aria-pressed={page.id === active?.id}
             className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
               page.id === active?.id && !isAll
-                ? "bg-point-500 text-white"
-                : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+                ? "bg-ink text-white"
+                : "border border-zinc-200 bg-white text-zinc-600 hover:border-ink hover:text-ink"
             }`}
           >
             {page.name}
@@ -185,8 +233,9 @@ export function CategoryPagesSettings({
 
       {isAll ? (
         <p className="text-xs text-zinc-400">
-          These blocks render on every category page that has not been
-          customised.
+          These blocks render on every{" "}
+          {VERSIONS.find((v) => v.key === version)?.label.toLowerCase()}{" "}
+          category page that has not been customised.
         </p>
       ) : (
         <div className="rounded-2xl border border-zinc-100 bg-white p-5">
@@ -206,18 +255,18 @@ export function CategoryPagesSettings({
                 key={mode}
                 type="button"
                 onClick={() => patch({ mode })}
-                aria-pressed={state[active!.id].mode === mode}
+                aria-pressed={state[version][active!.id].mode === mode}
                 className={`h-8 rounded px-3 text-xs font-medium transition-colors ${
-                  state[active!.id].mode === mode
-                    ? "bg-ink text-white"
-                    : "border border-zinc-200 bg-white text-zinc-600 hover:border-ink hover:text-ink"
+                  state[version][active!.id].mode === mode
+                    ? "bg-point-500 text-white"
+                    : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
                 }`}
               >
                 {label}
               </button>
             ))}
           </div>
-          {state[active!.id].mode === "default" && (
+          {state[version][active!.id].mode === "default" && (
             <div className="mt-3 space-y-1.5">
               <p className="text-xs text-zinc-400">
                 Hide a block on this page while the rest keeps following the
@@ -235,9 +284,9 @@ export function CategoryPagesSettings({
                 >
                   <input
                     type="checkbox"
-                    checked={state[active!.id].hidden.includes(key)}
+                    checked={state[version][active!.id].hidden.includes(key)}
                     onChange={(e) => {
-                      const next = new Set(state[active!.id].hidden);
+                      const next = new Set(state[version][active!.id].hidden);
                       if (e.target.checked) next.add(key);
                       else next.delete(key);
                       patch({ hidden: [...next] });
@@ -257,7 +306,7 @@ export function CategoryPagesSettings({
         value={shown}
         onChange={patch}
         editable={editing}
-        ownerId={isAll ? null : active!.id}
+        ownerId={null}
         ownerNames={categoryNames}
       />
 
@@ -266,20 +315,20 @@ export function CategoryPagesSettings({
           <button
             type="button"
             onClick={saveAllPages}
-            disabled={saving !== null}
+            disabled={saving}
             className="h-9 rounded bg-point-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
           >
-            {saving === "all" ? "Saving…" : "Save for all category pages"}
+            {saving ? "Saving…" : "Save for all category pages"}
           </button>
         ) : (
           <>
             <button
               type="button"
               onClick={savePage}
-              disabled={saving !== null}
+              disabled={saving}
               className="h-9 rounded bg-point-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
             >
-              {saving === "page" ? "Saving…" : `Save ${active!.name}`}
+              {saving ? "Saving…" : `Save ${active!.name}`}
             </button>
             <Link
               href={`/category/${active!.slug}`}
@@ -291,5 +340,28 @@ export function CategoryPagesSettings({
         )}
       </div>
     </div>
+  );
+}
+
+/** The stored `pageBanners` JSON → one store's editable blocks, per category. */
+function buildPages(
+  pages: CategoryPageRow[],
+  version: SiteVersion,
+): Record<string, PageBlocks> {
+  return Object.fromEntries(
+    pages.map((p) => {
+      const config = categoryPageBlocksFor(p.pageBanners, version);
+      return [
+        p.id,
+        {
+          mode: config.mode,
+          hidden: config.hidden,
+          long: config.long,
+          longHeight: config.longHeight,
+          promoId: config.promoId,
+          promoHeight: config.promoHeight,
+        },
+      ];
+    }),
   );
 }

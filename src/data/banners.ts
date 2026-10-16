@@ -1,4 +1,8 @@
 import { db } from "@/lib/db";
+import {
+  categoryPageBlocksFor,
+  type CategoryPageBlocksConfig,
+} from "@/lib/category-page-blocks";
 import type { ShowcaseBanner } from "@/lib/page-builder/types";
 import type { BrandsPageContent } from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
@@ -148,24 +152,25 @@ export interface CategoryPageBlocks {
 }
 
 /**
- * The all-pages blocks (stored on the site config, shared by both stores — the
- * category listings are the same store to store): the two heights and the promo
- * banner reference.
+ * Every category page's blocks for one store (the all-pages configuration),
+ * stored on that store's site config.
  */
-export async function getCategoryPageDefaults(version: SiteVersion): Promise<{
-  longHeight: number;
-  promoId: string | null;
-  promoHeight: number;
-}> {
+export async function getCategoryAllPagesBlocks(
+  version: SiteVersion,
+): Promise<CategoryPageBlocksConfig> {
   const row = await db.siteConfig.findUnique({
     where: { version },
     select: {
+      categoryLongBannerIds: true,
       categoryLongBannerHeight: true,
       categoryPromoBannerId: true,
       categoryPromoHeight: true,
     },
   });
   return {
+    mode: "default",
+    hidden: [],
+    long: row?.categoryLongBannerIds ?? [],
     longHeight: row?.categoryLongBannerHeight ?? 0,
     promoId: row?.categoryPromoBannerId ?? null,
     promoHeight: row?.categoryPromoHeight ?? 0,
@@ -174,55 +179,59 @@ export async function getCategoryPageDefaults(version: SiteVersion): Promise<{
 
 /**
  * The banners of one category page: the long banner (one banner per column, up
- * to three — the same strip the home page uses) and the single promo block. The
- * long banner's pictures are picked under Pages → Category pages and belong to
- * one place only (a banner with no category attached is an all-pages pick); the
- * promo references a banner, so the same one can also sit elsewhere.
+ * to three — the same strip the home page uses) and the single promo block,
+ * resolved for one store. A page either follows that store's all-pages blocks
+ * or keeps its own — and either way it can hide a block on its own. Everything
+ * is a reference, so a banner can be used here and elsewhere at once.
  */
 export async function getCategoryPageBlocks(
-  category: {
-    id: string;
-    pageBannersMode: string;
-    hiddenBlocks: string[];
-    longBannerHeight: number;
-    promoBannerId: string | null;
-    promoHeight: number;
-  },
+  category: { pageBanners: unknown },
   version: SiteVersion,
 ): Promise<CategoryPageBlocks> {
-  const custom = category.pageBannersMode === "custom";
-  const hidden = new Set(category.hiddenBlocks ?? []);
-  const defaults = custom ? null : await getCategoryPageDefaults(version);
-  const promoId = custom ? category.promoBannerId : defaults!.promoId;
+  const allPages = await getCategoryAllPagesBlocks(version);
+  const stored = categoryPageBlocksFor(category.pageBanners, version);
+  const blocks: CategoryPageBlocksConfig =
+    stored.mode === "custom"
+      ? stored
+      : {
+          mode: "default",
+          hidden: stored.hidden,
+          long: allPages.long,
+          longHeight: allPages.longHeight,
+          promoId: allPages.promoId,
+          promoHeight: allPages.promoHeight,
+        };
+
+  const hidden = new Set(blocks.hidden);
+  // The strip takes three columns at most; extra picks would be invisible.
+  const longIds = hidden.has("long") ? [] : blocks.long.slice(0, 3);
+  const promoId = hidden.has("promo") ? null : blocks.promoId;
 
   const [longRows, promoRow] = await Promise.all([
-    hidden.has("long")
+    longIds.length === 0
       ? []
       : db.banner.findMany({
-          where: {
-            ...liveWindow(new Date()),
-            // The page's own picks when it is customised, all-pages ones else.
-            categoryId: custom ? category.id : null,
-            placement: "category-long",
-          },
-          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-          // The strip takes three columns at most; extra picks are invisible.
-          take: 3,
+          where: { ...liveWindow(new Date()), id: { in: longIds } },
           select: BANNER_FIELDS,
         }),
-    hidden.has("promo") || !promoId
-      ? null
-      : db.banner.findFirst({
+    promoId
+      ? db.banner.findFirst({
           where: { ...liveWindow(new Date()), id: promoId },
           select: BANNER_FIELDS,
-        }),
+        })
+      : null,
   ]);
 
+  // The picks are stored in the admin's order, which the query cannot know.
+  const byId = new Map(longRows.map((b) => [b.id, b] as const));
   return {
-    long: longRows.map(toLongBanner),
+    long: longIds
+      .map((id) => byId.get(id))
+      .filter((b) => b !== undefined)
+      .map(toLongBanner),
     promo: promoRow ? toLongBanner(promoRow) : null,
-    longHeight: custom ? category.longBannerHeight : defaults!.longHeight,
-    promoHeight: custom ? category.promoHeight : defaults!.promoHeight,
+    longHeight: blocks.longHeight,
+    promoHeight: blocks.promoHeight,
   };
 }
 

@@ -122,15 +122,27 @@ preview in the editor:
   (client's follow-up). The labels in the admin and the component
   (`PromoBanner`) follow the rename, and the heights column is `promo_height`.
 
-New storage (migrations `20261016223000_category_page_defaults` and
-`20261016233000_promo_banner_reference`): `Category.pageBannersMode` (`default`
-| `custom`), `Category.hiddenBlocks`, `Category.promoBannerId`,
-`Category.promoHeight` (renamed from `ad_banner_height`), and
-`SiteConfig.categoryLongBannerHeight` + `categoryPromoBannerId` +
-`categoryPromoHeight` for the all-pages blocks. The long banner's _pictures_ are
-still the `category-long` placements with no category attached, so a picture
-still sits in one strip only; the promo's reference is why the same image can be
-in both.
+**Storage, per store.** Each store keeps its own blocks (client's follow-up: the
+category screen gets the same India / International tabs as the brands page).
+The **all-pages** configuration is four columns on that store's `SiteConfig` —
+`categoryLongBannerIds`, `categoryLongBannerHeight`, `categoryPromoBannerId`,
+`categoryPromoHeight` — and a page that does _not_ follow it keeps its own copy
+in `Category.pageBanners`, one JSON slice per store
+(`{ local: {...}, global: {...} }`: `mode`, `hidden`, `long`, `longHeight`,
+`promoId`, `promoHeight`). Both are **references** (banner ids), so the same
+banner can sit in a block here and in another block elsewhere — nothing is
+claimed, moved or detached. The storefront resolves a page with
+`getCategoryPageBlocks(category, version)` against
+`getCategoryAllPagesBlocks(version)`; the saves are `setCategoryPageBanners`
+(one page) and `setCategoryPageDefaults` (all pages) in
+`src/app/admin/pages/actions.ts`, and both refuse an id no banner has.
+
+Migration `20261017001500_category_blocks_per_store` carries the old flat columns
+(`Category.pageBannersMode` / `hiddenBlocks` / `promoBannerId` / `promoHeight`,
+`SiteConfig.categoryLongBannerHeight` / `categoryPromoBannerId` /
+`categoryPromoHeight`) into both stores' slices, then clears the retired
+`category-long` placements and any `categoryId` they carried — the strip's picks
+are ids now, so a banner no longer sits “on” a category.
 
 **Follow-up — page configuration lives under Pages.** The Pages screen is now
 the single home for per-page settings, and one list of every configurable page
@@ -146,18 +158,16 @@ and carry a **Hidden** chip when the page is off. Each row opens its screen:
   details, top banner, store picker, delivery, tax, invoice). This is where the
   slide-4 follow-up landed for it, and it now lives with the banner pickers it
   belongs to.
-- `/admin/pages/category` — **one** screen for every category listing: the
-  first tab is the all-pages default, each listing tab follows it, hides a block
-  or is customised (a `?category=<slug>` opens it on that one). They all do the
-  same thing and differ only in which banners they hold, so one screen serves
-  them all, and edits for the other pages are kept while you switch.
+- `/admin/pages/category` — **one** screen for every category listing, with the
+  same India / International tabs as the brands page: the first tab is that
+  store's all-pages default, each listing tab follows it, hides a block or is
+  customised (a `?category=<slug>` opens it on that one). They all do the same
+  thing and differ only in which banners they hold, so one screen serves them
+  all, and edits for the other pages are kept while you switch.
 
 `/admin/categories` is back to the tree alone — name, slug, tile, order,
 visibility and subcategories — with a gear shortcut on each top-level row that
-opens its page settings. The storefront reads the same `placement`/`categoryId`
-picks as before, now resolved against the page's mode and hides
-(`getCategoryPageBlocks`); the saves are `setCategoryPageBanners` (one page) and
-`setCategoryPageDefaults` (all pages) in `src/app/admin/pages/actions.ts`.
+opens its page settings.
 
 ### Slide 6 — the brands page's long banner and promo block
 
@@ -171,7 +181,8 @@ picked. Both are configured on the existing **Pages → Brands page** screen, wh
 and both are _references_: a banner can sit here and on a category page at once.
 The picker fields, heights and previews are literally the same component the
 category screen uses (`src/components/admin/banner-blocks-fields.tsx`), so the
-two screens cannot drift apart.
+two screens cannot drift apart — and both now have the same India /
+International tabs, each store with its own blocks and its own previews.
 
 Migration `20261016235500_brands_page_blocks`: renames `brands_banner_ids` →
 `brands_long_banner_ids`, adds `brands_long_banner_height`,
@@ -202,12 +213,13 @@ standalone pool.
 ## Content the client still needs to upload (no code left to write)
 
 - **Banner artwork.** Every block that shows a banner — the home long banner,
-  the category pages' long banner and promo, the brands page's top pair, the
-  brand sections — picks from the banners in **Banners** (`/admin/banners` →
-  **New banner**: image, link, optional text over it, schedule). To add another
-  promo option, create the banner there and pick it in **Pages → Category
-  pages** (or **Pages → Brands page**); both screens link straight to the new
-  banner form, and a banner can only sit in one place, so picking it moves it.
+  the category pages' long banner and promo, the brands page's long banner and
+  promo, the brand sections — picks from the banners in **Banners**
+  (`/admin/banners` → **New banner**: image, link, optional text over it,
+  schedule). To add another promo option, create the banner there and pick it in
+  **Pages → Category pages** (or **Pages → Brands page**); both screens link
+  straight to the new banner form, and every pick is a reference, so the same
+  banner can be used in several blocks at once (in any store).
 - Two (or one) **brand banners** per brand section in `/admin/banners` — the
   section renders them the moment they exist; until then the sections simply
   show their product rows.
@@ -270,3 +282,7 @@ standalone pool.
   (`translateX(0% / -100% / -200% / -300%)`) with the product row fading in.
   The two-cell banner strip, the square event cards, the brand page banner path
   and the brand directory's tab-first layout were checked too.
+- After the per-store refactor: `/category/skin-care` still renders its two strip
+  cells (2 × 692.6 × 82.9 at 1440px, level with the page container) and the
+  1395 × 100 promo under them, from the per-store config — the same geometry as
+  before the JSON move. `/brands` and the category listings both answer 200.
