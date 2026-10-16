@@ -159,6 +159,26 @@ picks as before, now resolved against the page's mode and hides
 (`getCategoryPageBlocks`); the saves are `setCategoryPageBanners` (one page) and
 `setCategoryPageDefaults` (all pages) in `src/app/admin/pages/actions.ts`.
 
+### Slide 6 — the brands page's long banner and promo block
+
+`/brands` gets the same two blocks as the category pages, in the same order:
+**title → long banner → promo block → group tabs → preview grid → A–Z → list**.
+The long banner is the shared strip (one banner per column, up to three, plus a
+**Height (px)** setting) and the promo is one image with its own height — **empty
+by default**, so nothing renders between the title and the tabs until a banner is
+picked. Both are configured on the existing **Pages → Brands page** screen, whose
+“Top banners” pair was folded into the strip (two columns are exactly a pair),
+and both are _references_: a banner can sit here and on a category page at once.
+The picker fields, heights and previews are literally the same component the
+category screen uses (`src/components/admin/banner-blocks-fields.tsx`), so the
+two screens cannot drift apart.
+
+Migration `20261016235500_brands_page_blocks`: renames `brands_banner_ids` →
+`brands_long_banner_ids`, adds `brands_long_banner_height`,
+`brands_promo_banner_id` and `brands_promo_height`, and returns any banner that
+used the old `brand-top` placement (now removed from the placement list) to the
+standalone pool.
+
 ## New / changed infrastructure
 
 - **Slide 3 migrations** (both additive, run `npx prisma migrate deploy` when
@@ -192,7 +212,9 @@ picks as before, now resolved against the page's mode and hides
   section renders them the moment they exist; until then the sections simply
   show their product rows.
 - A **banner image per brand page** in `/admin/brands` — same for category
-  tiles, brand images and event artwork.
+  tiles, brand images and event artwork. (The **brands directory's** own banners
+  are picked under Pages → Brands page — the long banner and the promo block —
+  and stay empty until something is chosen.)
 - Event artwork: square uploads fit the new 1:1 cards best.
 
 ## Flagged / needs the missing deck

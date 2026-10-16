@@ -90,7 +90,7 @@ export type SwitcherNudge = {
   text: string;
 };
 
-/** The /brands page's preview grid (client round two). */
+/** The /brands page's own blocks (client rounds two and six). */
 export type BrandsPageContent = {
   /** Height of a preview tile in pixels (default 100). */
   previewHeight: number;
@@ -99,17 +99,27 @@ export type BrandsPageContent = {
   /** Rows of previews shown; the rest stay in the list below. */
   previewRows: number;
   /**
-   * The banners above the directory, in order (up to two). Picked here because
-   * the page, not the banner, decides where a banner goes (client's slide 3).
+   * The long banner above the group tabs, in order (up to three, one banner per
+   * column — the same strip the category pages use). Picked here because the
+   * page, not the banner, decides where a banner goes (client's slide 4).
    */
-  bannerIds: string[];
+  longBannerIds: string[];
+  /** Strip height in pixels; 0 keeps each banner's own proportions. */
+  longBannerHeight: number;
+  /** The promo block under the long banner; null until one is picked. */
+  promoBannerId: string | null;
+  /** Promo height in pixels; 0 keeps the artwork's own proportions. */
+  promoHeight: number;
 };
 
 export const DEFAULT_BRANDS_PAGE: BrandsPageContent = {
   previewHeight: 100,
   previewColumns: 4,
   previewRows: 2,
-  bannerIds: [],
+  longBannerIds: [],
+  longBannerHeight: 0,
+  promoBannerId: null,
+  promoHeight: 0,
 };
 
 const DEFAULT_TAX_RATES = { mhBps: DEFAULT_GST_BPS, otherBps: DEFAULT_GST_BPS };
@@ -401,8 +411,11 @@ export function siteContentFromRow(
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
-    /** Banner ids the /brands page shows above its directory. */
-    brandsBannerIds: string[];
+    /** The directory's own blocks: long banner ids, heights, promo pick. */
+    brandsLongBannerIds: string[];
+    brandsLongBannerHeight: number;
+    brandsPromoBannerId: string | null;
+    brandsPromoHeight: number;
     taxRateMhBps: number | null;
     taxRateOtherBps: number | null;
   } | null,
@@ -453,7 +466,22 @@ export function siteContentFromRow(
         10,
         base.brandsPage.previewRows,
       ),
-      bannerIds: (row.brandsBannerIds ?? base.brandsPage.bannerIds).slice(0, 2),
+      longBannerIds: (row.brandsLongBannerIds ?? base.brandsPage.longBannerIds)
+        .filter(Boolean)
+        .slice(0, 3),
+      longBannerHeight: clampNumber(
+        row.brandsLongBannerHeight,
+        0,
+        600,
+        base.brandsPage.longBannerHeight,
+      ),
+      promoBannerId: row.brandsPromoBannerId ?? null,
+      promoHeight: clampNumber(
+        row.brandsPromoHeight,
+        0,
+        600,
+        base.brandsPage.promoHeight,
+      ),
     },
     // India GST defaults (basis points); anything unusable falls back to 18%.
     taxRates: {

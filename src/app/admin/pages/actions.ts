@@ -391,11 +391,15 @@ const brandsPageInput = z.object({
   previewHeight: z.coerce.number().int().min(40).max(600),
   previewColumns: z.coerce.number().int().min(2).max(6),
   previewRows: z.coerce.number().int().min(1).max(10),
-  /** Up to two banners above the directory, in order. */
-  bannerIds: z.array(safeText(100)).max(2).default([]),
+  // The directory's own blocks (client's slide 6): the long banner's picks and
+  // height, and the promo — a reference, empty until one is picked.
+  longBannerIds: z.array(safeText(100)).max(3).default([]),
+  longBannerHeight: z.coerce.number().int().min(0).max(600).default(0),
+  promoBannerId: safeText(100).optional(),
+  promoHeight: z.coerce.number().int().min(0).max(600).default(0),
 });
 
-/** Save /brands' preview grid + banner picks for one store version. */
+/** Save /brands' blocks + banner picks for one store version. */
 export async function saveBrandsPage(
   input: z.input<typeof brandsPageInput>,
 ): Promise<PageSettingsResult> {
@@ -411,11 +415,30 @@ export async function saveBrandsPage(
   const version = parseSiteVersion(data.version);
   if (!version) return { ok: false, message: "Unknown store." };
 
+  const longBannerIds = [...new Set(data.longBannerIds.filter(Boolean))].slice(
+    0,
+    3,
+  );
+  const promoBannerId = data.promoBannerId?.trim() || null;
+  if (longBannerIds.length > 0 || promoBannerId) {
+    // Never store an id nothing can render — say so instead of saving a blank.
+    const found = await db.banner.findMany({
+      where: { id: { in: [...longBannerIds, ...(promoBannerId ?? [])] } },
+      select: { id: true },
+    });
+    if (found.length !== longBannerIds.length + (promoBannerId ? 1 : 0)) {
+      return { ok: false, message: "Those banners no longer exist." };
+    }
+  }
+
   const fields = {
     brandsPreviewHeight: data.previewHeight,
     brandsPreviewColumns: data.previewColumns,
     brandsPreviewRows: data.previewRows,
-    brandsBannerIds: data.bannerIds.filter(Boolean),
+    brandsLongBannerIds: longBannerIds,
+    brandsLongBannerHeight: data.longBannerHeight,
+    brandsPromoBannerId: promoBannerId,
+    brandsPromoHeight: data.promoHeight,
   };
 
   try {

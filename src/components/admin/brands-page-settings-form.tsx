@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
+import {
+  BannerBlocksFields,
+  type AdminBannerOption,
+} from "@/components/admin/banner-blocks-fields";
 import { saveBrandsPage } from "@/app/admin/pages/actions";
 import { notify } from "@/lib/toast";
 import type { BrandsPageContent } from "@/lib/site-content";
@@ -17,19 +20,19 @@ const VERSIONS: { key: SiteVersion; label: string }[] = [
 ];
 
 /**
- * The /brands page's own settings (client's slide 4: page configuration lives
- * under Pages). Moved here from Site settings, which keeps the store-wide
- * content — this is about one page: the preview grid under the group tabs and
- * the banners above the directory. Per store, like the rest of the site's
- * content.
+ * The /brands page's own settings (client's slides 4 and 6). Moved here from
+ * Site settings, which keeps the store-wide content — this is about one page:
+ * the long banner and promo block above the directory (the same blocks the
+ * category pages use, promo empty until picked) and the preview grid under the
+ * group tabs. Per store, like the rest of the site's content.
  */
 export function BrandsPageSettingsForm({
   initial,
   banners,
 }: {
   initial: Record<SiteVersion, BrandsPageContent>;
-  /** Standalone banners the page can put above its directory. */
-  banners: { id: string; title: string }[];
+  /** Every banner the page's blocks can pick from. */
+  banners: AdminBannerOption[];
 }) {
   const [tab, setTab] = useState<SiteVersion>("local");
   const [content, setContent] = useState(initial);
@@ -47,7 +50,10 @@ export function BrandsPageSettingsForm({
         previewHeight: current.previewHeight,
         previewColumns: current.previewColumns,
         previewRows: current.previewRows,
-        bannerIds: current.bannerIds ?? [],
+        longBannerIds: current.longBannerIds,
+        longBannerHeight: current.longBannerHeight,
+        promoBannerId: current.promoBannerId ?? undefined,
+        promoHeight: current.promoHeight,
       });
       if (result.ok) notify.success("Saved", "Brands page updated.");
       else notify.error("Could not save", result.message);
@@ -125,53 +131,32 @@ export function BrandsPageSettingsForm({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-        <h2 className="mb-1 text-sm font-semibold text-zinc-900">
-          Top banners
-        </h2>
-        <p className="mb-4 text-xs text-zinc-400">
-          Picked banners render side by side above the directory at their own
-          proportions. The banner&apos;s own image and text are edited in the{" "}
-          <Link href="/admin/banners" className="text-point-500">
-            Banners admin
-          </Link>
-          , where new ones are made —{" "}
-          <Link
-            href="/admin/banners/new"
-            target="_blank"
-            rel="noreferrer"
-            className="text-point-500"
-          >
-            add a new banner →
-          </Link>
-        </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[0, 1].map((slot) => (
-            <label key={slot} className="block">
-              <span className={labelCls}>Top banner {slot + 1}</span>
-              <select
-                value={current.bannerIds?.[slot] ?? ""}
-                onChange={(e) => {
-                  const next = [
-                    current.bannerIds?.[0] ?? "",
-                    current.bannerIds?.[1] ?? "",
-                  ];
-                  next[slot] = e.target.value;
-                  patch({ bannerIds: next.filter(Boolean) });
-                }}
-                className={inputCls}
-              >
-                <option value="">None</option>
-                {banners.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
-      </section>
+      <BannerBlocksFields
+        banners={banners}
+        value={{
+          long: current.longBannerIds,
+          promoId: current.promoBannerId,
+          longHeight: current.longBannerHeight,
+          promoHeight: current.promoHeight,
+        }}
+        onChange={(next) =>
+          patch({
+            ...(next.long !== undefined ? { longBannerIds: next.long } : {}),
+            ...(next.promoId !== undefined
+              ? { promoBannerId: next.promoId }
+              : {}),
+            ...(next.longHeight !== undefined
+              ? { longBannerHeight: next.longHeight }
+              : {}),
+            ...(next.promoHeight !== undefined
+              ? { promoHeight: next.promoHeight }
+              : {}),
+          })
+        }
+        editable
+        ownerId={null}
+        ownerNames={new Map()}
+      />
 
       <div>
         <button

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ShowcaseBanner } from "@/lib/page-builder/types";
+import type { BrandsPageContent } from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
 
 /**
@@ -226,33 +227,45 @@ export async function getCategoryPageBlocks(
 }
 
 /**
- * The /brands page's top row: up to two banners, side by side. When the admin
- * has picked specific banners (Site settings → Brands page) those ids win;
- * otherwise the legacy "brand-top" placement still applies.
+ * The /brands page's own blocks (client's slide 6): the long banner between the
+ * title and the group tabs — the same strip the category pages use — and the
+ * promo block under it, which stays empty until a banner is picked. Both are
+ * references, so a banner can sit here and on a category page at once.
  */
-export async function getBrandTopBanners(
-  ids?: string[],
-): Promise<LongBanner[]> {
-  const now = new Date();
-  const explicit = ids && ids.length > 0;
-  const rows = await db.banner.findMany({
-    where: {
-      ...liveWindow(now),
-      ...(explicit ? { id: { in: ids } } : { placement: "brand-top" }),
-    },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    take: 2,
-    select: BANNER_FIELDS,
-  });
-  if (explicit) {
-    // Keep the admin's pick order rather than the database's.
-    const byId = new Map(rows.map((b) => [b.id, b] as const));
-    return (ids ?? [])
+export async function getBrandsPageBlocks(content: BrandsPageContent): Promise<{
+  long: LongBanner[];
+  longHeight: number;
+  promo: LongBanner | null;
+  promoHeight: number;
+}> {
+  const ids = content.longBannerIds.slice(0, 3);
+  const [longRows, promoRow] = await Promise.all([
+    ids.length === 0
+      ? []
+      : db.banner.findMany({
+          where: { ...liveWindow(new Date()), id: { in: ids } },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: BANNER_FIELDS,
+        }),
+    content.promoBannerId
+      ? db.banner.findFirst({
+          where: { ...liveWindow(new Date()), id: content.promoBannerId },
+          select: BANNER_FIELDS,
+        })
+      : null,
+  ]);
+
+  // The picks are stored in the admin's order, which the query cannot know.
+  const byId = new Map(longRows.map((b) => [b.id, b] as const));
+  return {
+    long: ids
       .map((id) => byId.get(id))
-      .filter((b): b is (typeof rows)[number] => Boolean(b))
-      .map(toLongBanner);
-  }
-  return rows.map(toLongBanner);
+      .filter((b) => b !== undefined)
+      .map(toLongBanner),
+    longHeight: content.longBannerHeight,
+    promo: promoRow ? toLongBanner(promoRow) : null,
+    promoHeight: content.promoHeight,
+  };
 }
 
 /**

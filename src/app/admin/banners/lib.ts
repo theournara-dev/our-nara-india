@@ -34,7 +34,6 @@ export const BANNER_PLACEMENTS = [
   "hero",
   "triple",
   "category-long",
-  "brand-top",
   "brand-section",
 ] as const;
 export type BannerPlacement = (typeof BANNER_PLACEMENTS)[number];
@@ -44,7 +43,6 @@ export const PLACEMENT_LABELS: Record<BannerPlacement, string> = {
   hero: "Hero carousel",
   triple: "Triple banner",
   "category-long": "Category page — long banner",
-  "brand-top": "Brands page — top pair",
   "brand-section": "Brand section (home) — row above a brand",
 };
 

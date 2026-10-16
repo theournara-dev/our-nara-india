@@ -1058,13 +1058,17 @@ model SiteConfig {
   topBanner Json?
   // The store-picker popup: heading, note and one block per store.
   switcher  Json?
-  // /brands: the preview grid's tile height (px), columns and rows.
+  // /brands: the directory's own blocks (client's slide 6): the preview grid's
+  // tile height, columns and rows, the long banner above the group tabs (one
+  // banner per column, up to three — the same strip the category pages use) and
+  // the promo block under it, which stays empty until a banner is picked.
   brandsPreviewHeight  Int? @map("brands_preview_height")
   brandsPreviewColumns Int? @map("brands_preview_columns")
   brandsPreviewRows    Int? @map("brands_preview_rows")
-  // /brands: the banners above the directory, in order (client's slide 3 —
-  // the page picks its banners instead of the banner declaring a placement).
-  brandsBannerIds      String[] @map("brands_banner_ids")
+  brandsLongBannerIds     String[] @default([]) @map("brands_long_banner_ids")
+  brandsLongBannerHeight  Int      @default(0) @map("brands_long_banner_height")
+  brandsPromoBannerId     String?  @map("brands_promo_banner_id")
+  brandsPromoHeight       Int      @default(0) @map("brands_promo_height")
   // The "all category pages" blocks (client's slide 4): the heights and the
   // promo every category listing shows unless it is customised. The long-banner
   // pictures are the "category-long" picks with no category attached, so they

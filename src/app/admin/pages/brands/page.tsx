@@ -3,21 +3,41 @@ import { BrandsPageSettingsForm } from "@/components/admin/brands-page-settings-
 import { db } from "@/lib/db";
 import { loadSiteConfig } from "@/lib/site-config";
 
+/** The banner columns the block pickers and previews need. */
+const BANNER_OPTION_SELECT = {
+  id: true,
+  title: true,
+  image: true,
+  mobileImage: true,
+  alt: true,
+  href: true,
+  placement: true,
+  categoryId: true,
+  style: true,
+  heading: true,
+  subheading: true,
+  textAlign: true,
+  textVAlign: true,
+  textColor: true,
+  scrim: true,
+} as const;
+
 export const dynamic = "force-dynamic";
 
 /**
- * Page settings for /brands (client's slide 4: page configuration lives under
- * Pages). Its preview grid and the banners above the directory used to sit in
- * Site settings; that screen now keeps only the store-wide content.
+ * Page settings for /brands (client's slides 4 and 6): its long banner and promo
+ * block — the same two blocks the category pages use — plus the preview grid.
+ * They used to sit in Site settings, which now keeps only the store-wide
+ * content.
  */
 export default async function AdminBrandsPageSettings() {
   const [local, global, banners] = await Promise.all([
     loadSiteConfig("local"),
     loadSiteConfig("global"),
-    // Every standalone banner can go above the directory.
+    // Every banner can go in either block.
     db.banner.findMany({
-      select: { id: true, title: true },
       orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
+      select: BANNER_OPTION_SELECT,
     }),
   ]);
 
@@ -36,8 +56,8 @@ export default async function AdminBrandsPageSettings() {
           Brands page
         </h1>
         <p className="text-sm text-zinc-500">
-          The directory at /brands: the banners above it and the preview grid
-          under the group tabs.
+          The directory at /brands: the long banner and promo block above it,
+          between the title and the group tabs, plus the preview grid below.
         </p>
       </div>
 

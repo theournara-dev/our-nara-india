@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { BrandBrowser } from "@/components/brands/brand-browser";
+import { PromoBanner } from "@/components/banners/promo-banner";
+import { LongBannerCells } from "@/components/content/long-banner";
 import { Container } from "@/components/ui/container";
-import { getBrandTopBanners } from "@/data/banners";
+import { getBrandsPageBlocks } from "@/data/banners";
 import { getBrands } from "@/data/brands";
 import { getSiteConfig } from "@/lib/site-config";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
@@ -15,20 +15,19 @@ export const metadata: Metadata = { title: "Shop by Brand" };
 export const dynamic = "force-dynamic";
 
 /**
- * /brands (client slide 8): title → up to two banners in one row → group tabs
- * → brand preview grid → A–Z index → brand list. The heading and page margins
- * match the category pages; the preview grid's tile height, columns and rows
- * are set under Site settings → Brands page.
+ * /brands (client slides 4 and 6): title → the long banner and the promo block
+ * (the same two blocks the category pages use) → group tabs → brand preview grid
+ * → A–Z index → brand list. The heading and page margins match the category
+ * pages; the blocks and the preview grid's size are set under Pages → Brands
+ * page. The promo stays empty until a banner is picked for it.
  */
 export default async function BrandsPage() {
   const version = await getRequestSiteVersion();
-  // The site config decides the banner picks, so it is read first.
   const site = await getSiteConfig(version);
-  const siteBannerIds = site.brandsPage.bannerIds;
-  const [brands, banners] = await Promise.all([
+  const [brands, blocks] = await Promise.all([
     getBrands(),
-    // The page picks its own banners now, so no placement is involved.
-    getBrandTopBanners(siteBannerIds),
+    // The page picks its own banners, so no placement is involved.
+    getBrandsPageBlocks(site.brandsPage),
   ]);
 
   return (
@@ -37,48 +36,26 @@ export default async function BrandsPage() {
         BRAND
       </h1>
 
-      <BrandBrowser
-        brands={brands}
-        preview={site.brandsPage}
-        topBanners={
-          banners.length > 0 ? (
-            <div
-              className={`grid gap-3 ${
-                banners.length > 1 ? "sm:grid-cols-2" : ""
-              }`}
-            >
-              {banners.map((banner) =>
-                banner.href ? (
-                  <Link
-                    key={banner.id}
-                    href={banner.href}
-                    className="block overflow-hidden rounded-xl"
-                  >
-                    <Image
-                      src={banner.image}
-                      alt={banner.alt}
-                      width={1200}
-                      height={480}
-                      unoptimized
-                      className="h-auto w-full"
-                    />
-                  </Link>
-                ) : (
-                  <Image
-                    key={banner.id}
-                    src={banner.image}
-                    alt={banner.alt}
-                    width={1200}
-                    height={480}
-                    unoptimized
-                    className="h-auto w-full"
-                  />
-                ),
-              )}
-            </div>
-          ) : null
-        }
-      />
+      {blocks.long.length > 0 && (
+        <div className="mb-3">
+          <LongBannerCells
+            framed={false}
+            columns={blocks.long.length}
+            height={blocks.longHeight}
+            cells={blocks.long.map((banner, i) => ({
+              id: `cell-${i + 1}`,
+              banner,
+            }))}
+          />
+        </div>
+      )}
+      {blocks.promo && (
+        <div className="mb-4">
+          <PromoBanner banner={blocks.promo} height={blocks.promoHeight} />
+        </div>
+      )}
+
+      <BrandBrowser brands={brands} preview={site.brandsPage} />
     </Container>
   );
 }
