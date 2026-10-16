@@ -176,6 +176,13 @@ picks as before, now resolved against the page's mode and hides
 
 ## Content the client still needs to upload (no code left to write)
 
+- **Banner artwork.** Every block that shows a banner — the home long banner,
+  the category pages' long banner and promo, the brands page's top pair, the
+  brand sections — picks from the banners in **Banners** (`/admin/banners` →
+  **New banner**: image, link, optional text over it, schedule). To add another
+  promo option, create the banner there and pick it in **Pages → Category
+  pages** (or **Pages → Brands page**); both screens link straight to the new
+  banner form, and a banner can only sit in one place, so picking it moves it.
 - Two (or one) **brand banners** per brand section in `/admin/banners` — the
   section renders them the moment they exist; until then the sections simply
   show their product rows.

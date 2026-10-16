@@ -135,7 +135,15 @@ export function BrandsPageSettingsForm({
           <Link href="/admin/banners" className="text-point-500">
             Banners admin
           </Link>
-          .
+          , where new ones are made —{" "}
+          <Link
+            href="/admin/banners/new"
+            target="_blank"
+            rel="noreferrer"
+            className="text-point-500"
+          >
+            add a new banner →
+          </Link>
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           {[0, 1].map((slot) => (

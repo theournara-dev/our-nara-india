@@ -352,6 +352,24 @@ export function CategoryPagesSettings({
         ))}
       </div>
 
+      {/* The blocks pick from the banners the Banners admin owns, so the way to
+          add another option is right here (client's question). */}
+      <p className="text-xs text-zinc-400">
+        Every banner here comes from the{" "}
+        <Link href="/admin/banners" className="text-point-500">
+          Banners admin
+        </Link>
+        , where its image, link and any text over it are edited.{" "}
+        <Link
+          href="/admin/banners/new"
+          target="_blank"
+          rel="noreferrer"
+          className="text-point-500"
+        >
+          Add a new banner →
+        </Link>
+      </p>
+
       {isAll ? (
         <p className="text-xs text-zinc-400">
           These blocks render on every category page that has not been
@@ -534,8 +552,9 @@ export function CategoryPagesSettings({
           Promo block
         </h2>
         <p className="mb-4 text-xs text-zinc-400">
-          One image under the long banner. It links to the banner&apos;s own
-          destination when it has one.
+          One banner image under the long banner — any banner can be a promo,
+          and new ones are added in the Banners admin. It links to the
+          banner&apos;s own destination when it has one.
         </p>
 
         {(isAll || custom) && (
