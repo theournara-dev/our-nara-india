@@ -365,6 +365,26 @@ export async function getProductsBySlugs(
 }
 
 /**
+ * Products matching the given ids, preserving id order (missing skipped). Used
+ * by the wishlist, which stores ids rather than slugs.
+ */
+export async function getProductsByIds(
+  ids: string[],
+  version: SiteVersion,
+): Promise<ProductCard[]> {
+  if (ids.length === 0) return [];
+  const rows = (await db.product.findMany({
+    where: { ...shownWhere(version), id: { in: ids } },
+    include,
+  })) as ProductRow[];
+  const byId = new Map(rows.map((p) => [p.id, p]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((p): p is ProductRow => Boolean(p))
+    .map(toCard);
+}
+
+/**
  * Lightweight product list for pickers outside the catalog UI (the ambassador
  * application's "product you would promote" select), following the store's
  * show flag.

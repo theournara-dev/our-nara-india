@@ -77,6 +77,9 @@ export const shortsPicks: ShortsPick[] = [
     title: "T1 Prestige73 Collagen Mask 70g",
     videoUrl: "https://www.tiktok.com/@nowater_us/video/7626215536791162143",
     posterUrl: "/product/big/202607/2234414a17ece43b4c0bf7e0c5922cb6.jpg",
+    // The pick's product page — same product as the title, so the poster and
+    // the name navigate like the other picks (client slide 1).
+    productHref: "/products/t1-prestige73-collagen-mask-70g",
     productImage: "/product/big/202607/2234414a17ece43b4c0bf7e0c5922cb6.jpg",
     brand: "NOWATER",
     shortTags: ["CreamMask", "GlowBoost", "DeepHydration"],

@@ -78,6 +78,8 @@ export const showcaseBannerSchema = z.object({
   href: z.string().optional(),
   title: z.string().optional(),
   sub: z.string().optional(),
+  /** Alt text for the artwork; falls back to the title when empty. */
+  alt: z.string().optional(),
   style: z.enum(["image", "custom"]).default("image"),
 });
 export type ShowcaseBanner = z.infer<typeof showcaseBannerSchema>;
@@ -85,23 +87,36 @@ export type ShowcaseBanner = z.infer<typeof showcaseBannerSchema>;
 // ── Tabbed showcase tab ─────────────────────────────────────────────────────
 
 /**
- * One tab of the home "tabbed showcase": a category tab that swaps the panel
- * below it — a banner (linked to the brand or category) plus a curated product
- * row. The client's slide 5: click ①, ② changes to the corresponding content.
+ * One filter of the home "tabbed showcase" (the client's slide 2): a filter
+ * button that swaps the panel below it — a full-width banner plus that brand's
+ * chosen products. The filter is attached to a **brand**, so the whole banner
+ * opens that brand's page, and the admin picks which of the brand's products
+ * the row shows (at most `columns × rows` of them).
+ *
+ * `label` is the button's text; when it is empty the brand's name is used.
+ * `href` is an optional override for the banner destination (it defaults to the
+ * brand page).
  */
 export const showcaseTabSchema = z.object({
   id: z.string(),
-  /** Tab label, e.g. "Brightening". */
-  label: z.string().min(1, "Tab label is required"),
+  /** Filter text, e.g. "Brightening". Empty falls back to the brand name. */
+  label: z.string().default(""),
+  /** The brand this filter shows and links to. */
+  brandSlug: z.string().default(""),
   image: z.string().default(""),
   alt: z.string().default(""),
   /** Banner headline drawn over the artwork. */
   title: z.string().default(""),
   /** Banner supporting line. */
   sub: z.string().default(""),
-  /** Where the banner leads — usually the brand page. */
+  /** Banner destination override; the brand page when empty. */
   href: z.string().default(""),
+  /** The brand's products this filter shows, in display order. */
   productSlugs: z.array(z.string()).default([]),
+  /** Columns in this filter's product row. */
+  columns: z.number().int().min(2).max(6).default(4),
+  /** Rows in this filter's product row (columns × rows = most shown). */
+  rows: z.number().int().min(1).max(5).default(1),
 });
 export type ShowcaseTab = z.infer<typeof showcaseTabSchema>;
 
@@ -202,6 +217,8 @@ export const sectionConfigSchemas = {
     boxes: z.array(tripleBannerBoxSchema).default([]),
   }),
   "tabbed-showcase": z.object({
+    /** Heading above the filters; empty hides it (the client's slide 2). */
+    title: z.string().default(""),
     tabs: z.array(showcaseTabSchema).default([]),
     columns: z.number().int().min(2).max(6).default(4),
     /** Banner height in pixels (the admin adjusts it, not a ratio). */
@@ -293,9 +310,10 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
     type: "tabbed-showcase",
     label: "Tabbed showcase",
     description:
-      "Category tabs over a linked banner and a curated product row.",
+      "Brand filters over a full-width linked banner and that brand's product row.",
     configSchema: sectionConfigSchemas["tabbed-showcase"],
     defaultConfig: () => ({
+      title: "",
       tabs: [],
       columns: 4,
       height: 400,

@@ -945,12 +945,15 @@ export function ShowcaseTabsField({
       {
         id,
         label: "",
+        brandSlug: "",
         image: "",
         alt: "",
         title: "",
         sub: "",
         href: "",
         productSlugs: [],
+        columns: 4,
+        rows: 1,
       },
     ]);
     setExpandAll(false);
@@ -997,11 +1000,24 @@ export function ShowcaseTabsField({
       )}
 
       {tabs.length === 0 && (
-        <p className="text-sm text-zinc-400">No tabs yet.</p>
+        <p className="text-sm text-zinc-400">No filters yet.</p>
       )}
 
       {tabs.map((tab, i) => {
         const open = expandAll || tab.id === openId;
+        const brandName =
+          options.brands.find((b) => b.slug === tab.brandSlug)?.name ?? "";
+        // The product picker offers the attached brand's products, plus any
+        // product already picked from elsewhere so nothing can be lost by
+        // switching or clearing the brand.
+        const brandProducts = tab.brandSlug
+          ? options.products.filter(
+              (p) =>
+                p.brandSlug === tab.brandSlug ||
+                tab.productSlugs.includes(p.slug),
+            )
+          : options.products;
+        const rowCap = (tab.columns ?? 4) * (tab.rows ?? 1);
         return (
           <div key={tab.id} className="rounded-lg border border-zinc-200">
             {/* Header — always visible; click to expand/collapse. */}
@@ -1037,12 +1053,12 @@ export function ShowcaseTabsField({
               )}
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-zinc-800">
-                  {tab.label || `Tab ${i + 1}`}
+                  {tab.label || brandName || `Filter ${i + 1}`}
                 </div>
                 <div className="truncate text-xs text-zinc-400">
                   {tab.productSlugs.length} product
                   {tab.productSlugs.length === 1 ? "" : "s"}
-                  {tab.href ? ` · ${tab.href}` : ""}
+                  {brandName ? ` · ${brandName}` : " · no brand attached"}
                 </div>
               </div>
               <div
@@ -1082,19 +1098,50 @@ export function ShowcaseTabsField({
             {open && (
               <div className="border-t border-zinc-100 p-3">
                 <div className="grid gap-3 [&>*]:min-w-0">
+                  <SelectField
+                    label="Brand"
+                    value={tab.brandSlug || ""}
+                    onChange={(v) =>
+                      updateTab(tab.id, {
+                        brandSlug: v,
+                        // A filter shows one brand, so drop products that are
+                        // no longer in it.
+                        productSlugs: v
+                          ? tab.productSlugs.filter((slug) =>
+                              options.products.some(
+                                (p) => p.slug === slug && p.brandSlug === v,
+                              ),
+                            )
+                          : tab.productSlugs,
+                      })
+                    }
+                    options={[
+                      { value: "", label: "Choose a brand…" },
+                      ...options.brands.map((b) => ({
+                        value: b.slug,
+                        label: b.name,
+                      })),
+                    ]}
+                  />
+                  <p className="text-xs leading-5 text-zinc-400">
+                    The filter opens this brand&apos;s page when the banner is
+                    clicked.
+                  </p>
                   <TextField
-                    label="Tab label"
+                    label="Filter label (optional)"
                     value={tab.label}
                     onChange={(v) => updateTab(tab.id, { label: v })}
                     placeholder="e.g. Brightening"
                   />
+                  <p className="text-xs leading-5 text-zinc-400">
+                    Leave it empty to show the brand&apos;s name instead.
+                  </p>
                   <LinkField
-                    label="Banner link"
+                    label="Banner link (optional)"
                     value={tab.href}
                     onChange={(v) => updateTab(tab.id, { href: v })}
                     options={linkOptions}
-                    required
-                    hint="Where the banner goes when clicked."
+                    hint="Defaults to the brand page above."
                   />
                   <ImageField
                     value={tab.image}
@@ -1116,10 +1163,44 @@ export function ShowcaseTabsField({
                     value={tab.alt}
                     onChange={(v) => updateTab(tab.id, { alt: v })}
                   />
-                  <SlugsField
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <NumberField
+                      label="Columns"
+                      value={tab.columns ?? 4}
+                      min={2}
+                      max={6}
+                      onChange={(columns) => updateTab(tab.id, { columns })}
+                    />
+                    <NumberField
+                      label="Rows"
+                      value={tab.rows ?? 1}
+                      min={1}
+                      max={5}
+                      onChange={(rows) => updateTab(tab.id, { rows })}
+                    />
+                  </div>
+                  <p className="text-xs leading-5 text-zinc-400">
+                    This filter shows at most {rowCap} product
+                    {rowCap === 1 ? "" : "s"} ({tab.columns ?? 4} ×{" "}
+                    {tab.rows ?? 1}).
+                  </p>
+                  <SearchableCheckboxList
+                    items={brandProducts.map((p) => ({
+                      id: p.slug,
+                      name: p.name,
+                      brand: p.brandName,
+                    }))}
                     value={tab.productSlugs}
                     onChange={(v) => updateTab(tab.id, { productSlugs: v })}
-                    options={options}
+                    getLabel={(p) => p.name}
+                    getMeta={(p) => p.brand}
+                    placeholder="Search this brand's products…"
+                    emptyText={
+                      tab.brandSlug
+                        ? "This brand has no products yet."
+                        : "Pick a brand above, or search every product."
+                    }
+                    label="Products of this brand"
                   />
                 </div>
               </div>
@@ -1132,7 +1213,7 @@ export function ShowcaseTabsField({
         onClick={addTab}
         className="inline-flex h-9 items-center justify-center rounded border border-dashed border-zinc-300 px-3 text-sm font-medium text-zinc-600 hover:border-point-500 hover:text-point-500"
       >
-        + Add tab
+        + Add filter
       </button>
     </div>
   );

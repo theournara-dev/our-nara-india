@@ -4,6 +4,10 @@
   --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-playfair), ui-serif, Georgia, serif;
   --font-korean: var(--font-noto-sans-kr), ui-sans-serif, system-ui, sans-serif;
+  /* "Main category" headings (page titles, section heads) use Pretendard — the
+     client's slides 7/9/10/11/13 all ask for the display serif to go there. */
+  --font-category:
+    "Pretendard", "Poppins", "Noto Sans KR", Verdana, Dotum, sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -59,25 +63,23 @@ body {
   }
 }
 
-/* Tabbed showcase: the panel under the category tabs fades up when a tab is
-   clicked (the client's slide 5 — "② changes to the corresponding content"). */
-@keyframes showcase-fade-up {
+/* Tabbed showcase: the banner strip slides to the picked filter's slide; the
+   product row under it only fades in, so the two never fight each other. */
+@keyframes showcase-products-fade {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
-.showcase-panel {
-  animation: showcase-fade-up 0.35s ease-out;
+.showcase-products {
+  animation: showcase-products-fade 0.35s ease-out;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .showcase-panel {
+  .showcase-products {
     animation: none;
   }
 }

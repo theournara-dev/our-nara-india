@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BrandBanner } from "@/components/brands/brand-banner";
 import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
 import { getBrandBySlug } from "@/data/brands";
@@ -59,6 +60,10 @@ export default async function BrandPage({
         </ol>
       </nav>
 
+      {/* Brand page banner — per brand, set in the admin; nothing renders when
+          the brand has no artwork yet (client slide 12). */}
+      <BrandBanner image={brand.coverUrl} name={brand.name} />
+
       {/* Brand header */}
       <div className="mb-6 flex items-center gap-5">
         {brand.logoUrl && (
@@ -73,7 +78,7 @@ export default async function BrandPage({
           </div>
         )}
         <div>
-          <h1 className="font-display text-3xl font-semibold text-ink">
+          <h1 className="font-category text-3xl font-semibold text-ink">
             {brand.name}
           </h1>
           {brand.description && (

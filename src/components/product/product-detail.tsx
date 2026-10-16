@@ -307,23 +307,24 @@ export function ProductDetail({
           >
             {product.brand.name}
           </Link>
-          {/* The K-Drop mark leads the title again (the client's follow-up),
-              half the size it was; the pre-order badge keeps its own line. */}
-          <h1 className="mt-1 font-display text-2xl font-semibold leading-snug text-ink">
-            <KDropMark
-              availableGlobally={availableGlobally}
-              className="mr-1.5 h-[11px] align-middle md:h-[12px]"
-            />
+          {/* Product name: Pretendard and a step smaller than before, as on
+              the client's mock — the K-Drop mark and the PRE-ORDER badge sit
+              on their own line underneath it (client slide 3). */}
+          <h1 className="mt-1 font-category text-xl font-semibold leading-snug text-ink md:text-[22px]">
             {product.name}
           </h1>
 
-          {showPreOrder && (
-            <div className="mt-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <KDropMark
+              availableGlobally={availableGlobally}
+              className="h-[11px] md:h-[12px]"
+            />
+            {showPreOrder && (
               <span className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white">
                 PRE-ORDER
               </span>
-            </div>
-          )}
+            )}
+          </div>
 
           {product.summary && (
             <p className="mt-2 text-sm leading-relaxed text-[#777]">
@@ -331,17 +332,100 @@ export function ProductDetail({
             </p>
           )}
 
-          {/* Price */}
-          <div className="mt-4 flex items-baseline gap-2">
-            <span className="text-2xl font-semibold text-point-500">
-              {formatMoney(displayPrice, product.currency)}
-            </span>
+          {/* Price — the client's slide 1: the amount sits on the right of the
+              row, with the compare-at (original) price beside it. */}
+          <div className="mt-4 flex items-baseline justify-end gap-2">
             {compareAtCents != null && (
               <span className="text-lg text-zinc-400 line-through">
                 {formatMoney(compareAtCents, product.currency)}
               </span>
             )}
+            <span className="text-2xl font-semibold text-point-500">
+              {formatMoney(displayPrice, product.currency)}
+            </span>
           </div>
+
+          {/* Options — round image swatches, as on the reference. The client's
+              slide 1 puts this block straight under the price, before the
+              delivery progress and the rest of the panel. */}
+          {product.variants.length > 0 && (
+            <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
+              <p className="text-[15px] font-bold text-ink">
+                Please Select Variants
+              </p>
+              <div className="mt-3 space-y-3">
+                {optionGroups.map((group) => (
+                  <div key={group.label || "option"}>
+                    {group.label && (
+                      <p className="mb-2 text-xs font-medium text-[#888]">
+                        {group.label}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2.5">
+                      {group.items.map((v) => {
+                        const selected = option === v.id;
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setOption(v.id);
+                              // Move the gallery to the option's first image,
+                              // the way picking an option swaps the original's
+                              // linked main image.
+                              const index = firstImageIndex.get(v.id);
+                              if (index != null) setActiveImage(index);
+                            }}
+                            aria-pressed={selected}
+                            aria-label={v.optionValue}
+                            title={v.optionValue}
+                            className={`relative size-[52px] cursor-pointer overflow-hidden rounded-full border-2 bg-white transition-colors ${
+                              selected
+                                ? "border-point-500"
+                                : "border-[#e5e5e5] hover:border-point-200"
+                            }`}
+                          >
+                            {v.images[0] ? (
+                              <Image
+                                src={v.images[0]}
+                                alt=""
+                                fill
+                                sizes="52px"
+                                className="object-cover"
+                              />
+                            ) : v.color ? (
+                              <span
+                                aria-hidden
+                                className="absolute inset-0"
+                                style={{ backgroundColor: v.color }}
+                              />
+                            ) : (
+                              <span className="grid h-full w-full place-items-center text-[11px] font-semibold text-[#666]">
+                                {v.optionValue}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {selectedVariant && (
+                <p className="mt-3 text-[13px] text-[#666]">
+                  {selectedVariant.optionLabel
+                    ? `${selectedVariant.optionLabel}: `
+                    : ""}
+                  {selectedVariant.optionValue}
+                </p>
+              )}
+              {needsOption && (
+                <p className="mt-2 text-xs text-rose-500">
+                  [Required] Please select options.
+                </p>
+              )}
+            </div>
+          )}
 
           {showPreOrder && (
             <div className="mt-2 flex items-center gap-2">
@@ -472,86 +556,6 @@ export function ProductDetail({
                   </div>
                 ))}
               </dl>
-            </div>
-          )}
-
-          {/* Options — round image swatches, as on the reference */}
-          {product.variants.length > 0 && (
-            <div className="mt-4 rounded-lg border border-[#eee] bg-white px-4 py-4">
-              <p className="text-[15px] font-bold text-ink">
-                Please Select Variants
-              </p>
-              <div className="mt-3 space-y-3">
-                {optionGroups.map((group) => (
-                  <div key={group.label || "option"}>
-                    {group.label && (
-                      <p className="mb-2 text-xs font-medium text-[#888]">
-                        {group.label}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-2.5">
-                      {group.items.map((v) => {
-                        const selected = option === v.id;
-                        return (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => {
-                              setOption(v.id);
-                              // Move the gallery to the option's first image,
-                              // the way picking an option swaps the original's
-                              // linked main image.
-                              const index = firstImageIndex.get(v.id);
-                              if (index != null) setActiveImage(index);
-                            }}
-                            aria-pressed={selected}
-                            aria-label={v.optionValue}
-                            title={v.optionValue}
-                            className={`relative size-[52px] cursor-pointer overflow-hidden rounded-full border-2 bg-white transition-colors ${
-                              selected
-                                ? "border-point-500"
-                                : "border-[#e5e5e5] hover:border-point-200"
-                            }`}
-                          >
-                            {v.images[0] ? (
-                              <Image
-                                src={v.images[0]}
-                                alt=""
-                                fill
-                                sizes="52px"
-                                className="object-cover"
-                              />
-                            ) : v.color ? (
-                              <span
-                                aria-hidden
-                                className="absolute inset-0"
-                                style={{ backgroundColor: v.color }}
-                              />
-                            ) : (
-                              <span className="grid h-full w-full place-items-center text-[11px] font-semibold text-[#666]">
-                                {v.optionValue}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {selectedVariant && (
-                <p className="mt-3 text-[13px] text-[#666]">
-                  {selectedVariant.optionLabel
-                    ? `${selectedVariant.optionLabel}: `
-                    : ""}
-                  {selectedVariant.optionValue}
-                </p>
-              )}
-              {needsOption && (
-                <p className="mt-2 text-xs text-rose-500">
-                  [Required] Please select options.
-                </p>
-              )}
             </div>
           )}
 

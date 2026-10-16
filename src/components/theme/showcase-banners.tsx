@@ -25,7 +25,7 @@ export function ShowcaseBanners({ banners }: { banners?: ShowcaseBanner[] }) {
           <span className="relative block overflow-hidden rounded-2xl">
             <Image
               src={banner.image}
-              alt={banner.title ?? ""}
+              alt={banner.alt ?? banner.title ?? ""}
               width={1200}
               height={480}
               unoptimized

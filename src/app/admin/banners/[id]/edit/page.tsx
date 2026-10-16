@@ -23,11 +23,16 @@ export default async function EditBannerPage({
   const [{ id }, listParams] = await Promise.all([params, searchParams]);
   const backHref = buildBackHref(listParams);
 
-  const [banner, categories] = await Promise.all([
+  const [banner, categories, brands] = await Promise.all([
     db.banner.findUnique({ where: { id } }),
     db.category.findMany({
       where: { parentId: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    db.brand.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
   ]);
@@ -36,7 +41,12 @@ export default async function EditBannerPage({
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Edit banner</h1>
-      <BannerForm banner={banner} categories={categories} backHref={backHref} />
+      <BannerForm
+        banner={banner}
+        categories={categories}
+        brands={brands}
+        backHref={backHref}
+      />
     </div>
   );
 }

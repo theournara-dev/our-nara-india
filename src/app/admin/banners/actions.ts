@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { parseInput, safeText } from "@/lib/validation";
 import {
   BANNER_PLACEMENTS,
+  BRAND_PLACEMENTS,
   CATEGORY_PLACEMENTS,
   type BannerPlacement,
 } from "./lib";
@@ -19,6 +20,8 @@ const bannerInput = z.object({
   placement: z.enum(BANNER_PLACEMENTS).default("long"),
   /** The category page a "category-top"/"category-long" banner belongs to. */
   categoryId: z.string().optional(),
+  /** The brand section a "brand-section" banner sits above. */
+  brandId: z.string().optional(),
   image: safeText(2000, { min: 1, message: "Image is required" }),
   mobileImage: safeText(2000).optional(),
   alt: safeText(200).optional(),
@@ -64,6 +67,19 @@ function scopedCategoryId(
     : null;
 }
 
+/**
+ * The brand whose home section a scoped banner sits above: the picked one for
+ * the brand placements, cleared for every other placement.
+ */
+function scopedBrandId(
+  placement: string,
+  brandId: string | undefined,
+): string | null {
+  return BRAND_PLACEMENTS.includes(placement as BannerPlacement)
+    ? brandId?.trim() || null
+    : null;
+}
+
 // ── Actions ─────────────────────────────────────────────────────────────────
 
 export async function createBanner(input: BannerInput, backHref: string) {
@@ -74,6 +90,7 @@ export async function createBanner(input: BannerInput, backHref: string) {
       title: data.title.trim(),
       placement: data.placement,
       categoryId: scopedCategoryId(data.placement, data.categoryId),
+      brandId: scopedBrandId(data.placement, data.brandId),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,
@@ -97,6 +114,7 @@ export async function updateBanner(id: string, input: BannerInput) {
       title: data.title.trim(),
       placement: data.placement,
       categoryId: scopedCategoryId(data.placement, data.categoryId),
+      brandId: scopedBrandId(data.placement, data.brandId),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,

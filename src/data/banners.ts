@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { ShowcaseBanner } from "@/lib/page-builder/types";
 
 /**
  * Home page long banner content. Reproduces the original theme's
@@ -125,5 +126,36 @@ export async function getBrandTopBanners(): Promise<LongBanner[]> {
     mobileImage: b.mobileImage || b.image,
     alt: b.alt || b.title,
     href: b.href ?? undefined,
+  }));
+}
+
+/**
+ * The promo row above one brand's home section (client slides 5–6: NOWATER /
+ * SKIN APPLE / HYGEE). Managed in /admin/banners by picking the "Brand section"
+ * placement and the brand; two banners share the row side by side, a single one
+ * spans it, and nothing renders when the brand has none yet.
+ */
+export async function getBrandSectionBanners(
+  brandSlug: string,
+): Promise<ShowcaseBanner[]> {
+  const now = new Date();
+  const rows = await db.banner.findMany({
+    where: {
+      isActive: true,
+      placement: "brand-section",
+      brand: { slug: brandSlug },
+      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
+    },
+    orderBy: { sortOrder: "asc" },
+    take: 3,
+  });
+  return rows.map((b) => ({
+    id: b.id,
+    image: b.image,
+    href: b.href ?? undefined,
+    title: b.title,
+    alt: b.alt ?? undefined,
+    style: "image" as const,
   }));
 }

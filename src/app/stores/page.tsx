@@ -35,7 +35,7 @@ export default async function StoresPage() {
 
   return (
     <div className="mx-auto w-[98%] max-w-[1360px] px-[16px] pt-8 pb-16 leading-[normal] md:px-[20px]">
-      <h1 className="mb-6 text-center font-display text-3xl font-semibold text-ink">
+      <h1 className="mb-6 text-center font-category text-3xl font-semibold text-ink">
         STORES
       </h1>
       <StoreDirectory

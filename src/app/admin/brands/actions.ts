@@ -64,6 +64,8 @@ const brandUpdateInput = z.object({
   /** null clears the group (the brand stays in "All" only). */
   group: z.enum(["ONLY_AT_OURNARA", "NEW_LAUNCH"]).nullable().optional(),
   logoUrl: safeText(2000).optional(),
+  /** The brand page's banner image (client slide 12). */
+  coverUrl: safeText(2000).optional(),
 });
 
 /**
@@ -83,6 +85,9 @@ export async function updateBrand(
         ...(data.group !== undefined ? { group: data.group } : {}),
         ...(data.logoUrl !== undefined
           ? { logoUrl: data.logoUrl.trim() || null }
+          : {}),
+        ...(data.coverUrl !== undefined
+          ? { coverUrl: data.coverUrl.trim() || null }
           : {}),
       },
     });

@@ -86,8 +86,9 @@ export default async function CategoryPage({
         </ol>
       </nav>
 
-      {/* Centered title */}
-      <h1 className="mb-6 text-center font-display text-3xl font-semibold text-ink">
+      {/* Centered title — a "main category" heading, so Pretendard (client
+          slide 7: "change the font of the main category to Pretendard"). */}
+      <h1 className="mb-6 text-center font-category text-3xl font-semibold text-ink">
         {category.name}
       </h1>
 

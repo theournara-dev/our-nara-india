@@ -30,48 +30,52 @@ export default async function BrandsPage() {
 
   return (
     <Container wide className="py-8">
-      <h1 className="mb-6 text-center font-display text-3xl font-semibold text-ink">
+      <h1 className="mb-6 text-center font-category text-3xl font-semibold text-ink">
         BRAND
       </h1>
 
-      {banners.length > 0 && (
-        <div
-          className={`mb-8 grid gap-3 ${
-            banners.length > 1 ? "sm:grid-cols-2" : ""
-          }`}
-        >
-          {banners.map((banner) =>
-            banner.href ? (
-              <Link
-                key={banner.id}
-                href={banner.href}
-                className="block overflow-hidden rounded-xl"
-              >
-                <Image
-                  src={banner.image}
-                  alt={banner.alt}
-                  width={1200}
-                  height={480}
-                  unoptimized
-                  className="h-auto w-full"
-                />
-              </Link>
-            ) : (
-              <Image
-                key={banner.id}
-                src={banner.image}
-                alt={banner.alt}
-                width={1200}
-                height={480}
-                unoptimized
-                className="h-auto w-full rounded-xl"
-              />
-            ),
-          )}
-        </div>
-      )}
-
-      <BrandBrowser brands={brands} preview={site.brandsPage} />
+      <BrandBrowser
+        brands={brands}
+        preview={site.brandsPage}
+        topBanners={
+          banners.length > 0 ? (
+            <div
+              className={`grid gap-3 ${
+                banners.length > 1 ? "sm:grid-cols-2" : ""
+              }`}
+            >
+              {banners.map((banner) =>
+                banner.href ? (
+                  <Link
+                    key={banner.id}
+                    href={banner.href}
+                    className="block overflow-hidden rounded-xl"
+                  >
+                    <Image
+                      src={banner.image}
+                      alt={banner.alt}
+                      width={1200}
+                      height={480}
+                      unoptimized
+                      className="h-auto w-full"
+                    />
+                  </Link>
+                ) : (
+                  <Image
+                    key={banner.id}
+                    src={banner.image}
+                    alt={banner.alt}
+                    width={1200}
+                    height={480}
+                    unoptimized
+                    className="h-auto w-full"
+                  />
+                ),
+              )}
+            </div>
+          ) : null
+        }
+      />
     </Container>
   );
 }

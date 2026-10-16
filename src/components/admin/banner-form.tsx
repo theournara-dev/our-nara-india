@@ -16,6 +16,7 @@ import {
 } from "@/app/admin/banners/actions";
 import {
   BANNER_PLACEMENTS,
+  BRAND_PLACEMENTS,
   CATEGORY_PLACEMENTS,
   PLACEMENT_LABELS,
 } from "@/app/admin/banners/lib";
@@ -29,6 +30,7 @@ type BannerModel = {
   title: string;
   placement: string;
   categoryId: string | null;
+  brandId: string | null;
   image: string;
   mobileImage: string | null;
   alt: string | null;
@@ -44,8 +46,10 @@ type BannerFormProps = {
   backHref: string;
   /** Categories the scoped placements can attach to. */
   categories?: { id: string; name: string }[];
+  /** Brands the "brand-section" placement can attach to. */
+  brands?: { id: string; name: string }[];
   /** Prefills from the list's filters (e.g. the "Page banners" shortcut). */
-  defaults?: { placement?: string; categoryId?: string };
+  defaults?: { placement?: string; categoryId?: string; brandId?: string };
 };
 
 /** Create/edit form for a banner; images upload when the form is saved. */
@@ -61,6 +65,7 @@ function BannerFormInner({
   banner,
   backHref,
   categories = [],
+  brands = [],
   defaults,
 }: BannerFormProps) {
   const isEdit = Boolean(banner);
@@ -72,6 +77,9 @@ function BannerFormInner({
   );
   const [categoryId, setCategoryId] = useState(
     banner?.categoryId ?? defaults?.categoryId ?? "",
+  );
+  const [brandId, setBrandId] = useState(
+    banner?.brandId ?? defaults?.brandId ?? "",
   );
   const [image, setImage] = useState(banner?.image ?? "");
   const [mobileImage, setMobileImage] = useState(banner?.mobileImage ?? "");
@@ -97,6 +105,7 @@ function BannerFormInner({
       title: title.trim(),
       placement: placement as BannerInput["placement"],
       categoryId: categoryId || undefined,
+      brandId: brandId || undefined,
       image: image.trim(),
       mobileImage: mobileImage.trim() || undefined,
       alt: alt.trim() || undefined,
@@ -167,7 +176,11 @@ function BannerFormInner({
                 placement as (typeof CATEGORY_PLACEMENTS)[number],
               )
                 ? "Shown on the chosen category page, under its mid-level tiles."
-                : "Long banner is shown on the homepage carousel."}
+                : BRAND_PLACEMENTS.includes(
+                      placement as (typeof BRAND_PLACEMENTS)[number],
+                    )
+                  ? "Shown above the chosen brand's product row on the homepage."
+                  : "Long banner is shown on the homepage carousel."}
             </span>
           </label>
           {CATEGORY_PLACEMENTS.includes(
@@ -189,6 +202,29 @@ function BannerFormInner({
               </select>
               <span className="mt-1 block text-xs text-zinc-400">
                 The top pair renders the first two banners side by side.
+              </span>
+            </label>
+          )}
+          {BRAND_PLACEMENTS.includes(
+            placement as (typeof BRAND_PLACEMENTS)[number],
+          ) && (
+            <label className="block">
+              <span className={labelCls}>Brand section</span>
+              <select
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">Choose a brand…</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-zinc-400">
+                Two banners for one brand sit side by side; a single one spans
+                the row.
               </span>
             </label>
           )}

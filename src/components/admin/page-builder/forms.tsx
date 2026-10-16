@@ -116,9 +116,23 @@ export function ReviewsForm() {
  * The tabbed showcase (the client's slide 5): every tab is a category that
  * swaps the panel — a linked banner plus curated products.
  */
+/**
+ * The tabbed showcase (the client's slide 2): every filter is attached to a
+ * brand and swaps the full-width banner plus that brand's chosen products.
+ */
 export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
   return (
     <div className="space-y-4">
+      <TextField
+        label="Title (optional)"
+        value={config.title ?? ""}
+        onChange={(title) => onChange({ ...config, title })}
+        placeholder="e.g. Shop by brand"
+      />
+      <p className="text-xs leading-5 text-zinc-400">
+        Sits above the filters. Leave it empty (the default) and nothing is
+        shown.
+      </p>
       <ShowcaseTabsField
         value={config.tabs ?? []}
         onChange={(tabs) => onChange({ ...config, tabs })}
@@ -134,11 +148,12 @@ export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
           hint="Every tab's banner renders at this height."
         />
         <NumberField
-          label="Columns"
+          label="Default columns"
           value={config.columns ?? 4}
           min={2}
           max={6}
           onChange={(columns) => onChange({ ...config, columns })}
+          hint="Used by filters that don't set their own."
         />
       </div>
       <MoreLinkField

@@ -162,6 +162,9 @@ model Brand {
   createdAt   DateTime @default(now()) @map("created_at")
 
   products Product[]
+  // "brand-section" banners: the promo row shown above this brand's home row
+  // (client slides 5–6).
+  banners  Banner[]
 
   @@map("brands")
 }
@@ -785,11 +788,14 @@ model RecentView {
 model Banner {
   id          String    @id @default(cuid())
   title       String // admin label, e.g. "Summer Sale"
-  placement   String    @default("long") // "long" | "hero" | "triple" | "category-top" | "category-long"
+  placement   String    @default("long") // "long" | "hero" | "triple" | "category-top" | "category-long" | "brand-top" | "brand-section"
   // The category page a scoped banner belongs to ("category-top" renders the
   // first two side by side, "category-long" is the carousel under them).
   // Null on the homepage placements.
   categoryId  String?   @map("category_id")
+  // The brand whose home section a "brand-section" banner sits above; the row
+  // renders its banners side by side. Null for every other placement.
+  brandId     String?   @map("brand_id")
   image       String // desktop image URL
   mobileImage String?   @map("mobile_image") // taller mobile variant; falls back to image
   alt         String?
@@ -802,9 +808,11 @@ model Banner {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brand    Brand?    @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   @@index([isActive, placement, sortOrder])
   @@index([categoryId, placement])
+  @@index([brandId, placement])
   @@map("banners")
 }
 

@@ -68,27 +68,38 @@ const TAB_META: Record<string, { label: string; href: string }> = {
 export interface TripleBannerTab {
   id: string;
   label: string;
+  /** The brand this filter shows and links to. */
+  brandSlug: string;
   image: string;
   alt: string;
   title: string;
   sub: string;
   href: string;
   productSlugs: string[];
+  columns: number;
+  rows: number;
 }
 
 /**
- * The three boxes as tabs of the page-builder "tabbed showcase" that replaced
- * the home triple banner: the tab row swaps the banner + curated product row.
+ * The three boxes as filters of the page-builder "tabbed showcase" that
+ * replaced the home triple banner: each filter is attached to a brand, swaps
+ * the banner and shows that brand's own products (client's slide 2).
  */
 export const tripleBannerTabs: TripleBannerTab[] = tripleBannerBoxes.map(
   (box) => ({
     id: box.id,
     label: TAB_META[box.id]?.label ?? box.title,
+    brandSlug: (box.href ?? TAB_META[box.id]?.href ?? "").replace(
+      /^\/brand\//,
+      "",
+    ),
     image: box.image,
     alt: box.alt,
     title: box.title,
     sub: box.sub,
     href: box.href ?? TAB_META[box.id]?.href ?? "",
     productSlugs: box.productSlugs,
+    columns: 4,
+    rows: 1,
   }),
 );

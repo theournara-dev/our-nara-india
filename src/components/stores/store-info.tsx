@@ -28,7 +28,7 @@ export function StoreInfo({
 
   return (
     <div className="rounded-[14px] bg-[#e9d5ff] px-[24px] py-[34px] md:rounded-[18px] md:max-[1025px]:px-[34px] md:max-[1025px]:py-[42px] min-[1025px]:px-[44px] min-[1025px]:py-[50px]">
-      <h2 className="mb-[28px] font-display text-[28px] leading-[normal] font-semibold text-[#222] md:mb-[36px] md:text-[34px]">
+      <h2 className="mb-[28px] font-category text-[28px] leading-[normal] font-semibold text-[#222] md:mb-[36px] md:text-[34px]">
         {name}
       </h2>
       <dl className="border-t border-[#d8dfd5]">

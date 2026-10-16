@@ -2,12 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
+import { toggleWishlist } from "@/app/actions/wishlist";
 import { formatMoney, priceForVersion } from "@/lib/money";
 import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
-import { notifyAddedToCart } from "@/lib/toast";
+import { notify, notifyAddedToCart } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useSiteVersion } from "@/components/site-version-provider";
 
@@ -27,6 +30,11 @@ export function ThemeProductCard({
   priority?: boolean;
 }) {
   const { version } = useSiteVersion();
+  const router = useRouter();
+  const [savingWishlist, startWishlist] = useTransition();
+  // The heart reflects the last toggle this visitor made; the saved list lives
+  // on /account/wishlist.
+  const [saved, setSaved] = useState(false);
   // The card answers per store: what this storefront sells (buy-now /
   // pre-order / not yet) and at what price.
   const saleState = saleStateForVersion(product, version);
@@ -36,6 +44,22 @@ export function ThemeProductCard({
   function handleAddToCart() {
     addProductToCart(product);
     notifyAddedToCart(product.name);
+  }
+
+  function handleWishlist() {
+    startWishlist(async () => {
+      const res = await toggleWishlist(product.id);
+      if (!res.ok) {
+        notify.error("Wishlist", res.message);
+        // Anonymous visitors are sent to sign in rather than left with a dead
+        // button.
+        if (res.reason === "auth") router.push("/login");
+        return;
+      }
+      setSaved(res.saved);
+      if (res.saved) notify.success("Saved to wishlist", product.name);
+      else notify.success("Removed from wishlist", product.name);
+    });
   }
 
   return (
@@ -101,16 +125,23 @@ export function ThemeProductCard({
           >
             <button
               type="button"
-              aria-label="Add to wishlist"
-              className="block cursor-pointer"
+              aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+              aria-pressed={saved}
+              onClick={handleWishlist}
+              disabled={savingWishlist}
+              className={`block cursor-pointer disabled:opacity-60 ${
+                saved ? "ring-1 ring-point-500" : ""
+              }`}
             >
               <Image
                 src="/upload/icon_202508271427425900.png"
-                alt="wishlist"
+                alt=""
                 width={30}
                 height={30}
                 unoptimized
-                className="rounded bg-white/60 p-1"
+                className={`rounded p-1 ${
+                  saved ? "bg-point-100" : "bg-white/60"
+                }`}
               />
             </button>
             {saleState !== "unavailable" && (
@@ -145,13 +176,16 @@ export function ThemeProductCard({
         </span>
         {/* International storefront: the K-Drop mark leads the name on the
             same line, matched to the name's own size; the name wraps beside
-            it. Shown for products that also ship from the global store. */}
-        <strong className="mb-2 block text-left text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
-          <KDropMark
-            availableGlobally={visibleForVersion(product, "global")}
-            className="mr-1 h-[7px] align-middle md:h-[7.5px]"
-          />
+            it. Shown for products that also ship from the global store. The
+            name is Pretendard (client slide 3: "change the product name font
+            to Pretendard"). Mark and name share one link so the whole line —
+            logo included — opens the product (client slide 1). */}
+        <strong className="mb-2 block text-left font-category text-[14px] font-bold leading-6 text-black line-clamp-2 md:text-[15px]">
           <Link href={`/products/${product.slug}`} className="text-black">
+            <KDropMark
+              availableGlobally={visibleForVersion(product, "global")}
+              className="mr-1 h-[7px] align-middle md:h-[7.5px]"
+            />
             {product.name}
           </Link>
         </strong>

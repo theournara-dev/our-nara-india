@@ -10,6 +10,7 @@ import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductShowcase } from "@/components/theme/product-showcase";
 import { TabbedShowcase } from "@/components/content/tabbed-showcase";
 import { getLongBanners } from "@/data/banners";
+import { getBrands } from "@/data/brands";
 import type { ProductCard } from "@/data/products";
 import {
   getAvailableNow,
@@ -201,6 +202,7 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
     meta: SECTION_TYPE_META_BY_TYPE["tabbed-showcase"],
     load: async (config) => {
       const c = config as {
+        title?: string;
         tabs?: ShowcaseTab[];
         columns?: number;
         height?: number;
@@ -208,11 +210,30 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
         moreLabel?: string;
       };
       const version = await getRequestSiteVersion();
+      // Filter labels and banner links come from the attached brand, so one
+      // brand lookup serves every filter (client's slide 2).
+      const brands = new Map(
+        (await getBrands()).map((b) => [b.slug, b] as const),
+      );
+      const tabs = (c.tabs ?? []).map((tab) => {
+        const brand = tab.brandSlug ? brands.get(tab.brandSlug) : undefined;
+        const columns = tab.columns ?? c.columns ?? 4;
+        const rows = tab.rows ?? 1;
+        return { tab, brand, columns, rows };
+      });
       return {
+        title: c.title ?? "",
         tabs: await Promise.all(
-          (c.tabs ?? []).map(async (tab) => ({
+          tabs.map(async ({ tab, brand, columns, rows }) => ({
             ...tab,
-            products: await getProductsBySlugs(tab.productSlugs, version),
+            columns,
+            label: tab.label.trim() || brand?.name || "",
+            href: tab.href.trim() || (brand ? `/brand/${brand.slug}` : ""),
+            // Columns × rows is the ceiling, so a long list can never blow the
+            // row up (the client's slide 2).
+            products: (
+              await getProductsBySlugs(tab.productSlugs, version)
+            ).slice(0, columns * rows),
           })),
         ),
         columns: c.columns ?? 4,

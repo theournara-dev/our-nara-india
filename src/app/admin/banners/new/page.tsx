@@ -19,11 +19,18 @@ export default async function NewBannerPage({
 }) {
   const params = await searchParams;
   const backHref = buildBackHref(params);
-  const categories = await db.category.findMany({
-    where: { parentId: null },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
+  const [categories, brands] = await Promise.all([
+    db.category.findMany({
+      where: { parentId: null },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    db.brand.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div>
@@ -31,6 +38,7 @@ export default async function NewBannerPage({
       <BannerForm
         banner={null}
         categories={categories}
+        brands={brands}
         backHref={backHref}
         defaults={{ placement: params.placement, categoryId: params.category }}
       />

@@ -21,6 +21,7 @@ export interface AdminBrandRow {
   isActive: boolean;
   productCount: number;
   logoUrl: string | null;
+  coverUrl: string | null;
   group: BrandGroupKey | null;
 }
 
@@ -217,6 +218,7 @@ function BrandEditDialog({
   onSaved: () => void;
 }) {
   const [logoUrl, setLogoUrl] = useState(brand.logoUrl ?? "");
+  const [coverUrl, setCoverUrl] = useState(brand.coverUrl ?? "");
   const [group, setGroup] = useState<"" | BrandGroupKey>(brand.group ?? "");
   const [saving, startTransition] = useTransition();
 
@@ -225,6 +227,7 @@ function BrandEditDialog({
       const tid = notify.loading("Saving brand…");
       const res = await updateBrand(brand.id, {
         logoUrl,
+        coverUrl,
         group: group === "" ? null : group,
       });
       if (!res.ok) {
@@ -287,6 +290,13 @@ function BrandEditDialog({
               value={logoUrl}
               onChange={setLogoUrl}
               hint="Shown on the /brands grid tile; brands without one show their name."
+            />
+
+            <ImageField
+              label="Brand page banner (optional)"
+              value={coverUrl}
+              onChange={setCoverUrl}
+              hint="Wide artwork shown at the top of this brand's own page; brands without one show no banner."
             />
           </div>
 

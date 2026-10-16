@@ -1,13 +1,13 @@
 import { HeroCarousel } from "@/components/content/hero-carousel";
 import { InstagramSection } from "@/components/content/instagram-section";
-import { LongBanner } from "@/components/content/long-banner";
+import { LongBannerCells } from "@/components/content/long-banner";
 import { ReviewsSection } from "@/components/content/reviews-section";
 import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TabbedShowcase } from "@/components/content/tabbed-showcase";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
-import { getLongBanners } from "@/data/banners";
+import { getLongBanners, getBrandSectionBanners } from "@/data/banners";
 import { getBrand } from "@/data/catalog";
 import { homeBrandSections } from "@/data/home-sections";
 import {
@@ -55,6 +55,9 @@ export async function StaticHome() {
       ...section,
       title: getBrand(section.slug)?.name ?? section.slug,
       products: await getProductsByBrandSlug(section.slug, 20, version),
+      // The promo row above the brand's grid (client slides 5–6). Empty until
+      // the banners are uploaded in /admin/banners.
+      banners: await getBrandSectionBanners(section.slug),
     })),
   );
 
@@ -79,10 +82,11 @@ export async function StaticHome() {
         <ShortsCarousel picks={shorts} />
       </Reveal>
 
-      {/* Tabbed showcase (the triple banner's successor: tabs + banner +
-          curated products) */}
+      {/* Tabbed showcase (the client's slide 2): brand filters over a
+          full-width banner and that brand's products. The title is empty by
+          default, so nothing renders above the filters. */}
       <Reveal>
-        <TabbedShowcase tabs={showcaseTabs} columns={4} />
+        <TabbedShowcase title="" tabs={showcaseTabs} columns={4} height={400} />
       </Reveal>
 
       {/* Pre-orders */}
@@ -97,9 +101,16 @@ export async function StaticHome() {
         </Reveal>
       )}
 
-      {/* Long banner */}
+      {/* Long banner — the client's slide 6: the strip is two banners side by
+          side (one spans it when only one is active), not a one-at-a-time
+          carousel. */}
       <Reveal>
-        <LongBanner banners={longBanners} />
+        <LongBannerCells
+          cells={[
+            { id: "cell-1", banner: longBanners[0] ?? null },
+            { id: "cell-2", banner: longBanners[1] ?? null },
+          ]}
+        />
       </Reveal>
 
       {/* Brand sections */}
@@ -109,6 +120,7 @@ export async function StaticHome() {
             sub={section.sub}
             title={section.title}
             products={section.products}
+            banners={section.banners}
             moreHref={`/brand/${section.slug}`}
           />
         </Reveal>

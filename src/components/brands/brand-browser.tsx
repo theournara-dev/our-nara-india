@@ -28,17 +28,21 @@ const COLUMN_CLASS: Record<number, string> = {
 };
 
 /**
- * The /brands directory below the banners (client slide 8): full-width group
- * tabs whose active state is a bottom border, the tab's brand preview tiles
- * (name slides up on hover), the A–Z circles and then the plain brand list.
- * Tile height and the number of previews come from Site settings → Brands page.
+ * The /brands directory below the title (client slides 8): the three group
+ * tabs sit directly under the heading, the promo banners follow them, then the
+ * tab's brand preview tiles (name slides up on hover), the A–Z circles and the
+ * plain brand list. Tile height and the number of previews come from Site
+ * settings → Brands page.
  */
 export function BrandBrowser({
   brands,
   preview,
+  topBanners,
 }: {
   brands: BrandSummary[];
   preview: BrandsPageContent;
+  /** The banner row, rendered by the page under the tabs. */
+  topBanners?: React.ReactNode;
 }) {
   const [tab, setTab] = useState<TabKey>("all");
 
@@ -60,7 +64,8 @@ export function BrandBrowser({
 
   return (
     <div>
-      {/* Tabs span the content width; the active one is underlined. */}
+      {/* The three group tabs sit right under the title (the client's slide-8
+          layout); the page's banners follow them. */}
       <div
         role="tablist"
         aria-label="Brand groups"
@@ -86,6 +91,8 @@ export function BrandBrowser({
           );
         })}
       </div>
+
+      {topBanners && <div className="mt-[30px]">{topBanners}</div>}
 
       {/* The tab's preview tiles: each shows the brand image at the height
           set in the admin; the name slides up from the bottom on hover. */}

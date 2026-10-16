@@ -13,10 +13,9 @@ export default function ReviewPage() {
     <div>
       <Container className="py-12">
         <div className="mb-2 text-center">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-point-500">
-            REAL REVIEWS
-          </p>
-          <h1 className="font-display text-3xl font-semibold text-ink">
+          {/* The "REAL REVIEWS" eyebrow goes (client slide 13: "Please remove
+              it."); the heading stays, in Pretendard. */}
+          <h1 className="font-category text-3xl font-semibold text-ink">
             What Our Customers Say
           </h1>
         </div>

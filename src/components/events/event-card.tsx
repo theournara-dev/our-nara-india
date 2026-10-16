@@ -2,9 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 
 /**
- * One /event card (client slide 10): a fixed-height block whose title and text
- * sit in the bottom-left corner. With artwork the image fills the block; without
- * it the card renders on the admin-chosen colour (or the brand purple).
+ * One /event card (client slide 10): a square image box whose title and text sit
+ * in the bottom-left corner. With artwork the image fills the square (cropped);
+ * without it the card renders on the admin-chosen colour (or the brand purple).
  *
  * Shared by the storefront and the admin form's live preview so an editor sees
  * exactly what visitors get.
@@ -13,8 +13,11 @@ import Link from "next/link";
 /** Fallback background when a card has no artwork and no colour set. */
 export const EVENT_DEFAULT_COLOR = "#6f2dbd";
 
-/** The cards are all one height, so every event lines up in the grid. */
-const CARD_HEIGHT = "h-[300px] md:h-[360px]";
+/**
+ * The client's slide 10: "an image will be inserted to fit the square box", so
+ * every card is a 1:1 box whatever the upload's own ratio.
+ */
+const CARD_SHAPE = "aspect-square";
 
 export interface EventCardData {
   title: string;
@@ -72,7 +75,7 @@ export function EventCardView({ event }: { event: EventCardData }) {
     </>
   );
 
-  const className = `group relative block ${CARD_HEIGHT} overflow-hidden rounded-2xl`;
+  const className = `group relative block ${CARD_SHAPE} overflow-hidden rounded-2xl`;
 
   return event.href ? (
     <Link href={event.href} className={className}>
