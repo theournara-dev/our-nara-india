@@ -78,8 +78,8 @@ fields — labels, images, headlines, links and product lists are untouched.
 
 The category page's banners and the brands page's banners used to be assigned by the banner's own placement. Since that field is gone, each page now picks its own:
 
-- **Category pages**: `/admin/categories` → edit a top-level category → **Page banners** (a top pair + a searchable list for the long banner and a pick for the ad block). Picking a banner that sits on another category moves it, and unpicking detaches it (never deletes it) — `setCategoryBanners` writes the same `placement`/`categoryId` the storefront already reads.
-- **Brands page**: Site settings → Brands page → **Top banner 1/2**, stored with the rest of that page's settings.
+- **Category pages**: `/admin/categories` → edit a top-level category → **Page banners** (a top pair + a searchable list for the long banner and a pick for the ad block). Picking a banner that sits on another category moves it, and unpicking detaches it (never deletes it) — `setCategoryPageBanners` writes the same `placement`/`categoryId` the storefront already reads. **Moved:** after the client's follow-up, page configuration lives under **Pages** (see Slide 4 below), so this block now sits at `/admin/pages/category/<slug>`.
+- **Brands page**: Site settings → Brands page → **Top banner 1/2**, stored with the rest of that page's settings. **Moved:** now at `/admin/pages/brands` (Slide 4).
 
 ### Slide 4 — page titles, and the category page's long banner and ad block
 
@@ -92,10 +92,9 @@ explicit font class already used Pretendard (the body font), so the audit was
 “every remaining `font-display` heading on a storefront page”.
 
 **Category page: long banner below the filters + one ad block.** Both are
-admin-controlled from `/admin/categories` → edit a top-level category → **Page
-banners**, and both render under the mid-level filter tiles (the block position
-the slide-8 reference showed), inside the page container so they line up with
-the filter sidebar and the product grid:
+admin-controlled, and both render under the mid-level filter tiles (the block
+position the slide-8 reference showed), inside the page container so they line
+up with the filter sidebar and the product grid:
 
 - **Long banner** — the same strip the home page uses (one banner per column:
   one runs full width, two or three share the row, phones stack). Up to three
@@ -114,6 +113,28 @@ the filter sidebar and the product grid:
 New: `Category.longBannerHeight` + `Category.adBannerHeight` (migration
 `20261016210000_category_page_blocks`, both default `0`) and a `category-ad`
 banner placement (scoped to a category, like the top pair and the long banner).
+
+**Follow-up — page configuration lives under Pages.** The Pages screen is now
+the single home for per-page settings. The content pages (home, ambassador)
+keep their section builder; a new **Other pages** table lists the brands page
+and every top-level category listing, with what is already configured on each
+(“None yet” until something is picked). Each row opens its own screen:
+
+- `/admin/pages/brands` — the directory's preview grid and the banners above it
+  (moved out of Site settings, which keeps the store-wide content: contact
+  details, top banner, store picker, delivery, tax, invoice). This is where the
+  slide-4 follow-up landed for it, and it now lives with the banner pickers it
+  belongs to.
+- `/admin/pages/category/<slug>` — that listing's top pair, long banner (up to
+  three picks + height) and ad block (+ height). A mid-level category has no
+  page of its own, so it redirects to its parent's settings.
+
+`/admin/categories` is back to the tree alone — name, slug, tile, order,
+visibility and subcategories — with a gear shortcut on each top-level row that
+opens its page settings. Nothing about the storefront changed: the same
+`placement`/`categoryId` picks and the same `SiteConfig` columns are written,
+just from the new screens (`setCategoryPageBanners`, `saveBrandsPage` in
+`src/app/admin/pages/actions.ts`).
 
 ## New / changed infrastructure
 

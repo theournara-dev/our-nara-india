@@ -14,7 +14,6 @@ import {
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import type {
-  BrandsPageContent,
   SiteContent,
   SwitcherBlock,
   SwitcherContent,
@@ -68,20 +67,13 @@ function newId(prefix: string) {
 export function SiteSettingsForm({
   initial,
   initialSwitcher,
-  banners,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
-  /** Standalone banners the brands page can put above its directory. */
-  banners: { id: string; title: string }[];
 }) {
   return (
     <UploadQueueProvider>
-      <SiteSettingsInner
-        initial={initial}
-        initialSwitcher={initialSwitcher}
-        banners={banners}
-      />
+      <SiteSettingsInner initial={initial} initialSwitcher={initialSwitcher} />
     </UploadQueueProvider>
   );
 }
@@ -89,11 +81,9 @@ export function SiteSettingsForm({
 function SiteSettingsInner({
   initial,
   initialSwitcher,
-  banners,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
-  banners: { id: string; title: string }[];
 }) {
   const [tab, setTab] = useState<SiteVersion>("local");
   const [content, setContent] = useState(initial);
@@ -149,7 +139,6 @@ function SiteSettingsInner({
         phone: current.phone,
         address: current.address,
         topBanner: current.topBanner,
-        brandsPage: current.brandsPage,
         taxRates,
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
@@ -162,7 +151,6 @@ function SiteSettingsInner({
   useEffect(() => {
     gate.registerHandler("contact", () => saveStore("contact"));
     gate.registerHandler("banner", () => saveStore("banner"));
-    gate.registerHandler("brands", () => saveStore("brands"));
     gate.registerHandler("tax", () => saveStore("tax"));
     gate.registerHandler("shipping", () => saveStore("shipping"));
     gate.registerHandler("invoice", () => saveStore("invoice"));
@@ -431,16 +419,7 @@ function SiteSettingsInner({
         disabled={saving !== null}
       />
 
-      {/* ── Brands page ─────────────────────────────────────────────────── */}
-      <BrandsPageEditor
-        content={current.brandsPage}
-        banners={banners}
-        onChange={(brandsPage) => patch({ brandsPage })}
-        onSave={() => void gate.save("brands")}
-        saving={saving === "brands"}
-        disabled={saving !== null}
-      />
-
+      {/* Store-picker editor */}
       {/* ── India GST (local store only) ────────────────────────────────── */}
       {tab === "local" && (
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">
@@ -785,129 +764,6 @@ function TopBannerEditor({
           className={saveBtnCls}
         >
           {saving ? "Saving…" : "Save top banner"}
-        </button>
-      </div>
-    </section>
-  );
-}
-
-/** Editor for the /brands preview grid's size (per store). */
-function BrandsPageEditor({
-  content,
-  banners,
-  onChange,
-  onSave,
-  saving,
-  disabled,
-}: {
-  content: BrandsPageContent;
-  banners: { id: string; title: string }[];
-  onChange: (content: BrandsPageContent) => void;
-  onSave: () => void;
-  saving: boolean;
-  disabled: boolean;
-}) {
-  return (
-    <section className="rounded-2xl border border-zinc-100 bg-white p-5">
-      <h2 className="mb-1 text-sm font-semibold text-zinc-900">Brands page</h2>
-      <p className="mb-4 text-xs text-zinc-400">
-        The brand preview grid under the tabs on /brands: how tall each tile is
-        and how many previews to show. The rest stay in the list below the A–Z
-        circles.
-      </p>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="block">
-          <span className={labelCls}>Tile height (px)</span>
-          <input
-            type="number"
-            min={40}
-            max={600}
-            value={content.previewHeight}
-            onChange={(e) =>
-              onChange({
-                ...content,
-                previewHeight: Number(e.target.value) || 100,
-              })
-            }
-            className={inputCls}
-          />
-        </label>
-        <label className="block">
-          <span className={labelCls}>Columns</span>
-          <input
-            type="number"
-            min={2}
-            max={6}
-            value={content.previewColumns}
-            onChange={(e) =>
-              onChange({
-                ...content,
-                previewColumns: Number(e.target.value) || 4,
-              })
-            }
-            className={inputCls}
-          />
-        </label>
-        <label className="block">
-          <span className={labelCls}>Rows</span>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            value={content.previewRows}
-            onChange={(e) =>
-              onChange({
-                ...content,
-                previewRows: Number(e.target.value) || 2,
-              })
-            }
-            className={inputCls}
-          />
-        </label>
-      </div>
-
-      {/* The banners above the directory. The page owns them and picks them by
-          name here (client's slide 3: banners are standalone, the component
-          that shows one decides where it goes). */}
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        {[0, 1].map((slot) => (
-          <label key={slot} className="block">
-            <span className={labelCls}>Top banner {slot + 1}</span>
-            <select
-              value={content.bannerIds?.[slot] ?? ""}
-              onChange={(e) => {
-                const next = [
-                  content.bannerIds?.[0] ?? "",
-                  content.bannerIds?.[1] ?? "",
-                ];
-                next[slot] = e.target.value;
-                onChange({ ...content, bannerIds: next.filter(Boolean) });
-              }}
-              className={inputCls}
-            >
-              <option value="">None</option>
-              {banners.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.title}
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-zinc-400">
-        Picked banners render side by side above the brand grid at their own
-        proportions. They are managed in the Banners admin.
-      </p>
-
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={disabled}
-          className={saveBtnCls}
-        >
-          {saving ? "Saving…" : "Save brands page"}
         </button>
       </div>
     </section>

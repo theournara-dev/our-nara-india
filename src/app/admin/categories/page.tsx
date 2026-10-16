@@ -7,38 +7,16 @@ export const metadata = { title: "Categories" };
 
 /**
  * Category management: the two-level tree that drives the storefront's header
- * menu and the mid-level tabs/tiles on listing pages. Products keep a
- * top-level category and sit in 0..n mid-level categories. A top-level
- * category's edit dialog also picks the banners shown on its listing page.
+ * menu and the mid-level tabs/tiles on listing pages. Products keep a top-level
+ * category and sit in 0..n mid-level categories. What each category *page*
+ * shows is configured under Pages (client's slide 4) — this screen is only the
+ * tree.
  */
 export default async function AdminCategoriesPage() {
-  const [rows, bannerRows] = await Promise.all([
-    db.category.findMany({
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: { _count: { select: { subcategoryLinks: true } } },
-    }),
-    // Every banner feeds the per-category page pickers. Ordered the way the
-    // storefront renders them so the picked ids come back in display order.
-    db.banner.findMany({
-      orderBy: [{ sortOrder: "asc" }, { title: "asc" }],
-      select: {
-        id: true,
-        title: true,
-        image: true,
-        placement: true,
-        categoryId: true,
-      },
-    }),
-  ]);
-
-  /** Ids of one category's picks for one of the page's banner placements. */
-  const pickIds = (
-    categoryId: string,
-    placement: "category-top" | "category-long" | "category-ad",
-  ) =>
-    bannerRows
-      .filter((b) => b.categoryId === categoryId && b.placement === placement)
-      .map((b) => b.id);
+  const rows = await db.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: { _count: { select: { subcategoryLinks: true } } },
+  });
 
   return (
     <div>
@@ -49,11 +27,11 @@ export default async function AdminCategoriesPage() {
         <p className="text-sm text-zinc-500">
           {rows.filter((r) => !r.parentId).length} top-level categories and{" "}
           {rows.filter((r) => r.parentId).length} subcategories. Top-level
-          categories are the site menu; editing one also picks the banners on
-          its page. Subcategories are the tiles/tabs on a category page and can
-          be hidden or reordered here. Products sit in a top-level category and
-          in any number of subcategories (see each product&apos;s
-          &ldquo;Subcategories&rdquo; field).
+          categories are the site menu; subcategories are the tiles/tabs on a
+          category page and can be hidden or reordered here. Products sit in a
+          top-level category and in any number of subcategories (see each
+          product&apos;s &ldquo;Subcategories&rdquo; field). A category
+          page&apos;s banners are set under Pages.
         </p>
       </div>
 
@@ -67,13 +45,7 @@ export default async function AdminCategoriesPage() {
           sortOrder: r.sortOrder,
           isActive: r.isActive,
           productCount: r._count.subcategoryLinks,
-          topBannerIds: pickIds(r.id, "category-top"),
-          longBannerIds: pickIds(r.id, "category-long"),
-          adBannerIds: pickIds(r.id, "category-ad"),
-          longBannerHeight: r.longBannerHeight,
-          adBannerHeight: r.adBannerHeight,
         }))}
-        banners={bannerRows}
       />
     </div>
   );

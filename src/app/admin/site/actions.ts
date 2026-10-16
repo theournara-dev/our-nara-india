@@ -41,16 +41,6 @@ const contentInput = z.object({
     .nullable()
     .optional(),
   dispatchCutoffHour: z.coerce.number().int().min(0).max(23).optional(),
-  // ── /brands preview grid ──────────────────────────────────────────────
-  brandsPage: z
-    .object({
-      previewHeight: z.coerce.number().int().min(40).max(600).optional(),
-      previewColumns: z.coerce.number().int().min(2).max(6).optional(),
-      previewRows: z.coerce.number().int().min(1).max(10).optional(),
-      /** The banners above the directory, in order (at most two). */
-      bannerIds: z.array(safeText(100)).max(2).optional(),
-    })
-    .optional(),
   // ── India GST defaults ────────────────────────────────────────────────
   taxRates: z
     .object({
@@ -110,26 +100,6 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
       : {}),
     ...(data.dispatchCutoffHour !== undefined
       ? { dispatchCutoffHour: data.dispatchCutoffHour }
-      : {}),
-    ...(data.brandsPage
-      ? {
-          ...(data.brandsPage.previewHeight !== undefined
-            ? { brandsPreviewHeight: data.brandsPage.previewHeight }
-            : {}),
-          ...(data.brandsPage.previewColumns !== undefined
-            ? { brandsPreviewColumns: data.brandsPage.previewColumns }
-            : {}),
-          ...(data.brandsPage.previewRows !== undefined
-            ? { brandsPreviewRows: data.brandsPage.previewRows }
-            : {}),
-          ...(data.brandsPage.bannerIds !== undefined
-            ? {
-                brandsBannerIds: data.brandsPage.bannerIds.filter(
-                  (id) => id.length > 0,
-                ),
-              }
-            : {}),
-        }
       : {}),
     ...(data.invoice
       ? {

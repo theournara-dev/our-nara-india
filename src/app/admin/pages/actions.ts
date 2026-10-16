@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
@@ -9,6 +10,8 @@ import {
   type PageSectionRow,
   type SectionType,
 } from "@/lib/page-builder/types";
+import { parseSiteVersion } from "@/lib/site-version";
+import { parseInput, safeText } from "@/lib/validation";
 
 // ── Guards & helpers ───────────────────────────────────────────────────────
 
@@ -149,4 +152,187 @@ export async function reorderSections(
     }
   });
   revalidate(pageId);
+}
+
+// ── Page settings (listings that are not built from sections) ───────────────
+
+/**
+ * The blocks of one category page (client's slides 4): the "top pair" rendered
+ * side by side, the long banner under the filter tiles (up to three, one banner
+ * per column — the same strip the home page uses) and the single ad block under
+ * that, plus the two heights. Page settings live under Pages; the category tree
+ * in /admin/categories no longer edits them. A banner sits on at most one page
+ * (`categoryId` is a single column), so a pick that is already attached
+ * elsewhere moves here.
+ */
+const categoryBannersInput = z.object({
+  top: z.array(safeText(100)).default([]),
+  long: z.array(safeText(100)).default([]),
+  ad: z.array(safeText(100)).default([]),
+  /** Strip height in pixels; 0 keeps each banner's own proportions. */
+  longHeight: z.coerce.number().int().min(0).max(600).default(0),
+  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
+  adHeight: z.coerce.number().int().min(0).max(600).default(0),
+});
+
+export type CategoryPageBanners = z.input<typeof categoryBannersInput>;
+
+export type PageSettingsResult = { ok: true } | { ok: false; message: string };
+
+/** Save one category page's banner picks (pair + long banner + ad). */
+export async function setCategoryPageBanners(
+  categoryId: string,
+  input: CategoryPageBanners,
+): Promise<PageSettingsResult> {
+  await requireAdmin();
+
+  let data: z.infer<typeof categoryBannersInput>;
+  try {
+    data = parseInput(categoryBannersInput, input, "category page banners");
+  } catch {
+    return { ok: false, message: "Check the selected banners." };
+  }
+
+  const category = await db.category.findUnique({
+    where: { id: categoryId },
+    select: { parentId: true },
+  });
+  if (!category)
+    return { ok: false, message: "This category no longer exists." };
+  if (category.parentId) {
+    // Subcategories have no page of their own, so they host no banners.
+    return {
+      ok: false,
+      message: "Only top-level categories have a page of their own.",
+    };
+  }
+
+  // Drop blanks and duplicates; the pair keeps its first two slots, the strip
+  // its first three columns and the ad its single pick. A banner picked in
+  // several lists stays in the earlier one — the more specific pick wins.
+  const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
+  const top = cleanIds(data.top).slice(0, 2);
+  const long = cleanIds(data.long)
+    .filter((id) => !top.includes(id))
+    .slice(0, 3);
+  const ad = cleanIds(data.ad)
+    .filter((id) => !top.includes(id) && !long.includes(id))
+    .slice(0, 1);
+
+  // Anything still attached to this page but no longer picked comes off it.
+  // Detached, not deleted, so the banner stays available to other pages.
+  const attached = await db.banner.findMany({
+    where: {
+      categoryId,
+      placement: { in: ["category-top", "category-long", "category-ad"] },
+    },
+    select: { id: true },
+  });
+  const picked = new Set([...top, ...long, ...ad]);
+  const detach = attached.filter((b) => !picked.has(b.id));
+
+  const writes = [
+    ...top.map((id, i) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-top", categoryId, sortOrder: i },
+      }),
+    ),
+    ...long.map((id, i) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-long", categoryId, sortOrder: i },
+      }),
+    ),
+    ...ad.map((id) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-ad", categoryId, sortOrder: 0 },
+      }),
+    ),
+    ...detach.map((b) =>
+      db.banner.update({
+        where: { id: b.id },
+        data: { placement: "", categoryId: null },
+      }),
+    ),
+    // The heights live on the page itself, not on the banner (client's slide 4).
+    db.category.update({
+      where: { id: categoryId },
+      data: {
+        longBannerHeight: data.longHeight,
+        adBannerHeight: data.adHeight,
+      },
+    }),
+  ];
+
+  try {
+    // One transaction so a failed pick cannot leave the page half-saved.
+    await db.$transaction(writes);
+  } catch (err) {
+    console.error(
+      `[pages] category banner picks failed for ${categoryId}:`,
+      err,
+    );
+    return { ok: false, message: "Could not save the page banners." };
+  }
+
+  revalidatePath("/admin/pages");
+  revalidatePath("/admin/banners");
+  // Every category listing page renders these picks.
+  revalidatePath("/category", "layout");
+  return { ok: true };
+}
+
+/**
+ * The /brands page's own settings (client's slide 4: page configuration lives
+ * under Pages): the preview grid under the group tabs and the banners above it.
+ * Moved here from Site settings, which keeps the store-wide content.
+ */
+const brandsPageInput = z.object({
+  version: z.string(),
+  previewHeight: z.coerce.number().int().min(40).max(600),
+  previewColumns: z.coerce.number().int().min(2).max(6),
+  previewRows: z.coerce.number().int().min(1).max(10),
+  /** Up to two banners above the directory, in order. */
+  bannerIds: z.array(safeText(100)).max(2).default([]),
+});
+
+/** Save /brands' preview grid + banner picks for one store version. */
+export async function saveBrandsPage(
+  input: z.input<typeof brandsPageInput>,
+): Promise<PageSettingsResult> {
+  await requireAdmin();
+
+  let data: z.infer<typeof brandsPageInput>;
+  try {
+    data = parseInput(brandsPageInput, input, "brands page");
+  } catch {
+    return { ok: false, message: "Check the brands page settings." };
+  }
+
+  const version = parseSiteVersion(data.version);
+  if (!version) return { ok: false, message: "Unknown store." };
+
+  const fields = {
+    brandsPreviewHeight: data.previewHeight,
+    brandsPreviewColumns: data.previewColumns,
+    brandsPreviewRows: data.previewRows,
+    brandsBannerIds: data.bannerIds.filter(Boolean),
+  };
+
+  try {
+    await db.siteConfig.upsert({
+      where: { version },
+      create: { version, ...fields },
+      update: fields,
+    });
+  } catch (err) {
+    console.error(`[pages] brands page save failed (${version}):`, err);
+    return { ok: false, message: "Could not save the brands page." };
+  }
+
+  revalidatePath("/admin/pages");
+  revalidatePath("/brands");
+  return { ok: true };
 }

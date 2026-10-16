@@ -7,9 +7,9 @@ import Link from "next/link";
 import {
   ChevronDown,
   ChevronUp,
-  Image as ImageIcon,
   Pencil,
   Plus,
+  Settings,
   Trash2,
   X,
 } from "lucide-react";
@@ -21,13 +21,8 @@ import {
   deleteCategory,
   moveCategory,
   saveCategory,
-  setCategoryBanners,
   type CategoryActionResult,
 } from "@/app/admin/categories/actions";
-import {
-  PLACEMENT_LABELS,
-  type BannerPlacement,
-} from "@/app/admin/banners/lib";
 
 export interface AdminCategory {
   id: string;
@@ -39,35 +34,6 @@ export interface AdminCategory {
   isActive: boolean;
   /** Products assigned to this mid-level category. */
   productCount: number;
-  /** This page's top-pair picks (placement "category-top"), in slot order. */
-  topBannerIds: string[];
-  /** This page's long-banner picks (placement "category-long"), in order. */
-  longBannerIds: string[];
-  /** This page's ad-block pick (placement "category-ad"), at most one. */
-  adBannerIds: string[];
-  /** Long banner height in pixels; 0 keeps each banner's own proportions. */
-  longBannerHeight: number;
-  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
-  adBannerHeight: number;
-}
-
-/** One banner the category page pickers can choose from. */
-export interface AdminBannerOption {
-  id: string;
-  title: string;
-  image: string;
-  placement: string;
-  /** The category page it sits on right now; null when it sits elsewhere. */
-  categoryId: string | null;
-}
-
-/** A top-level category page's banner picks and block heights (slide 4). */
-export interface CategoryPageBanners {
-  top: string[];
-  long: string[];
-  ad: string[];
-  longHeight: number;
-  adHeight: number;
 }
 
 const inputCls =
@@ -76,16 +42,13 @@ const inputCls =
 /**
  * Category-tree editor: top-level categories with their mid-level children.
  * Products keep a top-level category and sit in 0..n mid-level categories, so
- * this page owns the storefront's header menu, its listing tabs and each
- * top-level listing page's banners.
+ * this page owns the storefront's header menu and its listing tabs. What each
+ * listing page *shows* is configured under Pages (client's slide 4).
  */
 export function CategoriesManager({
   categories,
-  banners,
 }: {
   categories: AdminCategory[];
-  /** Every banner, offered by each category's page-banner pickers. */
-  banners: AdminBannerOption[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -133,19 +96,15 @@ export function CategoriesManager({
             <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3">
               <CategoryRow
                 category={root}
-                categories={categories}
-                banners={banners}
                 pending={pending}
                 editing={editingId === root.id}
                 onEdit={() => setEditingId(root.id)}
                 onCancel={() => setEditingId(null)}
-                onSave={(input, pageBanners) =>
-                  run(async () => {
-                    const saved = await saveCategory({ ...input, id: root.id });
-                    if (!saved.ok || !pageBanners) return saved;
-                    // The page picks save with the same Save and toast.
-                    return setCategoryBanners(root.id, pageBanners);
-                  }, "Category saved")
+                onSave={(input) =>
+                  run(
+                    () => saveCategory({ ...input, id: root.id }),
+                    "Category saved",
+                  )
                 }
                 onMove={(dir) =>
                   run(() => moveCategory(root.id, dir), "Category moved")
@@ -238,8 +197,6 @@ export function CategoriesManager({
 /** One editable category line (view mode ↔ edit mode). */
 function CategoryRow({
   category,
-  categories,
-  banners,
   pending,
   editing,
   onEdit,
@@ -250,18 +207,11 @@ function CategoryRow({
   childCount,
 }: {
   category: AdminCategory;
-  /** Every category, so banner pickers can name the page a banner sits on. */
-  categories?: AdminCategory[];
-  /** Every banner, for a top-level category's page pickers. */
-  banners?: AdminBannerOption[];
   pending: boolean;
   editing: boolean;
   onEdit: () => void;
   onCancel: () => void;
-  onSave: (
-    input: Record<string, unknown>,
-    pageBanners?: CategoryPageBanners,
-  ) => void;
+  onSave: (input: Record<string, unknown>) => void;
   onMove: (direction: "up" | "down") => void;
   onDelete: () => void;
   childCount?: number;
@@ -271,8 +221,6 @@ function CategoryRow({
       <CategoryForm
         pending={pending}
         category={category}
-        categories={categories}
-        banners={banners}
         onCancel={onCancel}
         onSubmit={onSave}
       />
@@ -316,17 +264,16 @@ function CategoryRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {/* Shortcut to this category's banners in the Banners admin, where a
-            banner's image and text are edited; the page's picks are edited
-            in this dialog's "Page banners" block. */}
+        {/* Shortcut to this category's page settings under Pages, where its
+            banner blocks are picked (client's slide 4). */}
         {category.parentId === null && (
           <Link
-            href={`/admin/banners?category=${category.id}`}
-            title="Open this category's banners in the Banners admin"
-            aria-label="Category banners in the Banners admin"
+            href={`/admin/pages/category/${category.slug}`}
+            title="Page settings — banners on this category's page"
+            aria-label="Page settings for this category"
             className="grid h-8 w-8 place-items-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
           >
-            <ImageIcon className="h-4 w-4" aria-hidden />
+            <Settings className="h-4 w-4" aria-hidden />
           </Link>
         )}
         <button
@@ -373,8 +320,6 @@ function CategoryForm({
   category,
   parentId,
   parentName,
-  categories,
-  banners,
   pending,
   onSubmit,
   onCancel,
@@ -383,15 +328,8 @@ function CategoryForm({
   category?: AdminCategory;
   parentId?: string;
   parentName?: string;
-  /** Every category, so banner pickers can name the page a banner sits on. */
-  categories?: AdminCategory[];
-  /** Every banner, for a top-level category's page pickers. */
-  banners?: AdminBannerOption[];
   pending: boolean;
-  onSubmit: (
-    input: Record<string, unknown>,
-    pageBanners?: CategoryPageBanners,
-  ) => void;
+  onSubmit: (input: Record<string, unknown>) => void;
   onCancel?: () => void;
   onDone?: () => void;
 }) {
@@ -400,27 +338,8 @@ function CategoryForm({
   const [image, setImage] = useState(category?.image ?? "");
   const [isActive, setIsActive] = useState(category?.isActive ?? true);
   const [slugTouched, setSlugTouched] = useState(Boolean(category));
-  const [topBannerIds, setTopBannerIds] = useState<string[]>(
-    category?.topBannerIds.slice(0, 2) ?? [],
-  );
-  const [longBannerIds, setLongBannerIds] = useState<string[]>(
-    category?.longBannerIds.slice(0, 3) ?? [],
-  );
-  const [adBannerIds, setAdBannerIds] = useState<string[]>(
-    category?.adBannerIds.slice(0, 1) ?? [],
-  );
-  const [longBannerHeight, setLongBannerHeight] = useState(
-    category?.longBannerHeight ?? 0,
-  );
-  const [adBannerHeight, setAdBannerHeight] = useState(
-    category?.adBannerHeight ?? 0,
-  );
 
   const effectiveSlug = slugTouched ? slug : slugify(name);
-  // Only an existing top-level category has a page of its own to stock.
-  const showPageBanners = Boolean(
-    category && category.parentId === null && banners,
-  );
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -429,25 +348,14 @@ function CategoryForm({
       notify.error("Categories", "A name is required.");
       return;
     }
-    onSubmit(
-      {
-        name: name.trim(),
-        slug: finalSlug,
-        parentId: parentId ?? category?.parentId ?? "",
-        image: image.trim(),
-        sortOrder: category?.sortOrder ?? 999,
-        isActive,
-      },
-      showPageBanners
-        ? {
-            top: topBannerIds,
-            long: longBannerIds,
-            ad: adBannerIds,
-            longHeight: longBannerHeight,
-            adHeight: adBannerHeight,
-          }
-        : undefined,
-    );
+    onSubmit({
+      name: name.trim(),
+      slug: finalSlug,
+      parentId: parentId ?? category?.parentId ?? "",
+      image: image.trim(),
+      sortOrder: category?.sortOrder ?? 999,
+      isActive,
+    });
     onDone?.();
   }
 
@@ -511,24 +419,6 @@ function CategoryForm({
         />
       </div>
 
-      {showPageBanners && category && banners && (
-        <PageBannersFields
-          categoryId={category.id}
-          banners={banners}
-          categories={categories ?? []}
-          top={topBannerIds}
-          long={longBannerIds}
-          ad={adBannerIds}
-          longHeight={longBannerHeight}
-          adHeight={adBannerHeight}
-          onTopChange={setTopBannerIds}
-          onLongChange={setLongBannerIds}
-          onAdChange={setAdBannerIds}
-          onLongHeightChange={setLongBannerHeight}
-          onAdHeightChange={setAdBannerHeight}
-        />
-      )}
-
       <div className="mt-3 flex items-center gap-2">
         <button
           type="submit"
@@ -549,245 +439,5 @@ function CategoryForm({
         )}
       </div>
     </form>
-  );
-}
-
-/** Where a banner sits today, in words — null while it is on this page. */
-function bannerHome(
-  banner: AdminBannerOption,
-  categoryId: string,
-  categoryNames: Map<string, string>,
-): string | null {
-  if (banner.categoryId === categoryId) return null;
-  if (banner.categoryId) {
-    // Assigned to another page: picking it here moves it away.
-    return categoryNames.get(banner.categoryId) ?? "another category";
-  }
-  // Not on a category page at all: name its current placement instead.
-  return PLACEMENT_LABELS[banner.placement as BannerPlacement] ?? null;
-}
-
-/**
- * The page blocks of one top-level category (client's slide 4): the top pair
- * rendered side by side, the long banner under the filters — one banner per
- * column, exactly like the home page's strip — and the single ad block below
- * it. The banners are picked here; each banner's own image and text are edited
- * in /admin/banners. Saved together with the category form; the server moves
- * banners that sit on another page.
- */
-function PageBannersFields({
-  categoryId,
-  banners,
-  categories,
-  top,
-  long,
-  ad,
-  longHeight,
-  adHeight,
-  onTopChange,
-  onLongChange,
-  onAdChange,
-  onLongHeightChange,
-  onAdHeightChange,
-}: {
-  categoryId: string;
-  banners: AdminBannerOption[];
-  categories: AdminCategory[];
-  top: string[];
-  long: string[];
-  ad: string[];
-  longHeight: number;
-  adHeight: number;
-  onTopChange: (ids: string[]) => void;
-  onLongChange: (ids: string[]) => void;
-  onAdChange: (ids: string[]) => void;
-  onLongHeightChange: (height: number) => void;
-  onAdHeightChange: (height: number) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const categoryNames = useMemo(
-    () => new Map<string, string>(categories.map((c) => [c.id, c.name])),
-    [categories],
-  );
-
-  const selectedLong = new Set(long);
-  const filtered = banners.filter((b) =>
-    b.title.toLowerCase().includes(query.trim().toLowerCase()),
-  );
-  // The strip renders at most three columns, so it picks at most three.
-  const atCap = long.length >= 3;
-
-  /** Set one of the two top slots ("" clears it) and keep the pair dense. */
-  function setTopSlot(slot: 0 | 1, id: string) {
-    const next = [top[0] ?? "", top[1] ?? ""];
-    next[slot] = id;
-    onTopChange(next.filter(Boolean));
-  }
-
-  /** Checkbox toggle; keeps the picks in list order (their column order). */
-  function toggleLong(id: string) {
-    const next = new Set(selectedLong);
-    if (next.has(id)) next.delete(id);
-    else if (!atCap) next.add(id);
-    onLongChange(banners.filter((b) => next.has(b.id)).map((b) => b.id));
-  }
-
-  return (
-    <div className="mt-3 rounded-xl border border-zinc-200 bg-white p-3">
-      <h3 className="text-xs font-semibold text-zinc-700">Page banners</h3>
-      <p className="mt-0.5 text-xs text-zinc-400">
-        A banner can only sit on one category page; picking it here moves it.
-      </p>
-
-      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        {([0, 1] as const).map((slot) => (
-          <label key={slot} className="block">
-            <span className="mb-1 block text-xs font-medium text-zinc-500">
-              Top banner {slot + 1}
-            </span>
-            <select
-              value={top[slot] ?? ""}
-              onChange={(e) => setTopSlot(slot, e.target.value)}
-              className={inputCls}
-            >
-              <option value="">None</option>
-              {banners.map((b) => {
-                const home = bannerHome(b, categoryId, categoryNames);
-                // The pair holds two slots: keep the sibling's pick out.
-                const taken = slot === 0 ? top[1] : top[0];
-                return (
-                  <option key={b.id} value={b.id} disabled={b.id === taken}>
-                    {home ? `${b.title} · ${home}` : b.title}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-        ))}
-      </div>
-
-      <div className="mt-3">
-        <span className="mb-1 block text-xs font-medium text-zinc-500">
-          Long banner (below the filters)
-        </span>
-        <p className="mb-1 text-xs text-zinc-400">
-          One banner per column: one runs full width, two or three share the row
-          and phones stack them. Up to three.
-        </p>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search banners…"
-          className={inputCls}
-        />
-        {/* Scrollable like the page-builder pickers so the dialog stays small. */}
-        <div className="mt-1 max-h-48 overflow-y-auto rounded border border-zinc-200">
-          {filtered.length === 0 ? (
-            <p className="px-2 py-2 text-xs text-zinc-400">No banners match.</p>
-          ) : (
-            filtered.map((b) => {
-              const home = bannerHome(b, categoryId, categoryNames);
-              return (
-                <label
-                  key={b.id}
-                  className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedLong.has(b.id)}
-                    disabled={!selectedLong.has(b.id) && atCap}
-                    onChange={() => toggleLong(b.id)}
-                    className="h-4 w-4 rounded border-zinc-300 accent-point-500"
-                  />
-                  <Image
-                    src={b.image}
-                    alt=""
-                    width={40}
-                    height={24}
-                    unoptimized
-                    className="h-6 w-10 shrink-0 rounded object-cover"
-                  />
-                  <span className="min-w-0 flex-1 truncate">{b.title}</span>
-                  {home && (
-                    <span className="shrink-0 text-xs text-zinc-400">
-                      {home}
-                    </span>
-                  )}
-                </label>
-              );
-            })
-          )}
-        </div>
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="text-xs text-zinc-400">
-            {long.length} of 3 selected
-          </span>
-          <label className="flex items-center gap-1.5">
-            <span className="text-xs text-zinc-500">Height (px)</span>
-            <input
-              type="number"
-              min={0}
-              max={600}
-              value={longHeight}
-              onChange={(e) =>
-                onLongHeightChange(
-                  Math.max(0, Math.min(600, Number(e.target.value) || 0)),
-                )
-              }
-              className={`${inputCls} w-20`}
-            />
-          </label>
-        </div>
-        <span className="mt-0.5 block text-xs text-zinc-400">
-          Height 0 keeps each banner&apos;s own proportions.
-        </span>
-      </div>
-
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-500">
-            Ad block
-          </span>
-          <select
-            value={ad[0] ?? ""}
-            onChange={(e) => onAdChange(e.target.value ? [e.target.value] : [])}
-            className={inputCls}
-          >
-            <option value="">None</option>
-            {banners
-              .filter((b) => !top.includes(b.id) && !selectedLong.has(b.id))
-              .map((b) => {
-                const home = bannerHome(b, categoryId, categoryNames);
-                return (
-                  <option key={b.id} value={b.id}>
-                    {home ? `${b.title} · ${home}` : b.title}
-                  </option>
-                );
-              })}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-500">
-            Ad height (px)
-          </span>
-          <input
-            type="number"
-            min={0}
-            max={600}
-            value={adHeight}
-            onChange={(e) =>
-              onAdHeightChange(
-                Math.max(0, Math.min(600, Number(e.target.value) || 0)),
-              )
-            }
-            className={inputCls}
-          />
-          <span className="mt-1 block text-xs text-zinc-400">
-            One image below the long banner. 0 keeps the artwork&apos;s own
-            proportions.
-          </span>
-        </label>
-      </div>
-    </div>
   );
 }
