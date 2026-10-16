@@ -115,10 +115,12 @@ New: `Category.longBannerHeight` + `Category.adBannerHeight` (migration
 banner placement (scoped to a category, like the top pair and the long banner).
 
 **Follow-up — page configuration lives under Pages.** The Pages screen is now
-the single home for per-page settings. The content pages (home, ambassador)
-keep their section builder; a new **Other pages** table lists the brands page
-and every top-level category listing, with what is already configured on each
-(“None yet” until something is picked). Each row opens its own screen:
+the single home for per-page settings, and one list of every configurable page
+— home, ambassador, the brands directory and each top-level category listing —
+since they all do the same thing (update what their page shows) and differ only
+in the options they offer. Each row names its configuration (“18 sections”,
+“Banners · preview grid”, “top ×2 · long ×1 · ad”, “None yet”) and carries a
+**Hidden** chip when the page is off, and opens its own screen:
 
 - `/admin/pages/brands` — the directory's preview grid and the banners above it
   (moved out of Site settings, which keeps the store-wide content: contact
