@@ -4,7 +4,11 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
-import { longBannerCellBox, longBannerPhoneBox } from "@/lib/long-banner";
+import {
+  longBannerCellBox,
+  longBannerPhoneBox,
+  LONG_BANNER_PREVIEW_RADIUS,
+} from "@/lib/long-banner";
 import { BannerArtwork } from "@/components/banners/banner-artwork";
 import { ImageField } from "@/components/admin/image-field";
 import {
@@ -399,13 +403,19 @@ function BannerFormInner({ banner, backHref, longBanner }: BannerFormProps) {
                   {frame.box.height}
                   {autoHeight ? " (auto)" : ""}
                 </p>
-                <div className="flex w-full gap-[6px]">
+                <div
+                  className="flex w-full gap-[6px]"
+                  // The cells quote their corner as a share of this row, so the
+                  // frame reads at the same roundness as the page.
+                  style={{ containerType: "inline-size" }}
+                >
                   {Array.from({ length: frame.columns }, (_, i) => (
                     <div
                       key={i}
-                      className="relative min-w-0 flex-1 overflow-hidden rounded-lg bg-zinc-100"
+                      className="relative min-w-0 flex-1 overflow-hidden rounded-md bg-zinc-100"
                       style={{
                         aspectRatio: `${frame.box.width} / ${frame.box.height}`,
+                        borderRadius: LONG_BANNER_PREVIEW_RADIUS,
                       }}
                     >
                       <BannerArtwork banner={preview} />

@@ -116,3 +116,17 @@ export function longBannerPhoneBox(height: number) {
         : Math.round(LONG_BANNER_PHONE_WIDTH / LONG_BANNER_PHONE_RATIO),
   };
 }
+
+/**
+ * The storefront gives every cell the same 16px corner (Tailwind's rounded-2xl
+ * on the strip). The admin previews are scaled-down pictures of the strip, so
+ * they quote the corner as a share of the strip's width instead — a fixed 16px
+ * on a preview cell a third of the size reads about twice as round as the page
+ * does (the client's note). Put it on a box whose parent has
+ * `container-type: inline-size`.
+ */
+export const LONG_BANNER_CELL_RADIUS = 16;
+export const LONG_BANNER_PREVIEW_RADIUS = `${(
+  (LONG_BANNER_CELL_RADIUS * 100) /
+  LONG_BANNER_CONTENT_WIDTH
+).toFixed(2)}cqw`;

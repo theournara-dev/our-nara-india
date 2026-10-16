@@ -25,6 +25,7 @@ import {
   longBannerCellBox,
   normalizeLongBannerSlots,
   resolveLongBannerCells,
+  LONG_BANNER_PREVIEW_RADIUS,
   type LongBannerSlot,
 } from "@/lib/long-banner";
 import { BannerArtwork } from "@/components/banners/banner-artwork";
@@ -174,7 +175,12 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
             Nothing to show — every column is on &quot;None&quot;.
           </p>
         ) : (
-          <div className="flex w-full flex-col gap-[10px] md:flex-row">
+          <div
+            className="flex w-full flex-col gap-[10px] md:flex-row"
+            // One query container per strip, so the cells can quote their
+            // corner as a share of it (LONG_BANNER_PREVIEW_RADIUS).
+            style={{ containerType: "inline-size" }}
+          >
             {preview.map(({ id, banner }) => (
               <div
                 key={id}
@@ -182,7 +188,7 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
                 // shape is the page's shape by construction; a pinned height
                 // keeps the column's share of the content column at the widest
                 // the page goes — the same box the banner editor quotes.
-                className={`relative w-full overflow-hidden rounded-2xl bg-white ${
+                className={`relative w-full overflow-hidden rounded-md bg-white ${
                   height > 0 ? "" : "aspect-[800/210] md:aspect-[2172/260]"
                 } ${
                   preview.length > 1
@@ -191,13 +197,16 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
                       : "md:w-1/3"
                     : ""
                 }`}
-                style={
-                  height > 0
+                style={{
+                  // The live 16px corner at the preview's own scale (the
+                  // rounded-md above is the fallback for older engines).
+                  borderRadius: LONG_BANNER_PREVIEW_RADIUS,
+                  ...(height > 0
                     ? {
                         aspectRatio: `${longBannerCellBox(columns, height).width} / ${height}`,
                       }
-                    : undefined
-                }
+                    : {}),
+                }}
               >
                 <BannerArtwork
                   banner={{
