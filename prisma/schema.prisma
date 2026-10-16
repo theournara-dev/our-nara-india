@@ -152,6 +152,9 @@ model Brand {
   name        String
   logoUrl     String?  @map("logo_url")
   coverUrl    String?  @map("cover_url")
+  // The brand page's banner height in pixels (client slide 7): the artwork is
+  // drawn full width at this height. 300 until an admin says otherwise.
+  bannerHeight Int     @default(300) @map("banner_height")
   description String?
   // The /brands page's curated tabs (client slide 8): "Only At Ournara" or
   // "New Launch". Null = listed under "All" only.

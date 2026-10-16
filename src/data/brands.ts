@@ -12,7 +12,10 @@ export interface BrandSummary {
   slug: string;
   name: string;
   logoUrl?: string | null;
+  /** The brand page's own banner image (client's slide 7). */
   coverUrl?: string | null;
+  /** How tall that banner is drawn, in pixels. */
+  bannerHeight?: number | null;
   description?: string | null;
   group?: BrandGroupKey | null;
 }
@@ -43,6 +46,7 @@ export async function getBrandBySlug(
       name: true,
       logoUrl: true,
       coverUrl: true,
+      bannerHeight: true,
       description: true,
       isActive: true,
     },

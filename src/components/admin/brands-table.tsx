@@ -5,11 +5,20 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
 import { ImageField } from "@/components/admin/image-field";
+import { ScaledPreview } from "@/components/admin/scaled-preview";
+import { BrandBanner } from "@/components/brands/brand-banner";
 import {
   deleteBrand,
   toggleBrandActive,
   updateBrand,
 } from "@/app/admin/brands/actions";
+import {
+  BRAND_BANNER_HEIGHT_DEFAULT,
+  BRAND_BANNER_HEIGHT_MAX,
+  BRAND_BANNER_HEIGHT_MIN,
+  BRAND_BANNER_VIEWPORT_WIDTH,
+  brandBannerHeight,
+} from "@/lib/brand-banner";
 import { notify } from "@/lib/toast";
 
 export type BrandGroupKey = "ONLY_AT_OURNARA" | "NEW_LAUNCH";
@@ -22,6 +31,8 @@ export interface AdminBrandRow {
   productCount: number;
   logoUrl: string | null;
   coverUrl: string | null;
+  /** The brand page banner's height in pixels (client's slide 7). */
+  bannerHeight: number;
   group: BrandGroupKey | null;
 }
 
@@ -207,7 +218,8 @@ export function BrandsTable({ brands }: { brands: AdminBrandRow[] }) {
   );
 }
 
-/** The /brands page fields: the brand image and its curated group tab. */
+/** The brand's own fields: its /brands image and group tab, and the banner its
+ * page draws (client slides 7–8). */
 function BrandEditDialog({
   brand,
   onClose,
@@ -219,8 +231,12 @@ function BrandEditDialog({
 }) {
   const [logoUrl, setLogoUrl] = useState(brand.logoUrl ?? "");
   const [coverUrl, setCoverUrl] = useState(brand.coverUrl ?? "");
+  const [bannerHeight, setBannerHeight] = useState(
+    brandBannerHeight(brand.bannerHeight),
+  );
   const [group, setGroup] = useState<"" | BrandGroupKey>(brand.group ?? "");
   const [saving, startTransition] = useTransition();
+  const banner = coverUrl.trim();
 
   function onSave() {
     startTransition(async () => {
@@ -228,6 +244,7 @@ function BrandEditDialog({
       const res = await updateBrand(brand.id, {
         logoUrl,
         coverUrl,
+        bannerHeight,
         group: group === "" ? null : group,
       });
       if (!res.ok) {
@@ -266,7 +283,7 @@ function BrandEditDialog({
             {brand.name}
           </h3>
           <p className="mt-1 text-sm text-zinc-500">
-            What the /brands page shows for this brand.
+            What /brands and this brand&apos;s own page show.
           </p>
 
           <div className="mt-4 space-y-4">
@@ -296,8 +313,59 @@ function BrandEditDialog({
               label="Brand page banner (optional)"
               value={coverUrl}
               onChange={setCoverUrl}
-              hint="Wide artwork shown at the top of this brand's own page; brands without one show no banner."
+              hint="One raw image, full width at the top of this brand's own page. Brands without one show no banner."
             />
+
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-zinc-500">
+                Banner height (px)
+              </span>
+              <input
+                type="number"
+                min={BRAND_BANNER_HEIGHT_MIN}
+                max={BRAND_BANNER_HEIGHT_MAX}
+                step={10}
+                value={bannerHeight}
+                onChange={(e) =>
+                  setBannerHeight(brandBannerHeight(Number(e.target.value)))
+                }
+                className="h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+              />
+              <span className="mt-1 block text-xs text-zinc-400">
+                {BRAND_BANNER_HEIGHT_DEFAULT}px by default (
+                {BRAND_BANNER_HEIGHT_MIN}–{BRAND_BANNER_HEIGHT_MAX}). The banner
+                is full width, so this is the only measurement it needs.
+              </span>
+            </label>
+
+            <div>
+              <span className="mb-1 block text-xs font-medium text-zinc-500">
+                Banner preview
+              </span>
+              {banner ? (
+                <>
+                  <ScaledPreview
+                    referenceWidth={BRAND_BANNER_VIEWPORT_WIDTH}
+                    referenceHeight={bannerHeight}
+                  >
+                    <BrandBanner
+                      image={banner}
+                      name={brand.name}
+                      height={bannerHeight}
+                    />
+                  </ScaledPreview>
+                  <p className="mt-1 text-xs text-zinc-400">
+                    Full width at a {BRAND_BANNER_VIEWPORT_WIDTH}px screen,
+                    scaled to fit here. The image is cropped to this height.
+                  </p>
+                </>
+              ) : (
+                <p className="rounded border border-dashed border-zinc-200 py-6 text-center text-xs text-zinc-400">
+                  No banner yet — the brand page shows its title and products
+                  without one.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="mt-5 flex items-center justify-end gap-2">

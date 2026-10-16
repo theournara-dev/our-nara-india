@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import { brandBannerHeight } from "@/lib/brand-banner";
 import { db } from "@/lib/db";
 import { parseInput, safeText } from "@/lib/validation";
 
@@ -64,13 +65,17 @@ const brandUpdateInput = z.object({
   /** null clears the group (the brand stays in "All" only). */
   group: z.enum(["ONLY_AT_OURNARA", "NEW_LAUNCH"]).nullable().optional(),
   logoUrl: safeText(2000).optional(),
-  /** The brand page's banner image (client slide 12). */
+  /** The brand page's banner image (client's slide 7). */
   coverUrl: safeText(2000).optional(),
+  /** How tall that banner is drawn, in pixels. Out-of-range values are clamped
+   * rather than refused — a height is a setting, not a mistake to argue about. */
+  bannerHeight: z.coerce.number().int().optional(),
 });
 
 /**
- * Save the /brands page fields: the curated group tab and the brand image
- * (client slide 8; both are set from the brands table's edit dialog).
+ * Save the brand's own fields: the curated group tab, its /brands image, and the
+ * banner its page draws (client slides 7–8; all set from the brands table's edit
+ * dialog).
  */
 export async function updateBrand(
   id: string,
@@ -88,6 +93,9 @@ export async function updateBrand(
           : {}),
         ...(data.coverUrl !== undefined
           ? { coverUrl: data.coverUrl.trim() || null }
+          : {}),
+        ...(data.bannerHeight !== undefined
+          ? { bannerHeight: brandBannerHeight(data.bannerHeight) }
           : {}),
       },
     });

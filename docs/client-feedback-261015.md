@@ -23,7 +23,7 @@ the bottom.
 | 9   | Remove the indicated element + main category font                                        | The **"REAL REVIEWS" eyebrow is gone from `/review`** as well (the home section lost it in an earlier round); the heading "What Our Customers Say" stays and is Pretendard on both. The removed element is the only thing that changed — cards, counts and the Write-a-Review button are untouched.                                                                                                                                                                                                                                                                       |
 | 10  | Image section + text position + remove element                                           | Event cards are now a **square (1:1) image box** with `object-cover`, so an upload fills the box without distortion, and the text stays in the bottom-left corner as the reference shows. The element the slide marks for removal (the old card's "See coupons" button) does not exist in the current card, so nothing else was taken away.                                                                                                                                                                                                                               |
 | 11  | Events main category typography                                                          | The Events heading is Pretendard (the shared `PageHeader`), applied everywhere that header is reused. Content, grid and links are unchanged.                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 12  | Banner images on individual brand pages                                                  | New `BrandBanner` component + `Brand.coverUrl` wired end to end: each brand page renders **its own** wide banner under the breadcrumb (≈3.5:1, `object-cover`, square-cornered, 16:9 on phones), and admins upload it per brand in **Brands → Edit → "Brand page banner"**. A brand without artwork renders no frame at all, so the page never shows an empty box. The banner is the page's own artwork, so it carries no link.                                                                                                                                           |
+| 12  | Banner images on individual brand pages                                                  | New `BrandBanner` component + `Brand.coverUrl` wired end to end: each brand page renders **its own** banner, and admins upload it per brand in **Brands → Edit → "Brand page banner"**. A brand without artwork renders no frame at all, so the page never shows an empty box. The banner is the page's own artwork, so it carries no link. **Superseded by slide 7** (below): the banner is now a full-bleed raw image at an admin-set height, 300px by default, with a preview in the same dialog.                                                                      |
 | 13  | Verify and update the brand list                                                         | Verified against the live catalogue: **all ten brands the client listed exist, are active and have products**, with the exact display names they used (Prelude Dinto, TAG, ZOOM by JUNGSAEMMOOL, JMsolution, IPKN, BONCEPT, VOV, MIMO by MAMONDE, MEDIPEEL, VT). `tests/client-brands.test.ts` guards this from now on, so a future import can't quietly drop one. No duplicates were created and no names were changed.                                                                                                                                                  |
 | 14  | Add the missing brand to the specified section                                           | **Not completed — needs the deck.** See below.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 15  | Final validation                                                                         | `npm run build`, `npx tsc --noEmit`, `npx eslint`, `npm test` (163 tests) all pass; the affected pages were checked in a real browser at 1440px, 834px and 390px wide.                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -213,6 +213,27 @@ focus point, so zooming never walks away from what was picked.
   gone (`ImageField`'s `onPreviewChange` is wired up), and the hover zoom now
   sits on a frame _around_ the image so the admin's framing cannot overwrite it.
 
+### Slide 7 — the brand page's banner
+
+A brand page now reads **banner → breadcrumb → logo and name → product grid**.
+The banner is one raw image, **full width**: it sits outside the page container,
+so it runs edge to edge with no margins, no rounding and no text over it, and it
+is drawn at the height the admin sets — **300px by default** — with
+`object-cover`, so any upload fills the strip without distortion. A brand without
+artwork renders nothing and the rest of the page is exactly what it was (same
+container, same spacing), so banners can be added brand by brand.
+
+It is edited where the rest of a brand is: **Brands → Edit**, the single brand
+editing dialog, which now carries the banner image, a **Banner height (px)**
+field and a **preview** that draws the storefront's own `BrandBanner` at 1440px
+wide — the width a full-bleed strip has on a desktop screen, which matters
+because a fixed-height `object-cover` crop depends on it — then scales the whole
+picture down to the dialog. `src/components/admin/scaled-preview.tsx` is that
+wrapper; `src/lib/brand-banner.ts` holds the default, the limits (60–900) and the
+reference width, read by the renderer, the action and the preview alike, so the
+three cannot disagree. Migration `20261017030000_brand_banner_height` adds
+`brands.banner_height`.
+
 ## New / changed infrastructure
 
 - **Slide 3 migrations** (both additive, run `npx prisma migrate deploy` when
@@ -310,6 +331,13 @@ focus point, so zooming never walks away from what was picked.
   cells (2 × 692.6 × 82.9 at 1440px, level with the page container) and the
   1395 × 100 promo under them, from the per-store config — the same geometry as
   before the JSON move. `/brands` and the category listings both answer 200.
+- Brand banner: with a temporary image on Prelude Dinto, `/brand/prelude-dinto`
+  measured the banner at **1440 × 300 at x=0** on a 1440px screen (full bleed,
+  `object-cover`, no rounding) and **390 × 300 at x=0** on a 390px phone with no
+  horizontal overflow; `/brand/tag` (no artwork) rendered no banner at all. The
+  dialog's preview was mounted at its real ~430px column and measured 430 × 89.6
+  with a `matrix(0.2986…)` scale (430 ÷ 1440) and a 0px radius, i.e. the page's
+  own picture, scaled. Data restored, throwaway route deleted.
 - Event card framing: with a temporary image on both events, `/event` rendered
   `object-position: 20% 80%` with `transform: scale(1.6)` and
   `transform-origin: 20% 80%` on every card, and the cards measured 600 × 600 at

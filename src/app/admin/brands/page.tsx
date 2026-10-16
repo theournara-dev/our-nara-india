@@ -14,6 +14,7 @@ export default async function AdminBrandsPage() {
       isActive: true,
       logoUrl: true,
       coverUrl: true,
+      bannerHeight: true,
       group: true,
       _count: { select: { products: true } },
     },
@@ -38,6 +39,7 @@ export default async function AdminBrandsPage() {
           productCount: b._count.products,
           logoUrl: b.logoUrl,
           coverUrl: b.coverUrl,
+          bannerHeight: b.bannerHeight,
           group: b.group,
         }))}
       />

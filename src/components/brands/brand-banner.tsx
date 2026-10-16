@@ -1,35 +1,38 @@
 import Image from "next/image";
+import { brandBannerHeight } from "@/lib/brand-banner";
 
 /**
- * A brand page's banner (client slide 12: "Add a layout that supports banner
- * images on each brand page"). The artwork is set per brand in the admin
- * (Brands → Edit → Page banner) and rendered full width under the breadcrumb,
- * cropped to a wide strip so any upload keeps the page's rhythm.
- *
- * Brands without artwork render nothing, so a page never shows an empty frame.
- * The banner belongs to the page it sits on, so it carries no link of its own —
- * only alt text.
+ * A brand page's banner (client's slide 7): one raw image, full width — no page
+ * margins — drawn at the height set in the admin (300px by default), cropped to
+ * fill it. It is the page's own hero, so it sits above the breadcrumb and takes
+ * no rounding, no overlay and no link of its own; brands without artwork render
+ * nothing, so a page never shows an empty frame.
  */
 export function BrandBanner({
   image,
   name,
+  height,
 }: {
   image: string | null | undefined;
   name: string;
+  /** Height in pixels; see `brand-banner.ts` for the default and the limits. */
+  height?: number | null;
 }) {
   if (!image) return null;
 
   return (
-    <div className="mb-6 aspect-[1560/440] w-full overflow-hidden rounded-2xl bg-[#f6f6f6] max-md:aspect-[16/9]">
+    <div
+      className="relative w-full overflow-hidden bg-[#f6f6f6]"
+      style={{ height: brandBannerHeight(height) }}
+    >
       <Image
         src={image}
         alt={`${name} banner`}
-        width={1560}
-        height={440}
+        fill
         unoptimized
         priority
-        sizes="(max-width: 1560px) 100vw, 1560px"
-        className="h-full w-full object-cover"
+        sizes="100vw"
+        className="object-cover"
       />
     </div>
   );
