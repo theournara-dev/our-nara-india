@@ -69,7 +69,8 @@ export default async function AdminPagesPage() {
       slug: `category/${category.slug}`,
       config: blocksOf(category.id),
       hidden: !category.isActive,
-      href: `/admin/pages/category/${category.slug}`,
+      // One screen configures every category page, opened on this one.
+      href: `/admin/pages/category?category=${category.slug}`,
     })),
   ];
 

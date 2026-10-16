@@ -264,11 +264,11 @@ function CategoryRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        {/* Shortcut to this category's page settings under Pages, where its
-            banner blocks are picked (client's slide 4). */}
+        {/* Shortcut to this category's page settings under Pages — one screen
+            configures every category page, opened on this one. */}
         {category.parentId === null && (
           <Link
-            href={`/admin/pages/category/${category.slug}`}
+            href={`/admin/pages/category?category=${category.slug}`}
             title="Page settings — banners on this category's page"
             aria-label="Page settings for this category"
             className="grid h-8 w-8 place-items-center rounded text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"

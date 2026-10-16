@@ -7,7 +7,10 @@ import {
   setCategoryPageBanners,
   type CategoryPageBanners,
 } from "@/app/admin/pages/actions";
-import { PLACEMENT_LABELS, type BannerPlacement } from "@/app/admin/banners/lib";
+import {
+  PLACEMENT_LABELS,
+  type BannerPlacement,
+} from "@/app/admin/banners/lib";
 import { notify } from "@/lib/toast";
 
 const inputCls =
@@ -20,6 +23,20 @@ export interface AdminBannerOption {
   placement: string;
   /** The category page it sits on right now; null when it sits elsewhere. */
   categoryId: string | null;
+}
+
+/** One category listing's page settings, as the screen receives them. */
+export interface CategoryPageSettings {
+  id: string;
+  slug: string;
+  name: string;
+  top: string[];
+  long: string[];
+  ad: string[];
+  /** Strip height in pixels; 0 keeps each banner's own proportions. */
+  longHeight: number;
+  /** Ad block height in pixels; 0 keeps the artwork's own proportions. */
+  adHeight: number;
 }
 
 /**
@@ -41,39 +58,34 @@ function bannerHome(
 }
 
 /**
- * The page settings of one top-level category listing (client's slide 4): the
- * top pair, the long banner below the filter tiles (one banner per column, up
- * to three — the same strip the home page uses) and the single ad block under
- * it, plus the two heights. Lives under Pages; /admin/categories is only the
- * category tree. A banner can only sit on one page, so picking it here moves it.
+ * The category listings' page settings (client's slide 4): the top pair, the
+ * long banner below the filter tiles (one banner per column, up to three — the
+ * same strip the home page uses) and the single ad block under it, plus the two
+ * heights. Every listing is configured on this one screen — pick the page on
+ * the left, edit it, save it. A banner can only sit on one page, so picking it
+ * here moves it.
  */
-export function CategoryPageBannersForm({
-  categoryId,
-  categoryName,
-  categorySlug,
+export function CategoryPagesSettings({
+  pages,
   banners,
   categories,
-  initial,
+  initialId,
 }: {
-  categoryId: string;
-  categoryName: string;
-  categorySlug: string;
+  pages: CategoryPageSettings[];
   banners: AdminBannerOption[];
-  /** The other categories, so the pickers can name the page a banner sits on. */
+  /** Every category, so the pickers can name the page a banner sits on. */
   categories: { id: string; name: string }[];
-  initial: {
-    top: string[];
-    long: string[];
-    ad: string[];
-    longHeight: number;
-    adHeight: number;
-  };
+  /** The page to open on (from the ?category= the admin came in with). */
+  initialId?: string;
 }) {
-  const [top, setTop] = useState<string[]>(initial.top);
-  const [long, setLong] = useState<string[]>(initial.long);
-  const [ad, setAd] = useState<string[]>(initial.ad);
-  const [longHeight, setLongHeight] = useState(initial.longHeight);
-  const [adHeight, setAdHeight] = useState(initial.adHeight);
+  const [activeId, setActiveId] = useState(
+    initialId && pages.some((p) => p.id === initialId)
+      ? initialId
+      : (pages[0]?.id ?? ""),
+  );
+  const [state, setState] = useState<Record<string, CategoryPageSettings>>(() =>
+    Object.fromEntries(pages.map((p) => [p.id, { ...p }])),
+  );
   const [query, setQuery] = useState("");
   const [saving, startSaving] = useTransition();
 
@@ -82,18 +94,33 @@ export function CategoryPageBannersForm({
     [categories],
   );
 
-  const selectedLong = new Set(long);
+  const active = pages.find((p) => p.id === activeId) ?? pages[0];
+  if (!active) {
+    return (
+      <p className="rounded-2xl border border-dashed border-zinc-200 py-10 text-center text-sm text-zinc-400">
+        No top-level categories yet — add one under Categories first.
+      </p>
+    );
+  }
+
+  const current = state[active.id];
+  const selectedLong = new Set(current.long ?? []);
   const filtered = banners.filter((b) =>
     b.title.toLowerCase().includes(query.trim().toLowerCase()),
   );
   // The strip renders at most three columns, so it picks at most three.
-  const atCap = long.length >= 3;
+  const atCap = (current.long ?? []).length >= 3;
+
+  function patch(next: Partial<CategoryPageSettings>) {
+    setState((s) => ({ ...s, [active.id]: { ...s[active.id], ...next } }));
+  }
 
   /** Set one of the two top slots ("" clears it) and keep the pair dense. */
   function setTopSlot(slot: 0 | 1, id: string) {
+    const top = current.top ?? [];
     const next = [top[0] ?? "", top[1] ?? ""];
     next[slot] = id;
-    setTop(next.filter(Boolean));
+    patch({ top: next.filter(Boolean) });
   }
 
   /** Checkbox toggle; keeps the picks in list order (their column order). */
@@ -101,26 +128,49 @@ export function CategoryPageBannersForm({
     const next = new Set(selectedLong);
     if (next.has(id)) next.delete(id);
     else if (!atCap) next.add(id);
-    setLong(banners.filter((b) => next.has(b.id)).map((b) => b.id));
+    patch({ long: banners.filter((b) => next.has(b.id)).map((b) => b.id) });
   }
 
   function save() {
-    const payload: CategoryPageBanners = {
-      top,
-      long,
-      ad,
-      longHeight,
-      adHeight,
-    };
     startSaving(async () => {
-      const result = await setCategoryPageBanners(categoryId, payload);
-      if (result.ok) notify.success("Saved", `${categoryName} page updated.`);
+      const payload: CategoryPageBanners = {
+        top: current.top ?? [],
+        long: current.long ?? [],
+        ad: current.ad ?? [],
+        longHeight: current.longHeight ?? 0,
+        adHeight: current.adHeight ?? 0,
+      };
+      const result = await setCategoryPageBanners(active.id, payload);
+      if (result.ok) notify.success("Saved", `${active.name} page updated.`);
       else notify.error("Could not save", result.message);
     });
   }
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
+        {pages.map((page) => (
+          <button
+            key={page.id}
+            type="button"
+            onClick={() => setActiveId(page.id)}
+            aria-pressed={page.id === active.id}
+            className={`h-8 rounded px-3 text-sm font-medium transition-colors ${
+              page.id === active.id
+                ? "bg-point-500 text-white"
+                : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+            }`}
+          >
+            {page.name}
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-zinc-400">
+        Editing <span className="font-medium text-zinc-500">{active.name}</span>{" "}
+        — /category/{active.slug}
+      </p>
+
       <section className="rounded-2xl border border-zinc-100 bg-white p-5">
         <h2 className="mb-1 text-sm font-semibold text-zinc-900">
           Banners on this page
@@ -137,15 +187,16 @@ export function CategoryPageBannersForm({
                 Top banner {slot + 1}
               </span>
               <select
-                value={top[slot] ?? ""}
+                value={current.top?.[slot] ?? ""}
                 onChange={(e) => setTopSlot(slot, e.target.value)}
                 className={inputCls}
               >
                 <option value="">None</option>
                 {banners.map((b) => {
-                  const home = bannerHome(b, categoryId, categoryNames);
+                  const home = bannerHome(b, active.id, categoryNames);
                   // The pair holds two slots: keep the sibling's pick out.
-                  const taken = slot === 0 ? top[1] : top[0];
+                  const taken =
+                    slot === 0 ? current.top?.[1] : current.top?.[0];
                   return (
                     <option key={b.id} value={b.id} disabled={b.id === taken}>
                       {home ? `${b.title} · ${home}` : b.title}
@@ -183,7 +234,7 @@ export function CategoryPageBannersForm({
             <p className="px-2 py-2 text-xs text-zinc-400">No banners match.</p>
           ) : (
             filtered.map((b) => {
-              const home = bannerHome(b, categoryId, categoryNames);
+              const home = bannerHome(b, active.id, categoryNames);
               return (
                 <label
                   key={b.id}
@@ -217,7 +268,7 @@ export function CategoryPageBannersForm({
         </div>
         <div className="mt-2 flex items-center justify-between gap-2">
           <span className="text-xs text-zinc-400">
-            {long.length} of 3 selected
+            {selectedLong.size} of 3 selected
           </span>
           <label className="flex items-center gap-1.5">
             <span className="text-xs text-zinc-500">Height (px)</span>
@@ -225,11 +276,14 @@ export function CategoryPageBannersForm({
               type="number"
               min={0}
               max={600}
-              value={longHeight}
+              value={current.longHeight ?? 0}
               onChange={(e) =>
-                setLongHeight(
-                  Math.max(0, Math.min(600, Number(e.target.value) || 0)),
-                )
+                patch({
+                  longHeight: Math.max(
+                    0,
+                    Math.min(600, Number(e.target.value) || 0),
+                  ),
+                })
               }
               className={`${inputCls} w-24`}
             />
@@ -252,15 +306,21 @@ export function CategoryPageBannersForm({
               Image
             </span>
             <select
-              value={ad[0] ?? ""}
-              onChange={(e) => setAd(e.target.value ? [e.target.value] : [])}
+              value={current.ad?.[0] ?? ""}
+              onChange={(e) =>
+                patch({ ad: e.target.value ? [e.target.value] : [] })
+              }
               className={inputCls}
             >
               <option value="">None</option>
               {banners
-                .filter((b) => !top.includes(b.id) && !selectedLong.has(b.id))
+                .filter(
+                  (b) =>
+                    !(current.top ?? []).includes(b.id) &&
+                    !selectedLong.has(b.id),
+                )
                 .map((b) => {
-                  const home = bannerHome(b, categoryId, categoryNames);
+                  const home = bannerHome(b, active.id, categoryNames);
                   return (
                     <option key={b.id} value={b.id}>
                       {home ? `${b.title} · ${home}` : b.title}
@@ -277,11 +337,14 @@ export function CategoryPageBannersForm({
               type="number"
               min={0}
               max={600}
-              value={adHeight}
+              value={current.adHeight ?? 0}
               onChange={(e) =>
-                setAdHeight(
-                  Math.max(0, Math.min(600, Number(e.target.value) || 0)),
-                )
+                patch({
+                  adHeight: Math.max(
+                    0,
+                    Math.min(600, Number(e.target.value) || 0),
+                  ),
+                })
               }
               className={inputCls}
             />
@@ -299,10 +362,10 @@ export function CategoryPageBannersForm({
           disabled={saving}
           className="h-9 rounded bg-point-500 px-4 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? "Saving…" : `Save ${active.name}`}
         </button>
         <Link
-          href={`/category/${categorySlug}`}
+          href={`/category/${active.slug}`}
           className="text-sm text-point-500 hover:underline"
         >
           View the page →

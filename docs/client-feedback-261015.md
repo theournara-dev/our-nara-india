@@ -127,9 +127,12 @@ in the options they offer. Each row names its configuration (“18 sections”,
   details, top banner, store picker, delivery, tax, invoice). This is where the
   slide-4 follow-up landed for it, and it now lives with the banner pickers it
   belongs to.
-- `/admin/pages/category/<slug>` — that listing's top pair, long banner (up to
-  three picks + height) and ad block (+ height). A mid-level category has no
-  page of its own, so it redirects to its parent's settings.
+- `/admin/pages/category` — **one** screen for every category listing: pick the
+  page at the top (the Pages list and the gear shortcut in Categories arrive
+  with `?category=<slug>`, so it opens on the right one), then set that page's
+  top pair, long banner (up to three picks + height) and ad block (+ height).
+  They all do the same thing and differ only in which banners they hold, so one
+  screen serves them all.
 
 `/admin/categories` is back to the tree alone — name, slug, tile, order,
 visibility and subcategories — with a gear shortcut on each top-level row that
