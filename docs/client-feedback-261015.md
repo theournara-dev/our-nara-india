@@ -116,11 +116,12 @@ banner placement (scoped to a category, like the top pair and the long banner).
 
 **Follow-up — page configuration lives under Pages.** The Pages screen is now
 the single home for per-page settings, and one list of every configurable page
-— home, ambassador, the brands directory and each top-level category listing —
-since they all do the same thing (update what their page shows) and differ only
-in the options they offer. Each row names its configuration (“18 sections”,
-“Banners · preview grid”, “top ×2 · long ×1 · ad”, “None yet”) and carries a
-**Hidden** chip when the page is off, and opens its own screen:
+— home, ambassador, the brands directory and the category listings — since they
+all do the same thing (update what their page shows) and differ only in the
+options they offer. The category listings share one screen, so they are one row
+(“Category pages · 4 pages · none set up yet” until something is picked); the
+other rows name their configuration (“18 sections”, “Banners · preview grid”)
+and carry a **Hidden** chip when the page is off. Each row opens its screen:
 
 - `/admin/pages/brands` — the directory's preview grid and the banners above it
   (moved out of Site settings, which keeps the store-wide content: contact
@@ -128,11 +129,11 @@ in the options they offer. Each row names its configuration (“18 sections”,
   slide-4 follow-up landed for it, and it now lives with the banner pickers it
   belongs to.
 - `/admin/pages/category` — **one** screen for every category listing: pick the
-  page at the top (the Pages list and the gear shortcut in Categories arrive
-  with `?category=<slug>`, so it opens on the right one), then set that page's
-  top pair, long banner (up to three picks + height) and ad block (+ height).
-  They all do the same thing and differ only in which banners they hold, so one
-  screen serves them all.
+  page at the top (a `?category=<slug>` opens it on that one), then set that
+  page's top pair, long banner (up to three picks + height) and ad block
+  (+ height). They all do the same thing and differ only in which banners they
+  hold, so one screen serves them all, and edits for the other pages are kept
+  while you switch.
 
 `/admin/categories` is back to the tree alone — name, slug, tile, order,
 visibility and subcategories — with a gear shortcut on each top-level row that

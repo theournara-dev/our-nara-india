@@ -9,9 +9,9 @@ const editBtnCls =
 /**
  * Pages: one list of every page the storefront renders from configuration. A
  * page's settings open from here — the content pages (home, ambassador) in the
- * section builder, the brands directory and each top-level category listing on
- * their own screens. The pages differ only in what they can be configured with,
- * which the Configuration column names (client's slide 4).
+ * section builder, the brands directory and the category listings on their own
+ * screens, one screen each. The pages differ only in what they can be
+ * configured with, which the Configuration column names (client's slide 4).
  */
 export default async function AdminPagesPage() {
   const [pages, categories] = await Promise.all([
@@ -23,28 +23,19 @@ export default async function AdminPagesPage() {
     db.category.findMany({
       where: { parentId: null },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, slug: true, name: true, isActive: true },
+      select: { id: true, slug: true, name: true },
     }),
   ]);
 
-  // How many blocks each category page already has, for the summary column.
+  // How many category pages already have banners picked, for the summary.
   const picks = await db.banner.groupBy({
     by: ["categoryId", "placement"],
     where: { categoryId: { in: categories.map((c) => c.id) } },
     _count: { _all: true },
   });
-  const blocksOf = (categoryId: string) => {
-    const of = (placement: string) =>
-      picks.find(
-        (p) => p.categoryId === categoryId && p.placement === placement,
-      )?._count._all ?? 0;
-    const parts = [
-      of("category-top") > 0 ? `top ×${of("category-top")}` : null,
-      of("category-long") > 0 ? `long ×${of("category-long")}` : null,
-      of("category-ad") > 0 ? "ad" : null,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(" · ") : "None yet";
-  };
+  const configuredPages = categories.filter((c) =>
+    picks.some((p) => p.categoryId === c.id),
+  ).length;
 
   const rows = [
     ...pages.map((page) => ({
@@ -63,15 +54,21 @@ export default async function AdminPagesPage() {
       hidden: false,
       href: "/admin/pages/brands",
     },
-    ...categories.map((category) => ({
-      key: category.id,
-      name: category.name,
-      slug: `category/${category.slug}`,
-      config: blocksOf(category.id),
-      hidden: !category.isActive,
-      // One screen configures every category page, opened on this one.
-      href: `/admin/pages/category?category=${category.slug}`,
-    })),
+    {
+      key: "categories",
+      name: "Category pages",
+      slug: "category/*",
+      // One screen configures them all, so they are one row here too.
+      config: `${categories.length} page${
+        categories.length === 1 ? "" : "s"
+      } · ${
+        configuredPages > 0
+          ? `${configuredPages} with banners`
+          : "none set up yet"
+      }`,
+      hidden: false,
+      href: "/admin/pages/category",
+    },
   ];
 
   return (
