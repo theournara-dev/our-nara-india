@@ -234,6 +234,30 @@ reference width, read by the renderer, the action and the preview alike, so the
 three cannot disagree. Migration `20261017030000_brand_banner_height` adds
 `brands.banner_height`.
 
+### Slide 8 — the review pages
+
+The eyebrow is gone from the reviews. The listing page (`/review`) had already
+lost its “REAL REVIEWS” line in an earlier round; the one still on the site was
+the **review detail page** (`/review/<id>`), whose `PageHeader` carried
+`eyebrow="Real Reviews"` — that is the element the client is pointing at, and it
+is removed. Both headers now go straight to the heading:
+
+- `/review` — “What Our Customers Say”.
+- `/review/<id>` — “Review by <author>” over “On <product>”.
+
+**Typography.** Both are “main category” headings and render in **Pretendard**
+through `font-category`, which is what `PageHeader` has used since slide 10/11 of
+the earlier round; the detail page was already covered by it, and switching the
+eyebrow off changes nothing there. Confirmed in the browser from the computed
+style (`Pretendard, Poppins, "Noto Sans KR", …`) and `document.fonts.check("1em
+Pretendard")`, not just from the class name, so the font is genuinely loaded and
+not falling back. The review card titles, body and star ratings are untouched.
+
+Nothing else on either page carried the wording: the home reviews section's
+heading was already “What Our Customers Say”, and the only other mention left in
+the codebase is the page builder's internal section description (“Real reviews
+carousel.”), which is an admin-facing label for the section, not storefront copy.
+
 ## New / changed infrastructure
 
 - **Slide 3 migrations** (both additive, run `npx prisma migrate deploy` when
@@ -331,6 +355,11 @@ three cannot disagree. Migration `20261017030000_brand_banner_height` adds
   cells (2 × 692.6 × 82.9 at 1440px, level with the page container) and the
   1395 × 100 promo under them, from the per-store config — the same geometry as
   before the JSON move. `/brands` and the category listings both answer 200.
+- Review pages: `/review` renders “What Our Customers Say” with nothing above it
+  and the detail page (`/review/r1`) renders “Review by Ananya” over “On NOWATER
+  set” — no “Real Reviews” anywhere (a body-text search for it returns false on
+  both), and both headings resolve to the **Pretendard** family with the font
+  loaded.
 - Brand banner: with a temporary image on Prelude Dinto, `/brand/prelude-dinto`
   measured the banner at **1440 × 300 at x=0** on a 1440px screen (full bleed,
   `object-cover`, no rounding) and **390 × 300 at x=0** on a 390px phone with no

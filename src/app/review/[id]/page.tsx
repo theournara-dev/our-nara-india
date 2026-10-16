@@ -32,8 +32,9 @@ export default async function ReviewDetailPage({
 
   return (
     <div>
+      {/* No eyebrow (client's slide 8: the "Real Reviews" line goes); the
+          heading stays, and PageHeader renders it in Pretendard. */}
       <PageHeader
-        eyebrow="Real Reviews"
         title={`Review by ${review.author}`}
         subtitle={review.product ? `On ${review.product}` : undefined}
       />
