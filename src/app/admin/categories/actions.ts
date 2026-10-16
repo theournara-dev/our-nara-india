@@ -12,8 +12,7 @@ import { parseInput, safeText } from "@/lib/validation";
  */
 
 export type CategoryActionResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 const categoryInput = z.object({
   name: safeText(120, { min: 1, message: "Name is required" }),
@@ -109,7 +108,9 @@ export async function saveCategory(
 }
 
 /** Delete a category. Refused while products or subcategories still use it. */
-export async function deleteCategory(id: string): Promise<CategoryActionResult> {
+export async function deleteCategory(
+  id: string,
+): Promise<CategoryActionResult> {
   await requireAdmin();
   const category = await db.category.findUnique({
     where: { id },
@@ -120,7 +121,8 @@ export async function deleteCategory(id: string): Promise<CategoryActionResult> 
       },
     },
   });
-  if (!category) return { ok: false, message: "This category no longer exists." };
+  if (!category)
+    return { ok: false, message: "This category no longer exists." };
 
   if (category._count.children > 0) {
     return {
@@ -168,7 +170,8 @@ export async function moveCategory(
     where: { id },
     select: { id: true, parentId: true },
   });
-  if (!category) return { ok: false, message: "This category no longer exists." };
+  if (!category)
+    return { ok: false, message: "This category no longer exists." };
 
   const siblings = await db.category.findMany({
     where: { parentId: category.parentId },
@@ -200,5 +203,96 @@ export async function moveCategory(
   }
 
   revalidateCategories();
+  return { ok: true };
+}
+
+/**
+ * Banner picks for one category page: the "top pair" rendered side by side
+ * and the long carousel under it. Placement editing moved off the banner edit
+ * form, so the category screen owns its page's banners. A banner sits on at
+ * most one page (`categoryId` is a single column), so a pick that is already
+ * attached elsewhere moves here.
+ */
+const categoryBannersInput = z.object({
+  top: z.array(safeText(100)).default([]),
+  long: z.array(safeText(100)).default([]),
+});
+
+/** Save one top-level category page's banner picks (top pair + carousel). */
+export async function setCategoryBanners(
+  categoryId: string,
+  input: { top: string[]; long: string[] },
+): Promise<CategoryActionResult> {
+  await requireAdmin();
+
+  let data: z.infer<typeof categoryBannersInput>;
+  try {
+    data = parseInput(categoryBannersInput, input, "category banners");
+  } catch {
+    return { ok: false, message: "Check the selected banners." };
+  }
+
+  const category = await db.category.findUnique({
+    where: { id: categoryId },
+    select: { parentId: true },
+  });
+  if (!category)
+    return { ok: false, message: "This category no longer exists." };
+  if (category.parentId) {
+    // Subcategories have no page of their own, so they host no banners.
+    return {
+      ok: false,
+      message: "Only top-level categories have page banners.",
+    };
+  }
+
+  // Drop blanks and duplicates; the pair keeps its first two slots. A banner
+  // picked in both lists stays up top — the more specific pick wins.
+  const cleanIds = (ids: string[]) => [...new Set(ids.filter(Boolean))];
+  const top = cleanIds(data.top).slice(0, 2);
+  const long = cleanIds(data.long).filter((id) => !top.includes(id));
+
+  // Anything still attached to this page but no longer picked comes off it.
+  // Detached, not deleted, so the banner stays available to other pages.
+  const attached = await db.banner.findMany({
+    where: { categoryId, placement: { in: ["category-top", "category-long"] } },
+    select: { id: true },
+  });
+  const picked = new Set([...top, ...long]);
+  const detach = attached.filter((b) => !picked.has(b.id));
+
+  const writes = [
+    ...top.map((id, i) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-top", categoryId, sortOrder: i },
+      }),
+    ),
+    ...long.map((id, i) =>
+      db.banner.update({
+        where: { id },
+        data: { placement: "category-long", categoryId, sortOrder: i },
+      }),
+    ),
+    ...detach.map((b) =>
+      db.banner.update({
+        where: { id: b.id },
+        data: { placement: "", categoryId: null },
+      }),
+    ),
+  ];
+
+  try {
+    // One transaction so a failed pick cannot leave the page half-saved.
+    if (writes.length > 0) await db.$transaction(writes);
+  } catch (err) {
+    console.error(`[categories] banner picks failed for ${categoryId}:`, err);
+    return { ok: false, message: "Could not save the page banners." };
+  }
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/banners");
+  // Every category listing page renders these picks.
+  revalidatePath("/category", "layout");
   return { ok: true };
 }

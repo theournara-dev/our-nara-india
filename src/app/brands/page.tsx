@@ -22,10 +22,13 @@ export const dynamic = "force-dynamic";
  */
 export default async function BrandsPage() {
   const version = await getRequestSiteVersion();
-  const [brands, banners, site] = await Promise.all([
+  // The site config decides the banner picks, so it is read first.
+  const site = await getSiteConfig(version);
+  const siteBannerIds = site.brandsPage.bannerIds;
+  const [brands, banners] = await Promise.all([
     getBrands(),
-    getBrandTopBanners(),
-    getSiteConfig(version),
+    // The page picks its own banners now, so no placement is involved.
+    getBrandTopBanners(siteBannerIds),
   ]);
 
   return (

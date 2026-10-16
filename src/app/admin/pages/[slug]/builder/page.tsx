@@ -36,8 +36,28 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
       take: 500,
     }),
     db.banner.findMany({
-      select: { id: true, title: true, image: true, placement: true },
-      orderBy: [{ placement: "asc" }, { sortOrder: "asc" }],
+      select: {
+        id: true,
+        title: true,
+        image: true,
+        mobileImage: true,
+        alt: true,
+        href: true,
+        placement: true,
+        isActive: true,
+        startsAt: true,
+        expiresAt: true,
+        // The content a banner draws, so the section editors can preview it
+        // exactly as the storefront will (client's slide 3).
+        style: true,
+        heading: true,
+        subheading: true,
+        textAlign: true,
+        textVAlign: true,
+        textColor: true,
+        scrim: true,
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     }),
   ]);
 
@@ -51,10 +71,27 @@ export default async function PageBuilderPage({ params }: { params: Params }) {
     summary: p.summary ?? undefined,
   }));
 
+  // The section editors preview banners, so they need to know which ones the
+  // storefront would actually render right now (active and in schedule) — the
+  // loaders draw their "Automatic" pool from exactly those.
+  const now = new Date();
+  const bannerOptions = banners.map(({ startsAt, expiresAt, ...b }) => ({
+    ...b,
+    live:
+      b.isActive &&
+      (!startsAt || startsAt <= now) &&
+      (!expiresAt || expiresAt >= now),
+  }));
+
   return (
     <PageBuilder
       page={page}
-      options={{ brands, categories, products: productOptions, banners }}
+      options={{
+        brands,
+        categories,
+        products: productOptions,
+        banners: bannerOptions,
+      }}
     />
   );
 }

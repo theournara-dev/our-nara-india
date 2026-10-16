@@ -68,13 +68,20 @@ function newId(prefix: string) {
 export function SiteSettingsForm({
   initial,
   initialSwitcher,
+  banners,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
+  /** Standalone banners the brands page can put above its directory. */
+  banners: { id: string; title: string }[];
 }) {
   return (
     <UploadQueueProvider>
-      <SiteSettingsInner initial={initial} initialSwitcher={initialSwitcher} />
+      <SiteSettingsInner
+        initial={initial}
+        initialSwitcher={initialSwitcher}
+        banners={banners}
+      />
     </UploadQueueProvider>
   );
 }
@@ -82,9 +89,11 @@ export function SiteSettingsForm({
 function SiteSettingsInner({
   initial,
   initialSwitcher,
+  banners,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
+  banners: { id: string; title: string }[];
 }) {
   const [tab, setTab] = useState<SiteVersion>("local");
   const [content, setContent] = useState(initial);
@@ -425,6 +434,7 @@ function SiteSettingsInner({
       {/* ── Brands page ─────────────────────────────────────────────────── */}
       <BrandsPageEditor
         content={current.brandsPage}
+        banners={banners}
         onChange={(brandsPage) => patch({ brandsPage })}
         onSave={() => void gate.save("brands")}
         saving={saving === "brands"}
@@ -784,12 +794,14 @@ function TopBannerEditor({
 /** Editor for the /brands preview grid's size (per store). */
 function BrandsPageEditor({
   content,
+  banners,
   onChange,
   onSave,
   saving,
   disabled,
 }: {
   content: BrandsPageContent;
+  banners: { id: string; title: string }[];
   onChange: (content: BrandsPageContent) => void;
   onSave: () => void;
   saving: boolean;
@@ -853,6 +865,41 @@ function BrandsPageEditor({
           />
         </label>
       </div>
+
+      {/* The banners above the directory. The page owns them and picks them by
+          name here (client's slide 3: banners are standalone, the component
+          that shows one decides where it goes). */}
+      <div className="mt-5 grid gap-4 sm:grid-cols-2">
+        {[0, 1].map((slot) => (
+          <label key={slot} className="block">
+            <span className={labelCls}>Top banner {slot + 1}</span>
+            <select
+              value={content.bannerIds?.[slot] ?? ""}
+              onChange={(e) => {
+                const next = [
+                  content.bannerIds?.[0] ?? "",
+                  content.bannerIds?.[1] ?? "",
+                ];
+                next[slot] = e.target.value;
+                onChange({ ...content, bannerIds: next.filter(Boolean) });
+              }}
+              className={inputCls}
+            >
+              <option value="">None</option>
+              {banners.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-zinc-400">
+        Picked banners render side by side above the brand grid at their own
+        proportions. They are managed in the Banners admin.
+      </p>
+
       <div className="mt-4">
         <button
           type="button"

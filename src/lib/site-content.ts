@@ -98,12 +98,18 @@ export type BrandsPageContent = {
   previewColumns: number;
   /** Rows of previews shown; the rest stay in the list below. */
   previewRows: number;
+  /**
+   * The banners above the directory, in order (up to two). Picked here because
+   * the page, not the banner, decides where a banner goes (client's slide 3).
+   */
+  bannerIds: string[];
 };
 
 export const DEFAULT_BRANDS_PAGE: BrandsPageContent = {
   previewHeight: 100,
   previewColumns: 4,
   previewRows: 2,
+  bannerIds: [],
 };
 
 const DEFAULT_TAX_RATES = { mhBps: DEFAULT_GST_BPS, otherBps: DEFAULT_GST_BPS };
@@ -395,6 +401,8 @@ export function siteContentFromRow(
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
+    /** Banner ids the /brands page shows above its directory. */
+    brandsBannerIds: string[];
     taxRateMhBps: number | null;
     taxRateOtherBps: number | null;
   } | null,
@@ -445,6 +453,7 @@ export function siteContentFromRow(
         10,
         base.brandsPage.previewRows,
       ),
+      bannerIds: (row.brandsBannerIds ?? base.brandsPage.bannerIds).slice(0, 2),
     },
     // India GST defaults (basis points); anything unusable falls back to 18%.
     taxRates: {

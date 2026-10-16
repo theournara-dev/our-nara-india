@@ -788,7 +788,11 @@ model RecentView {
 model Banner {
   id          String    @id @default(cuid())
   title       String // admin label, e.g. "Summer Sale"
-  placement   String    @default("long") // "long" | "hero" | "triple" | "category-top" | "category-long" | "brand-top" | "brand-section"
+  // Where the banner is shown. The client's slide 3 made banners standalone
+  // media: components pick their banners (the long banner's cells, the category
+  // and brands screens) and set this on the ones they own, so the banner form
+  // no longer asks for it. Empty = not placed anywhere yet.
+  placement   String    @default("") // "long" | "hero" | "triple" | "category-top" | "category-long" | "brand-top" | "brand-section"
   // The category page a scoped banner belongs to ("category-top" renders the
   // first two side by side, "category-long" is the carousel under them).
   // Null on the homepage placements.
@@ -800,6 +804,16 @@ model Banner {
   mobileImage String?   @map("mobile_image") // taller mobile variant; falls back to image
   alt         String?
   href        String? // optional link target
+  // What is drawn inside the banner (client's slide 3): "image" is the artwork
+  // as uploaded, "custom" draws the heading and subheading over it with the
+  // alignment, colour and scrim below.
+  style       String    @default("image") // "image" | "custom"
+  heading     String? // headline drawn over the artwork ("custom" only)
+  subheading  String? @map("subheading")
+  textAlign   String    @default("left") @map("text_align") // "left" | "center" | "right"
+  textVAlign  String    @default("bottom") @map("text_v_align") // "top" | "middle" | "bottom"
+  textColor   String?   @map("text_color") // hex; the storefront's white when empty
+  scrim       Boolean   @default(true) // dark gradient behind the text
   sortOrder   Int       @default(0) @map("sort_order")
   isActive    Boolean   @default(true) @map("is_active")
   startsAt    DateTime? @map("starts_at")
@@ -1032,6 +1046,9 @@ model SiteConfig {
   brandsPreviewHeight  Int? @map("brands_preview_height")
   brandsPreviewColumns Int? @map("brands_preview_columns")
   brandsPreviewRows    Int? @map("brands_preview_rows")
+  // /brands: the banners above the directory, in order (client's slide 3 —
+  // the page picks its banners instead of the banner declaring a placement).
+  brandsBannerIds      String[] @map("brands_banner_ids")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

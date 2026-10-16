@@ -9,6 +9,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+import { BannerArtwork } from "@/components/banners/banner-artwork";
 import type { LongBanner as LongBannerItem } from "@/data/banners";
 import { toLoopable } from "@/lib/carousel";
 
@@ -137,60 +138,83 @@ export function LongBanner({ banners }: LongBannerProps) {
 }
 
 /**
- * One admin-configured banner cell (see the page builder's long banner).
- * `banner` is null when no banner is available to show.
+ * One admin-configured banner slot (see the page builder's long banner).
+ * `banner` is null when the slot holds no banner (the "None" choice).
  */
 export interface LongBannerCell {
   id: string;
   banner: LongBannerItem | null;
 }
 
+/** The share of the row one cell takes: 1 → full width, 2 → halves, 3 → thirds. */
+const CELL_WIDTH = ["", "", "md:w-1/2", "md:w-1/3"];
+
 /**
- * The long-banner section's two cells: side by side on desktop, stacked on
- * phones, inside the original section container (92% / 1560px cap, 8px inset,
- * 100px top margin) so the section keeps the original strip's placement. Each
- * cell holds exactly one banner, rendered at the original strip's proportions
- * (the desktop art is a wide strip, the mobile art a shorter one) so the strip
- * keeps its original height whatever the upload's own ratio.
+ * The long-banner section (client's slide 3): the admin sets how many columns
+ * (1–3) and how tall the strip is, and picks one banner per column — a column
+ * set to "None" hands its width to the others. Everything is inside the usual
+ * 92% / 1560px page container, and each cell is one link to whatever the banner
+ * points at.
+ *
+ * `height: 0` keeps each banner's own proportions (what the strip did before
+ * the height control existed); any other value pins the strip's height.
  */
-export function LongBannerCells({ cells }: { cells: LongBannerCell[] }) {
+export function LongBannerCells({
+  cells,
+  columns = 2,
+  height = 0,
+}: {
+  cells: LongBannerCell[];
+  /** Columns across the strip on desktop (1–3); stacked on phones. */
+  columns?: number;
+  /** Strip height in pixels; 0 keeps the artwork's own proportions. */
+  height?: number;
+}) {
   const visible = (cells ?? []).filter(
     (cell): cell is LongBannerCell & { banner: LongBannerItem } =>
       Boolean(cell.banner),
   );
   if (visible.length === 0) return null;
 
+  const pinned = height > 0;
+
   return (
     <div className="long-banner">
-      {/* One banner fills the strip; two share it side by side. */}
-      <div
-        className={`grid gap-[10px] ${visible.length > 1 ? "md:grid-cols-2" : ""}`}
-      >
+      <div className="flex w-full flex-col gap-[10px] md:flex-row">
         {visible.map((cell) => (
           <Link
             key={cell.id}
             href={cell.banner.href ?? "/"}
-            className="block aspect-[800/210] overflow-hidden rounded-2xl md:aspect-[2172/260]"
+            className={`group block w-full overflow-hidden rounded-2xl ${
+              CELL_WIDTH[Math.min(visible.length, columns)] ?? ""
+            } ${pinned ? "" : "aspect-[800/210] md:aspect-[2172/260]"}`}
+            style={pinned ? { height } : undefined}
           >
-            <Image
-              src={cell.banner.image}
-              alt={cell.banner.alt}
-              width={2172}
-              height={260}
-              unoptimized
-              className="hidden h-full w-full object-cover md:block"
-            />
-            <Image
-              src={cell.banner.mobileImage}
-              alt={cell.banner.alt}
-              width={800}
-              height={210}
-              unoptimized
-              className="h-full w-full object-cover md:hidden"
-            />
+            <BannerArtworkCell banner={cell.banner} />
           </Link>
         ))}
       </div>
     </div>
+  );
+}
+
+/** Bridges the data layer's banner shape onto the shared artwork renderer. */
+function BannerArtworkCell({ banner }: { banner: LongBannerItem }) {
+  return (
+    <BannerArtwork
+      banner={{
+        image: banner.image,
+        mobileImage: banner.mobileImage,
+        alt: banner.alt,
+        style: banner.style,
+        heading: banner.heading,
+        subheading: banner.subheading,
+        textAlign: banner.textAlign,
+        textVAlign: banner.textVAlign,
+        textColor: banner.textColor,
+        scrim: banner.scrim,
+      }}
+      className="transition-transform duration-500 group-hover:scale-[1.01]"
+    />
   );
 }

@@ -43,7 +43,26 @@ export interface SectionFormOptions {
     isPreOrder: boolean;
     summary?: string;
   }[];
-  banners: { id: string; title: string; image: string; placement: string }[];
+  banners: {
+    id: string;
+    title: string;
+    image: string;
+    mobileImage: string | null;
+    alt: string | null;
+    href: string | null;
+    placement: string;
+    isActive: boolean;
+    /** Active *and* inside its schedule — what the storefront will render. */
+    live: boolean;
+    /** Content composition — previews render exactly what the storefront will. */
+    style: string;
+    heading: string | null;
+    subheading: string | null;
+    textAlign: string;
+    textVAlign: string;
+    textColor: string | null;
+    scrim: boolean;
+  }[];
 }
 
 export { inputCls, labelCls };

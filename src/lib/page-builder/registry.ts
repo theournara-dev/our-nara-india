@@ -9,8 +9,12 @@ import { ShortsCarousel } from "@/components/content/shorts-carousel";
 import { TripleBanner } from "@/components/content/triple-banner";
 import { ProductShowcase } from "@/components/theme/product-showcase";
 import { TabbedShowcase } from "@/components/content/tabbed-showcase";
-import { getLongBanners } from "@/data/banners";
+import { getStandaloneBanners } from "@/data/banners";
 import { getBrands } from "@/data/brands";
+import {
+  normalizeLongBannerSlots,
+  resolveLongBannerCells,
+} from "@/lib/long-banner";
 import type { ProductCard } from "@/data/products";
 import {
   getAvailableNow,
@@ -23,7 +27,6 @@ import {
 } from "@/data/products";
 import {
   DEFAULT_AMBASSADOR_FORM_INTRO,
-  LONG_BANNER_NONE,
   DEFAULT_AMBASSADOR_FORM_TITLE,
   SECTION_TYPE_META_BY_TYPE,
   type AmbassadorImageConfig,
@@ -160,40 +163,21 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
     meta: SECTION_TYPE_META_BY_TYPE["long-banner"],
     load: async (config) => {
       const c = config as {
+        columns?: number;
+        height?: number;
         cells?: { id: string; bannerId?: string }[];
         bannerIds?: string[];
       };
-      // Sections stored before the cell split carry a carousel selection —
-      // fold its first two entries into the two cells so old pages render.
-      const cells =
-        c.cells && c.cells.length > 0
-          ? c.cells
-          : [
-              { id: "cell-1", bannerId: c.bannerIds?.[0] ?? "" },
-              { id: "cell-2", bannerId: c.bannerIds?.[1] ?? "" },
-            ];
-      const all = await getLongBanners();
-      // A cell left on "automatic" takes the next active banner no other cell
-      // uses, so two empty cells show the first two banners rather than the
-      // same one twice. A cell set to "none" stays hidden on purpose.
-      const used = new Set(
-        cells
-          .map((cell) => cell.bannerId)
-          .filter((id): id is string => Boolean(id) && id !== LONG_BANNER_NONE),
-      );
-      const auto = all.filter((b) => !used.has(b.id));
+      const columns = Math.min(Math.max(c.columns ?? 2, 1), 3);
+      const cells = normalizeLongBannerSlots(c, columns);
+      // Every standalone banner is available to the columns; placement is no
+      // longer part of a banner (client's slide 3). The column rules live in
+      // `resolveLongBannerCells`, which the admin's preview also calls.
+      const all = await getStandaloneBanners();
       return {
-        cells: cells.map((cell) => ({
-          id: cell.id,
-          banner:
-            cell.bannerId === LONG_BANNER_NONE
-              ? null
-              : ((cell.bannerId
-                  ? all.find((b) => b.id === cell.bannerId)
-                  : undefined) ??
-                auto.shift() ??
-                null),
-        })),
+        columns,
+        height: c.height ?? 0,
+        cells: resolveLongBannerCells(cells, all),
       };
     },
     component: LongBannerCells,

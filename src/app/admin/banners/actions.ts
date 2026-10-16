@@ -17,7 +17,13 @@ import {
 
 const bannerInput = z.object({
   title: safeText(200, { min: 1, message: "Title is required" }),
-  placement: z.enum(BANNER_PLACEMENTS).default("long"),
+  /**
+   * Placement, category, brand and sort order are owned by the component that
+   * shows the banner (the long banner's columns, the category and brands
+   * screens) since the client's slide 3 made banners standalone media. The
+   * banner form no longer sends them, so an ordinary edit leaves them alone.
+   */
+  placement: z.enum(BANNER_PLACEMENTS).optional(),
   /** The category page a "category-top"/"category-long" banner belongs to. */
   categoryId: z.string().optional(),
   /** The brand section a "brand-section" banner sits above. */
@@ -26,7 +32,16 @@ const bannerInput = z.object({
   mobileImage: safeText(2000).optional(),
   alt: safeText(200).optional(),
   href: safeText(2000).optional(),
-  sortOrder: z.coerce.number().int().min(0).default(0),
+  // What the banner draws inside itself (client's slide 3).
+  style: z.enum(["image", "custom"]).default("image"),
+  heading: safeText(200).optional(),
+  subheading: safeText(200).optional(),
+  textAlign: z.enum(["left", "center", "right"]).default("left"),
+  textVAlign: z.enum(["top", "middle", "bottom"]).default("bottom"),
+  /** Hex colour; empty uses the storefront's white. */
+  textColor: safeText(30).optional(),
+  scrim: z.boolean().default(true),
+  sortOrder: z.coerce.number().int().min(0).optional(),
   isActive: z.boolean().default(true),
   // Optional schedule sent as `datetime-local` strings; empty means "no limit".
   startsAt: z.string().optional(),
@@ -88,14 +103,21 @@ export async function createBanner(input: BannerInput, backHref: string) {
   await db.banner.create({
     data: {
       title: data.title.trim(),
-      placement: data.placement,
-      categoryId: scopedCategoryId(data.placement, data.categoryId),
-      brandId: scopedBrandId(data.placement, data.brandId),
+      placement: data.placement ?? "",
+      categoryId: scopedCategoryId(data.placement ?? "", data.categoryId),
+      brandId: scopedBrandId(data.placement ?? "", data.brandId),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,
       href: data.href?.trim() || null,
-      sortOrder: data.sortOrder,
+      style: data.style,
+      heading: data.heading?.trim() || null,
+      subheading: data.subheading?.trim() || null,
+      textAlign: data.textAlign,
+      textVAlign: data.textVAlign,
+      textColor: data.textColor?.trim() || null,
+      scrim: data.scrim,
+      sortOrder: data.sortOrder ?? 0,
       isActive: data.isActive,
       startsAt: toDate(data.startsAt),
       expiresAt: toDate(data.expiresAt),
@@ -112,14 +134,27 @@ export async function updateBanner(id: string, input: BannerInput) {
     where: { id },
     data: {
       title: data.title.trim(),
-      placement: data.placement,
-      categoryId: scopedCategoryId(data.placement, data.categoryId),
-      brandId: scopedBrandId(data.placement, data.brandId),
+      // Placement (and the slot it belongs to) only moves when the caller
+      // explicitly sends one — the banner form does not.
+      ...(data.placement !== undefined
+        ? {
+            placement: data.placement,
+            categoryId: scopedCategoryId(data.placement, data.categoryId),
+            brandId: scopedBrandId(data.placement, data.brandId),
+          }
+        : {}),
+      ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
       image: data.image.trim(),
       mobileImage: data.mobileImage?.trim() || null,
       alt: data.alt?.trim() || null,
       href: data.href?.trim() || null,
-      sortOrder: data.sortOrder,
+      style: data.style,
+      heading: data.heading?.trim() || null,
+      subheading: data.subheading?.trim() || null,
+      textAlign: data.textAlign,
+      textVAlign: data.textVAlign,
+      textColor: data.textColor?.trim() || null,
+      scrim: data.scrim,
       isActive: data.isActive,
       startsAt: toDate(data.startsAt),
       expiresAt: toDate(data.expiresAt),

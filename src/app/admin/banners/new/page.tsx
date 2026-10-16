@@ -1,5 +1,5 @@
 import { BannerForm } from "@/components/admin/banner-form";
-import { db } from "@/lib/db";
+import { getLongBannerSettings } from "@/data/banners";
 import { buildBackHref } from "../lib";
 
 export const dynamic = "force-dynamic";
@@ -19,29 +19,13 @@ export default async function NewBannerPage({
 }) {
   const params = await searchParams;
   const backHref = buildBackHref(params);
-  const [categories, brands] = await Promise.all([
-    db.category.findMany({
-      where: { parentId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
-    }),
-    db.brand.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-  ]);
+  // The previews render the boxes the storefront actually uses.
+  const longBanner = await getLongBannerSettings();
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-zinc-900">New banner</h1>
-      <BannerForm
-        banner={null}
-        categories={categories}
-        brands={brands}
-        backHref={backHref}
-        defaults={{ placement: params.placement, categoryId: params.category }}
-      />
+      <BannerForm banner={null} backHref={backHref} longBanner={longBanner} />
     </div>
   );
 }

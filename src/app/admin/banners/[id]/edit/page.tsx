@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { BannerForm } from "@/components/admin/banner-form";
+import { getLongBannerSettings } from "@/data/banners";
 import { buildBackHref } from "../../lib";
 
 export const dynamic = "force-dynamic";
@@ -23,30 +24,17 @@ export default async function EditBannerPage({
   const [{ id }, listParams] = await Promise.all([params, searchParams]);
   const backHref = buildBackHref(listParams);
 
-  const [banner, categories, brands] = await Promise.all([
+  const [banner, longBanner] = await Promise.all([
     db.banner.findUnique({ where: { id } }),
-    db.category.findMany({
-      where: { parentId: null },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
-    }),
-    db.brand.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
+    // The previews render the boxes the storefront actually uses.
+    getLongBannerSettings(),
   ]);
   if (!banner) notFound();
 
   return (
     <div>
       <h1 className="mb-6 text-2xl font-semibold text-zinc-900">Edit banner</h1>
-      <BannerForm
-        banner={banner}
-        categories={categories}
-        brands={brands}
-        backHref={backHref}
-      />
+      <BannerForm banner={banner} backHref={backHref} longBanner={longBanner} />
     </div>
   );
 }

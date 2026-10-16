@@ -234,13 +234,18 @@ export const sectionConfigSchemas = {
     formIntro: z.string().default(DEFAULT_AMBASSADOR_FORM_INTRO),
   }),
   "long-banner": z.object({
-    // The two banner cells (side by side on desktop, stacked on phones): each
-    // shows exactly one banner, picked from the Banners admin. A cell left
-    // empty takes the next free active "long" banner, so the section is never
-    // unexpectedly blank; the "none" sentinel hides that cell on purpose.
+    // The strip's shape (client's slide 3): how many columns it shows (1–3,
+    // a column on "none" hands its width to the others) and how tall it is —
+    // 0 keeps each banner's own proportions, which is what the strip did before
+    // the height control existed.
+    columns: z.number().int().min(1).max(3).default(2),
+    height: z.number().int().min(0).max(600).default(0),
+    // One slot per column, each showing one banner picked from the Banners
+    // admin. Empty takes the next free banner so the section is never
+    // unexpectedly blank; the "none" sentinel hides that slot on purpose.
     cells: z
       .array(z.object({ id: z.string(), bannerId: z.string().default("") }))
-      .max(2)
+      .max(3)
       .default([]),
     // Legacy carousel selection from before the cell split; folded into the
     // cells when a stored section has none yet.
@@ -336,14 +341,15 @@ export const SECTION_TYPE_META: SectionTypeMeta[] = [
   {
     type: "long-banner",
     label: "Long banner",
-    description: "Two banner cells from the Banners admin.",
+    description: "A strip of 1–3 linked banners with an admin-set height.",
     configSchema: sectionConfigSchemas["long-banner"],
     defaultConfig: () => ({
+      columns: 2,
+      height: 0,
       cells: [
         { id: "cell-1", bannerId: "" },
         { id: "cell-2", bannerId: "" },
       ],
-      bannerIds: [],
     }),
   },
   {

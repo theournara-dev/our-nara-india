@@ -7,7 +7,7 @@ import { TabbedShowcase } from "@/components/content/tabbed-showcase";
 import { Reveal } from "@/components/ui/reveal";
 import { ProductGridSection } from "@/components/theme/product-grid-section";
 import { ThemeProductSection } from "@/components/theme/product-section";
-import { getLongBanners, getBrandSectionBanners } from "@/data/banners";
+import { getStandaloneBanners, getBrandSectionBanners } from "@/data/banners";
 import { getBrand } from "@/data/catalog";
 import { homeBrandSections } from "@/data/home-sections";
 import {
@@ -31,7 +31,7 @@ export async function StaticHome() {
   const { preOrderEnabled } = getVersionConfig(version);
   const featured = await getFeaturedProducts(4, version);
   const shorts = await getShortsPicks();
-  const longBanners = await getLongBanners();
+  const longBanners = await getStandaloneBanners();
   const showcaseTabs = await Promise.all(
     tripleBannerTabs.map(async (tab) => ({
       ...tab,
@@ -101,11 +101,11 @@ export async function StaticHome() {
         </Reveal>
       )}
 
-      {/* Long banner — the client's slide 6: the strip is two banners side by
-          side (one spans it when only one is active), not a one-at-a-time
-          carousel. */}
+      {/* Long banner (the client's slide 3): a strip of linked banners, one per
+          column, drawn from the same live pool the home section uses. */}
       <Reveal>
         <LongBannerCells
+          columns={2}
           cells={[
             { id: "cell-1", banner: longBanners[0] ?? null },
             { id: "cell-2", banner: longBanners[1] ?? null },

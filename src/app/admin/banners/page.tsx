@@ -144,8 +144,8 @@ export default async function AdminBannersPage({
           <thead>
             <tr className="border-b border-zinc-100 text-xs uppercase tracking-wide text-zinc-400">
               <th className="px-4 py-3 font-medium">Banner</th>
-              <th className="px-4 py-3 font-medium">Placement</th>
-              <th className="px-4 py-3 font-medium">Order</th>
+              <th className="px-4 py-3 font-medium">Content</th>
+              <th className="px-4 py-3 font-medium">Used in</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
@@ -195,16 +195,24 @@ export default async function AdminBannersPage({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-zinc-600">
-                    {PLACEMENT_LABELS[
-                      b.placement as keyof typeof PLACEMENT_LABELS
-                    ] ?? b.placement}
+                    {b.style === "custom" ? "Image + text" : "Image only"}
+                  </td>
+                  {/* Informational: the component that shows a banner sets
+                      this (client's slide 3), it is not edited on the banner. */}
+                  <td className="px-4 py-3 text-zinc-600">
+                    {b.placement ? (
+                      (PLACEMENT_LABELS[
+                        b.placement as keyof typeof PLACEMENT_LABELS
+                      ] ?? b.placement)
+                    ) : (
+                      <span className="text-zinc-400">Not placed yet</span>
+                    )}
                     {b.category && (
                       <span className="mt-0.5 block text-xs text-zinc-400">
                         {b.category.name}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-zinc-600">{b.sortOrder}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${

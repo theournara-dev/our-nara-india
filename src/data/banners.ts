@@ -13,64 +13,128 @@ import type { ShowcaseBanner } from "@/lib/page-builder/types";
 
 export interface LongBanner {
   id: string;
+  /** Admin label. */
+  title?: string;
   /** Desktop image (wide). */
   image: string;
   /** Mobile image (taller aspect), swapped in on small screens. */
   mobileImage: string;
   alt: string;
   href?: string;
+  /** What is drawn inside the banner (client's slide 3). */
+  style?: string;
+  heading?: string | null;
+  subheading?: string | null;
+  textAlign?: string;
+  textVAlign?: string;
+  textColor?: string | null;
+  scrim?: boolean;
 }
 
-const staticLongBanners: LongBanner[] = [
-  {
-    id: "lb1",
-    image: "/upload/goodymall1/en/main/long__banner01.jpg",
-    mobileImage: "/upload/goodymall1/en/main/m_long__banner01.jpg",
-    alt: "OUR:NARA banner",
-    href: "/",
-  },
-];
+/** The columns every loader reads, so their mappings cannot drift apart. */
+const BANNER_FIELDS = {
+  id: true,
+  title: true,
+  image: true,
+  mobileImage: true,
+  alt: true,
+  href: true,
+  style: true,
+  heading: true,
+  subheading: true,
+  textAlign: true,
+  textVAlign: true,
+  textColor: true,
+  scrim: true,
+} as const;
 
-/**
- * Long banners for the homepage long-banner section.
- *
- * When `ids` is provided (the admin selected specific banners), returns only
- * those active/in-schedule banners in their sort order — with no static
- * fallback, since the selection is explicit. When `ids` is empty, returns all
- * active `long` placement banners, falling back to the static list if none
- * exist so the homepage never regresses.
- */
-export async function getLongBanners(ids?: string[]): Promise<LongBanner[]> {
-  const now = new Date();
-  const explicit = ids && ids.length > 0;
-  const rows = await db.banner.findMany({
-    where: {
-      isActive: true,
-      ...(explicit ? { id: { in: ids } } : { placement: "long" }),
-      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
-    },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  if (!explicit && rows.length === 0) return staticLongBanners;
-
-  return rows.map((b) => ({
+/** One banner row → the storefront shape. */
+function toLongBanner(b: {
+  id: string;
+  title: string;
+  image: string;
+  mobileImage: string | null;
+  alt: string | null;
+  href: string | null;
+  style: string;
+  heading: string | null;
+  subheading: string | null;
+  textAlign: string;
+  textVAlign: string;
+  textColor: string | null;
+  scrim: boolean;
+}): LongBanner {
+  return {
     id: b.id,
+    title: b.title,
     image: b.image,
     mobileImage: b.mobileImage || b.image,
     alt: b.alt || b.title,
     href: b.href ?? undefined,
-  }));
+    style: b.style,
+    heading: b.heading,
+    subheading: b.subheading,
+    textAlign: b.textAlign,
+    textVAlign: b.textVAlign,
+    textColor: b.textColor,
+    scrim: b.scrim,
+  };
 }
 
-export { staticLongBanners as longBanners };
+/** Banners that are active and inside their optional schedule window. */
+function liveWindow(now: Date) {
+  return {
+    isActive: true,
+    OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+    AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
+  };
+}
+
+/** Banners that are active and inside their optional schedule window. */
+/**
+ * The long banner's shape as configured on the home page — the banner editor
+ * previews banners in exactly these boxes (client's slide 3). `height: 0` means
+ * "keep the strip's own proportions", which is the 2172 × 260 artwork.
+ */
+export async function getLongBannerSettings(): Promise<{
+  columns: number;
+  height: number;
+}> {
+  const section = await db.pageSection.findFirst({
+    where: { type: "long-banner", isActive: true, page: { slug: "home" } },
+    orderBy: { sortOrder: "asc" },
+    select: { config: true },
+  });
+  const config = (section?.config ?? {}) as {
+    columns?: number;
+    height?: number;
+  };
+  return {
+    columns: Math.min(Math.max(config.columns ?? 2, 1), 3),
+    height: Math.max(config.height ?? 0, 0),
+  };
+}
+
+/**
+ * Every banner that is not tied to a specific slot: the pool the components
+ * that place banners themselves pick from (the long banner's cells and the
+ * builder's banner pickers). Placement is no longer set on the banner record
+ * (client's slide 3), so this deliberately ignores it.
+ */
+export async function getStandaloneBanners(): Promise<LongBanner[]> {
+  const rows = await db.banner.findMany({
+    where: liveWindow(new Date()),
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: BANNER_FIELDS,
+  });
+  return rows.map(toLongBanner);
+}
 
 /**
  * The banners of one category page: up to two "category-top" images rendered
  * side by side under the mid-level tiles, and the "category-long" carousel
- * below them (any number of images). Managed in /admin/banners by choosing
- * the placement and the category.
+ * below them (any number of images). Picked on the category itself
+ * (/admin/categories → Page banners); the component owns the placement.
  */
 export async function getCategoryBanners(
   categorySlug: string,
@@ -78,84 +142,79 @@ export async function getCategoryBanners(
   const now = new Date();
   const rows = await db.banner.findMany({
     where: {
-      isActive: true,
+      ...liveWindow(now),
       placement: { in: ["category-top", "category-long"] },
       category: { slug: categorySlug },
-      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
     },
-    orderBy: { sortOrder: "asc" },
-  });
-
-  const toBanner = (b: (typeof rows)[number]): LongBanner => ({
-    id: b.id,
-    image: b.image,
-    mobileImage: b.mobileImage || b.image,
-    alt: b.alt || b.title,
-    href: b.href ?? undefined,
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: { ...BANNER_FIELDS, placement: true },
   });
 
   return {
     top: rows
       .filter((b) => b.placement === "category-top")
       .slice(0, 2)
-      .map(toBanner),
-    long: rows.filter((b) => b.placement === "category-long").map(toBanner),
+      .map(toLongBanner),
+    long: rows.filter((b) => b.placement === "category-long").map(toLongBanner),
   };
 }
 
 /**
- * The /brands page's top row: up to two "brand-top" banners, side by side.
- * Managed in /admin/banners by choosing the placement.
+ * The /brands page's top row: up to two banners, side by side. When the admin
+ * has picked specific banners (Site settings → Brands page) those ids win;
+ * otherwise the legacy "brand-top" placement still applies.
  */
-export async function getBrandTopBanners(): Promise<LongBanner[]> {
+export async function getBrandTopBanners(
+  ids?: string[],
+): Promise<LongBanner[]> {
   const now = new Date();
+  const explicit = ids && ids.length > 0;
   const rows = await db.banner.findMany({
     where: {
-      isActive: true,
-      placement: "brand-top",
-      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
+      ...liveWindow(now),
+      ...(explicit ? { id: { in: ids } } : { placement: "brand-top" }),
     },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     take: 2,
+    select: BANNER_FIELDS,
   });
-  return rows.map((b) => ({
-    id: b.id,
-    image: b.image,
-    mobileImage: b.mobileImage || b.image,
-    alt: b.alt || b.title,
-    href: b.href ?? undefined,
-  }));
+  if (explicit) {
+    // Keep the admin's pick order rather than the database's.
+    const byId = new Map(rows.map((b) => [b.id, b] as const));
+    return (ids ?? [])
+      .map((id) => byId.get(id))
+      .filter((b): b is (typeof rows)[number] => Boolean(b))
+      .map(toLongBanner);
+  }
+  return rows.map(toLongBanner);
 }
 
 /**
  * The promo row above one brand's home section (client slides 5–6: NOWATER /
- * SKIN APPLE / HYGEE). Managed in /admin/banners by picking the "Brand section"
- * placement and the brand; two banners share the row side by side, a single one
- * spans it, and nothing renders when the brand has none yet.
+ * SKIN APPLE / HYGEE). The brand's own banner list in the page builder is the
+ * usual way in; this placement stays for sections that point at the Banners
+ * admin instead. Two banners share the row, a single one spans it, and nothing
+ * renders when the brand has none.
  */
 export async function getBrandSectionBanners(
   brandSlug: string,
 ): Promise<ShowcaseBanner[]> {
-  const now = new Date();
   const rows = await db.banner.findMany({
     where: {
-      isActive: true,
+      ...liveWindow(new Date()),
       placement: "brand-section",
       brand: { slug: brandSlug },
-      OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-      AND: [{ OR: [{ expiresAt: null }, { expiresAt: { gte: now } }] }],
     },
-    orderBy: { sortOrder: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
     take: 3,
   });
   return rows.map((b) => ({
     id: b.id,
-    image: b.image,
+    image: b.mobileImage || b.image,
     href: b.href ?? undefined,
-    title: b.title,
-    alt: b.alt ?? undefined,
-    style: "image" as const,
+    title: b.heading || b.title,
+    alt: b.alt ?? b.heading ?? undefined,
+    style: b.style === "custom" ? ("custom" as const) : ("image" as const),
+    sub: b.subheading ?? undefined,
   }));
 }

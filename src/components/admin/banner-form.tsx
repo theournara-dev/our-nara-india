@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { notify } from "@/lib/toast";
 import { toDatetimeLocal } from "@/lib/datetime";
+import { longBannerCellBox, longBannerPhoneBox } from "@/lib/long-banner";
+import { BannerArtwork } from "@/components/banners/banner-artwork";
 import { ImageField } from "@/components/admin/image-field";
 import {
   UploadQueueProvider,
@@ -14,12 +16,6 @@ import {
   updateBanner,
   type BannerInput,
 } from "@/app/admin/banners/actions";
-import {
-  BANNER_PLACEMENTS,
-  BRAND_PLACEMENTS,
-  CATEGORY_PLACEMENTS,
-  PLACEMENT_LABELS,
-} from "@/app/admin/banners/lib";
 
 const inputCls =
   "h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500";
@@ -35,6 +31,13 @@ type BannerModel = {
   mobileImage: string | null;
   alt: string | null;
   href: string | null;
+  style: string;
+  heading: string | null;
+  subheading: string | null;
+  textAlign: string;
+  textVAlign: string;
+  textColor: string | null;
+  scrim: boolean;
   sortOrder: number;
   isActive: boolean;
   startsAt: Date | null;
@@ -44,13 +47,19 @@ type BannerModel = {
 type BannerFormProps = {
   banner: BannerModel | null;
   backHref: string;
-  /** Categories the scoped placements can attach to. */
-  categories?: { id: string; name: string }[];
-  /** Brands the "brand-section" placement can attach to. */
-  brands?: { id: string; name: string }[];
-  /** Prefills from the list's filters (e.g. the "Page banners" shortcut). */
-  defaults?: { placement?: string; categoryId?: string; brandId?: string };
+  /**
+   * The long banner's shape on the home page, so the previews below are the
+   * boxes the storefront will really use.
+   */
+  longBanner: { columns: number; height: number };
 };
+
+/**
+ * Where a banner can appear and at what box size. A banner is standalone media
+ * (client's slide 3), so one artwork is shown in several components at several
+ * sizes — the long-banner boxes come from the shared helpers so the two admin
+ * previews (this form and the section form) always agree.
+ */
 
 /** Create/edit form for a banner; images upload when the form is saved. */
 export function BannerForm(props: BannerFormProps) {
@@ -61,31 +70,22 @@ export function BannerForm(props: BannerFormProps) {
   );
 }
 
-function BannerFormInner({
-  banner,
-  backHref,
-  categories = [],
-  brands = [],
-  defaults,
-}: BannerFormProps) {
+function BannerFormInner({ banner, backHref, longBanner }: BannerFormProps) {
   const isEdit = Boolean(banner);
   const [pending, startTransition] = useTransition();
 
   const [title, setTitle] = useState(banner?.title ?? "");
-  const [placement, setPlacement] = useState(
-    banner?.placement ?? defaults?.placement ?? "long",
-  );
-  const [categoryId, setCategoryId] = useState(
-    banner?.categoryId ?? defaults?.categoryId ?? "",
-  );
-  const [brandId, setBrandId] = useState(
-    banner?.brandId ?? defaults?.brandId ?? "",
-  );
   const [image, setImage] = useState(banner?.image ?? "");
   const [mobileImage, setMobileImage] = useState(banner?.mobileImage ?? "");
   const [alt, setAlt] = useState(banner?.alt ?? "");
   const [href, setHref] = useState(banner?.href ?? "");
-  const [sortOrder, setSortOrder] = useState(String(banner?.sortOrder ?? 0));
+  const [style, setStyle] = useState(banner?.style ?? "image");
+  const [heading, setHeading] = useState(banner?.heading ?? "");
+  const [subheading, setSubheading] = useState(banner?.subheading ?? "");
+  const [textAlign, setTextAlign] = useState(banner?.textAlign ?? "left");
+  const [textVAlign, setTextVAlign] = useState(banner?.textVAlign ?? "bottom");
+  const [textColor, setTextColor] = useState(banner?.textColor ?? "");
+  const [scrim, setScrim] = useState(banner?.scrim ?? true);
   const [isActive, setIsActive] = useState(banner?.isActive ?? true);
   const [startsAt, setStartsAt] = useState(toDatetimeLocal(banner?.startsAt));
   const [expiresAt, setExpiresAt] = useState(
@@ -101,16 +101,21 @@ function BannerFormInner({
   }
 
   function submitBanner() {
+    // Placement, category, brand and sort order are deliberately absent: the
+    // component showing the banner owns them.
     const input: BannerInput = {
       title: title.trim(),
-      placement: placement as BannerInput["placement"],
-      categoryId: categoryId || undefined,
-      brandId: brandId || undefined,
       image: image.trim(),
       mobileImage: mobileImage.trim() || undefined,
       alt: alt.trim() || undefined,
       href: href.trim() || undefined,
-      sortOrder: parseInt(sortOrder || "0", 10),
+      style: style as BannerInput["style"],
+      heading: heading.trim() || undefined,
+      subheading: subheading.trim() || undefined,
+      textAlign: textAlign as BannerInput["textAlign"],
+      textVAlign: textVAlign as BannerInput["textVAlign"],
+      textColor: textColor.trim() || undefined,
+      scrim,
       isActive,
       startsAt: startsAt || undefined,
       expiresAt: expiresAt || undefined,
@@ -143,12 +148,34 @@ function BannerFormInner({
     gate.registerHandler("banner", submitBanner);
   });
 
+  const preview = {
+    image,
+    mobileImage: mobileImage || null,
+    alt,
+    style,
+    heading,
+    subheading,
+    textAlign,
+    textVAlign,
+    textColor: textColor || null,
+    scrim,
+  };
+
+  // The long banner's frames follow the live section: same column count, same
+  // height (0 = the strip's own proportions), so the shapes match the page.
+  const autoHeight = longBanner.height <= 0;
+  const longFrames = [1, 2, 3].map((columns) => ({
+    columns,
+    box: longBannerCellBox(columns, longBanner.height),
+  }));
+  const phone = longBannerPhoneBox(longBanner.height);
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <section className="rounded-2xl border border-zinc-100 bg-white p-5">
         <h2 className="mb-4 text-sm font-semibold text-zinc-900">Basic info</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block sm:col-span-2">
+        <div className="grid gap-4">
+          <label className="block">
             <span className={labelCls}>Title</span>
             <input
               value={title}
@@ -157,88 +184,9 @@ function BannerFormInner({
               required
               className={inputCls}
             />
-          </label>
-          <label className="block">
-            <span className={labelCls}>Placement</span>
-            <select
-              value={placement}
-              onChange={(e) => setPlacement(e.target.value)}
-              className={inputCls}
-            >
-              {BANNER_PLACEMENTS.map((p) => (
-                <option key={p} value={p}>
-                  {PLACEMENT_LABELS[p]}
-                </option>
-              ))}
-            </select>
             <span className="mt-1 block text-xs text-zinc-400">
-              {CATEGORY_PLACEMENTS.includes(
-                placement as (typeof CATEGORY_PLACEMENTS)[number],
-              )
-                ? "Shown on the chosen category page, under its mid-level tiles."
-                : BRAND_PLACEMENTS.includes(
-                      placement as (typeof BRAND_PLACEMENTS)[number],
-                    )
-                  ? "Shown above the chosen brand's product row on the homepage."
-                  : "Long banner is shown on the homepage carousel."}
-            </span>
-          </label>
-          {CATEGORY_PLACEMENTS.includes(
-            placement as (typeof CATEGORY_PLACEMENTS)[number],
-          ) && (
-            <label className="block">
-              <span className={labelCls}>Category page</span>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Choose a category…</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-xs text-zinc-400">
-                The top pair renders the first two banners side by side.
-              </span>
-            </label>
-          )}
-          {BRAND_PLACEMENTS.includes(
-            placement as (typeof BRAND_PLACEMENTS)[number],
-          ) && (
-            <label className="block">
-              <span className={labelCls}>Brand section</span>
-              <select
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-                className={inputCls}
-              >
-                <option value="">Choose a brand…</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <span className="mt-1 block text-xs text-zinc-400">
-                Two banners for one brand sit side by side; a single one spans
-                the row.
-              </span>
-            </label>
-          )}
-          <label className="block">
-            <span className={labelCls}>Sort order</span>
-            <input
-              type="number"
-              min={0}
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className={inputCls}
-            />
-            <span className="mt-1 block text-xs text-zinc-400">
-              Lower values appear first.
+              An admin label — the pickers in the page builder list banners by
+              it.
             </span>
           </label>
         </div>
@@ -251,7 +199,7 @@ function BannerFormInner({
             value={image}
             onChange={setImage}
             label="Desktop image"
-            hint="Wide image (e.g. 2172×260) shown on desktop."
+            hint="The artwork every component renders; its box decides the crop."
           />
           <ImageField
             value={mobileImage}
@@ -259,6 +207,102 @@ function BannerFormInner({
             label="Mobile image"
             hint="Taller variant shown on small screens. Falls back to the desktop image when empty."
           />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <h2 className="mb-4 text-sm font-semibold text-zinc-900">
+          Content inside the banner
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCls}>Type of content</span>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              className={inputCls}
+            >
+              <option value="image">
+                Image only — the artwork as uploaded
+              </option>
+              <option value="custom">Image with text — drawn over it</option>
+            </select>
+          </label>
+          <label className="flex items-end gap-2 pb-1">
+            <input
+              type="checkbox"
+              checked={scrim}
+              onChange={(e) => setScrim(e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+            />
+            <span className="text-sm text-zinc-700">
+              Dark scrim behind the text
+            </span>
+          </label>
+
+          {style === "custom" && (
+            <>
+              <label className="block">
+                <span className={labelCls}>Heading</span>
+                <input
+                  value={heading}
+                  onChange={(e) => setHeading(e.target.value)}
+                  placeholder="e.g. Summer Sale"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Subheading</span>
+                <input
+                  value={subheading}
+                  onChange={(e) => setSubheading(e.target.value)}
+                  placeholder="e.g. Up to 40% off"
+                  className={inputCls}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Text placement — across</span>
+                <select
+                  value={textAlign}
+                  onChange={(e) => setTextAlign(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="left">Left</option>
+                  <option value="center">Centre</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Text placement — down</span>
+                <select
+                  value={textVAlign}
+                  onChange={(e) => setTextVAlign(e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="top">Top</option>
+                  <option value="middle">Middle</option>
+                  <option value="bottom">Bottom</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Text colour</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={textColor || "#ffffff"}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    className="h-9 w-12 cursor-pointer rounded border border-zinc-200 bg-white"
+                  />
+                  <input
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    placeholder="#ffffff (default)"
+                    className={inputCls}
+                  />
+                </div>
+              </label>
+            </>
+          )}
         </div>
       </section>
 
@@ -284,6 +328,9 @@ function BannerFormInner({
               placeholder="e.g. /category/skin-care"
               className={inputCls}
             />
+            <span className="mt-1 block text-xs text-zinc-400">
+              Where the banner goes when a component renders it as a link.
+            </span>
           </label>
         </div>
       </section>
@@ -319,6 +366,90 @@ function BannerFormInner({
           />
           <span className="text-sm text-zinc-700">Active on storefront</span>
         </label>
+      </section>
+
+      {/* One banner, the boxes different components put it in (client's slide
+          3). The long-banner frames use the section's own settings, so what is
+          shown here is what the strip really renders. */}
+      <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <h2 className="mb-1 text-sm font-semibold text-zinc-900">Preview</h2>
+        <p className="mb-4 text-xs text-zinc-400">
+          The same artwork in the boxes the storefront gives it. Long-banner
+          frames follow{" "}
+          <span className="text-zinc-500">Pages → Home → Long banner</span> —{" "}
+          {longBanner.columns} column{longBanner.columns === 1 ? "" : "s"},
+          height{" "}
+          {autoHeight
+            ? "automatic (each banner keeps the strip's proportions)"
+            : `${longBanner.height}px`}
+          . Sizes are quoted at the widest the page goes — the phone strip at a
+          390px phone.
+        </p>
+        {!image ? (
+          <p className="rounded border border-dashed border-zinc-200 py-8 text-center text-xs text-zinc-400">
+            Add a desktop image to see the preview.
+          </p>
+        ) : (
+          <div className="grid gap-5 md:grid-cols-2">
+            {longFrames.map((frame) => (
+              <div key={frame.columns}>
+                <p className="mb-1 text-xs text-zinc-500">
+                  Long banner · {frame.columns} column
+                  {frame.columns === 1 ? "" : "s"} · {frame.box.width} ×{" "}
+                  {frame.box.height}
+                  {autoHeight ? " (auto)" : ""}
+                </p>
+                <div className="flex w-full gap-[6px]">
+                  {Array.from({ length: frame.columns }, (_, i) => (
+                    <div
+                      key={i}
+                      className="relative min-w-0 flex-1 overflow-hidden rounded-lg bg-zinc-100"
+                      style={{
+                        aspectRatio: `${frame.box.width} / ${frame.box.height}`,
+                      }}
+                    >
+                      <BannerArtwork banner={preview} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <p className="mb-1 text-xs text-zinc-500">
+                Long banner · phone · {phone.width} × {phone.height}
+                {autoHeight ? " (auto)" : ""}
+              </p>
+              <div
+                className="relative w-full max-w-[374px] overflow-hidden rounded-lg bg-zinc-100"
+                style={{ aspectRatio: `${phone.width} / ${phone.height}` }}
+              >
+                <BannerArtwork
+                  banner={{ ...preview, image: mobileImage || image }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-xs text-zinc-500">
+                Hero slide · portrait box — the artwork fills it, cropped
+              </p>
+              <div className="relative w-full max-w-[280px] overflow-hidden rounded-lg bg-zinc-100 [aspect-ratio:3/4]">
+                <BannerArtwork banner={preview} />
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1 text-xs text-zinc-500">
+                Brand section / category page · one of a pair, at the
+                artwork&apos;s own proportions
+              </p>
+              <div className="relative w-full max-w-[374px] overflow-hidden rounded-lg bg-zinc-100">
+                <BannerArtwork banner={preview} fit="natural" />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="flex flex-wrap items-center gap-3">

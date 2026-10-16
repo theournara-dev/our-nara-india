@@ -20,6 +20,14 @@ import {
   type SectionFormOptions,
 } from "./fields";
 import { LONG_BANNER_NONE } from "@/lib/page-builder/types";
+import {
+  growLongBannerSlots,
+  longBannerCellBox,
+  normalizeLongBannerSlots,
+  resolveLongBannerCells,
+  type LongBannerSlot,
+} from "@/lib/long-banner";
+import { BannerArtwork } from "@/components/banners/banner-artwork";
 
 /**
  * Per-type admin forms. Each receives the section's current `config` and an
@@ -61,17 +69,41 @@ export function ShortsForm({ config, onChange }: FormProps) {
 }
 
 export function LongBannerForm({ config, onChange, options }: FormProps) {
-  // Sections saved before the cell split carry a carousel selection; show its
-  // first two entries in the cells so editing never loses them.
-  const legacy: string[] = config.bannerIds ?? [];
-  const cells: { id: string; bannerId: string }[] =
-    config.cells && config.cells.length > 0
-      ? config.cells
-      : [
-          { id: "cell-1", bannerId: legacy[0] ?? "" },
-          { id: "cell-2", bannerId: legacy[1] ?? "" },
-        ];
-  const longBanners = options.banners.filter((b) => b.placement === "long");
+  const columns: number = Math.min(Math.max(config.columns ?? 2, 1), 3);
+  const height: number = config.height ?? 0;
+  // The stored slots, never fewer than the section's own column count — the
+  // same normalisation the storefront loader uses, so both see the identical
+  // columns. Picks kept for slots beyond the current count stay in the config.
+  const stored = Math.max(
+    config.cells?.length ?? 0,
+    (config.bannerIds ?? []).length,
+  );
+  const cells: LongBannerSlot[] = normalizeLongBannerSlots(
+    config,
+    Math.max(columns, stored),
+  );
+  /** The slots the pickers and the preview show: the visible columns only. */
+  const shown = cells.slice(0, columns);
+
+  /** The exact banners the columns will show, following the loader's rules. */
+  function resolveSlots() {
+    // One shared resolver, so the preview cannot drift from the page: the pool
+    // is what the loader draws from (active banners inside their schedule),
+    // picked columns win, "automatic" columns fill in order.
+    const pool = options.banners.filter((b) => b.live);
+    return resolveLongBannerCells(shown, pool);
+  }
+
+  function setColumn(next: number) {
+    onChange({
+      ...config,
+      // Keep what the extra slots already held, so raising and lowering the
+      // count never quietly loses a chosen banner.
+      cells: growLongBannerSlots(cells, next),
+      columns: next,
+      bannerIds: [],
+    });
+  }
 
   function setCell(index: number, bannerId: string) {
     const next = cells.map((cell, i) =>
@@ -80,30 +112,112 @@ export function LongBannerForm({ config, onChange, options }: FormProps) {
     onChange({ ...config, cells: next, bannerIds: [] });
   }
 
+  const preview = resolveSlots().filter((slot) => slot.banner);
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2">
-        {cells.map((cell, i) => (
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-3">
+        <NumberField
+          label="Columns"
+          value={columns}
+          min={1}
+          max={3}
+          onChange={setColumn}
+          hint="1–3 across on desktop; phones stack them."
+        />
+        <NumberField
+          label="Height (px)"
+          value={height}
+          min={0}
+          max={600}
+          onChange={(h) => onChange({ ...config, height: h })}
+          hint="0 keeps each banner's own proportions."
+        />
+      </div>
+
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-3">
+        {shown.map((cell, i) => (
           <SelectField
             key={cell.id}
-            label={`Cell ${i + 1} banner`}
+            label={`Column ${i + 1} banner`}
             value={cell.bannerId}
             onChange={(v) => setCell(i, v)}
             options={[
               { value: "", label: "Automatic (next free banner)" },
-              { value: LONG_BANNER_NONE, label: "None (hide this cell)" },
-              ...longBanners.map((b) => ({ value: b.id, label: b.title })),
+              { value: LONG_BANNER_NONE, label: "None (hide this column)" },
+              ...options.banners.map((b) => ({
+                value: b.id,
+                label: b.live ? b.title : `${b.title} (hidden)`,
+              })),
             ]}
           />
         ))}
       </div>
+
       <p className="text-xs leading-5 text-zinc-400">
-        The two cells sit side by side on desktop (stacked on phones). Each
-        shows one banner from the Banners admin — a cell left on
-        &quot;Automatic&quot; takes the next active &quot;Long banner&quot; no
-        other cell uses. Choose &quot;None&quot; to hide a cell; setting both to
-        &quot;None&quot; hides the whole section.
+        A column left on &quot;Automatic&quot; takes the next active banner no
+        other column uses. Choose &quot;None&quot; to hide a column — the others
+        take its width; every column on &quot;None&quot; hides the whole
+        section. A pick made for a column you later hide is kept for when it
+        comes back.
       </p>
+
+      {/* What the section will look like, at the width and height it will
+          actually render (client's slide 3). */}
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+        <p className="mb-2 text-xs font-medium text-zinc-500">
+          Preview — {columns} column{columns === 1 ? "" : "s"}
+          {height > 0 ? ` at ${height}px` : " at each banner's own proportions"}
+        </p>
+        {preview.length === 0 ? (
+          <p className="py-6 text-center text-xs text-zinc-400">
+            Nothing to show — every column is on &quot;None&quot;.
+          </p>
+        ) : (
+          <div className="flex w-full flex-col gap-[10px] md:flex-row">
+            {preview.map(({ id, banner }) => (
+              <div
+                key={id}
+                // Auto height uses the storefront cell's own classes, so the
+                // shape is the page's shape by construction; a pinned height
+                // keeps the column's share of the content column at the widest
+                // the page goes — the same box the banner editor quotes.
+                className={`relative w-full overflow-hidden rounded-2xl bg-white ${
+                  height > 0 ? "" : "aspect-[800/210] md:aspect-[2172/260]"
+                } ${
+                  preview.length > 1
+                    ? preview.length === 2
+                      ? "md:w-1/2"
+                      : "md:w-1/3"
+                    : ""
+                }`}
+                style={
+                  height > 0
+                    ? {
+                        aspectRatio: `${longBannerCellBox(columns, height).width} / ${height}`,
+                      }
+                    : undefined
+                }
+              >
+                <BannerArtwork
+                  banner={{
+                    image: banner!.image,
+                    mobileImage: banner!.mobileImage,
+                    alt: banner!.alt,
+                    style: banner!.style,
+                    heading: banner!.heading,
+                    subheading: banner!.subheading,
+                    textAlign: banner!.textAlign,
+                    textVAlign: banner!.textVAlign,
+                    textColor: banner!.textColor,
+                    scrim: banner!.scrim,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
