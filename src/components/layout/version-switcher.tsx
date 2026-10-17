@@ -99,14 +99,16 @@ export function VersionSwitcher({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="flex items-center gap-1.5">
-        {/* 1. The quick switch: two small pills, the active one rounded on every
-            side and wearing its store's background, the other greyed out. */}
+        {/* 1. The quick switch: two overlapping pills — the active one sits on
+            top of the other, so they read as one control with a coloured
+            "slider" over the grey side (client's note: the halves must overlap,
+            not stand apart). */}
         <div
           role="group"
           aria-label="Choose your store"
-          className="flex h-7 shrink-0 items-center gap-[3px] rounded-full bg-zinc-100 p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          className="flex shrink-0 items-center"
         >
-          {options.map(({ store, label, background }) => {
+          {options.map(({ store, label, background }, index) => {
             const active = version === store;
             const pending = pendingTo === store;
             return (
@@ -125,9 +127,11 @@ export function VersionSwitcher({
                     ? "International store — K-Drop"
                     : `${label} store`
                 }
-                className={`relative flex h-full items-center justify-center gap-1 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2 max-[1200px]:text-[9px] ${
+                className={`relative flex h-7 items-center justify-center gap-1 rounded-full px-3 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2.5 max-[1200px]:text-[9px] ${
+                  index > 0 ? "-ml-1.5" : ""
+                } ${
                   active
-                    ? "text-white shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.9)]"
+                    ? "z-10 text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
                     : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
                 }`}
                 style={active ? { background } : undefined}

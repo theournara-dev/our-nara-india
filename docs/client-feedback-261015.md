@@ -503,3 +503,13 @@ Three refinements after the client looked again:
 
 Also verified at 390px: logo (x 15), toggle (x 166, 100 × 28), chip (x 272) and
 cart (x 343) still share the first row with no overflow, and the nudge is hidden.
+
+### Third pass — the toggle's halves overlap
+
+The two halves no longer stand apart with a gap (which read as two separate
+round bubbles): they now **overlap by 6px**, and the active pill carries a higher
+z-index, so it sits **on top of** the grey one whichever store is selected — the
+control reads as one shape with the coloured half laid over the other. The outer
+grey wrapper and its padding are gone, so nothing double-rounds the pills.
+Measured in the browser in both states: 60px + 53px pills, 6px overlap, the
+active one `z-index: 10`.
