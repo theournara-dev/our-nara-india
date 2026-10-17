@@ -99,14 +99,15 @@ export function VersionSwitcher({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="flex items-center gap-1.5">
-        {/* 1. The quick switch: two overlapping pills — the active one sits on
-            top of the other, so they read as one control with a coloured
-            "slider" over the grey side (client's note: the halves must overlap,
-            not stand apart). */}
+        {/* 1. The quick switch: one pill, not two. The container is the pill
+            (grey, clipped); the **active** half is the only rounded, coloured
+            shape and it laps over the grey half, so the unselected side has no
+            visible corner of its own — the control reads as a single component
+            with a coloured slider on it (client's note). */}
         <div
           role="group"
           aria-label="Choose your store"
-          className="flex shrink-0 items-center"
+          className="flex shrink-0 items-center overflow-hidden rounded-full bg-zinc-200"
         >
           {options.map(({ store, label, background }, index) => {
             const active = version === store;
@@ -127,12 +128,15 @@ export function VersionSwitcher({
                     ? "International store — K-Drop"
                     : `${label} store`
                 }
-                className={`relative flex h-7 items-center justify-center gap-1 rounded-full px-3 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2.5 max-[1200px]:text-[9px] ${
-                  index > 0 ? "-ml-1.5" : ""
+                className={`relative flex h-7 items-center justify-center gap-1 px-3 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 max-[1200px]:px-2.5 max-[1200px]:text-[9px] ${
+                  // The second half always laps over the first; which one is on
+                  // top is decided by the active state, so the coloured pill
+                  // covers the grey one in both directions.
+                  index > 0 ? "-ml-3" : ""
                 } ${
                   active
-                    ? "z-10 text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
-                    : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
+                    ? "z-10 rounded-full text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
+                    : "rounded-none text-zinc-500 hover:text-zinc-700"
                 }`}
                 style={active ? { background } : undefined}
               >

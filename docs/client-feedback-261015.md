@@ -513,3 +513,15 @@ control reads as one shape with the coloured half laid over the other. The outer
 grey wrapper and its padding are gone, so nothing double-rounds the pills.
 Measured in the browser in both states: 60px + 53px pills, 6px overlap, the
 active one `z-index: 10`.
+
+### Fourth pass — the toggle is one pill
+
+The halves overlapped but both were still pills, so the unselected side kept a
+rounded corner of its own. Now the **container** is the only pill (`overflow:
+hidden; rounded-full; bg-zinc-200`), the **inactive** half is square
+(`border-radius: 0`) and laps **12px** under the active one, and only the
+**active** half is rounded and coloured (z-index 10). The grey side's outer edge
+is therefore the component's own shape, not a second pill's corner — the control
+reads as one slider with the coloured part laid over the grey track. Checked in
+both directions in the browser: 60px + 53px halves, 12px overlap, the inactive
+one `border-radius: 0`.
