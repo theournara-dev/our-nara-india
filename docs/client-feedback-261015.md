@@ -481,3 +481,25 @@ bottom tab bar's CATE button now opens `/category` too.
 - `/category`: "Category" in Pretendard, four tiles → the four category pages.
 - 390: logo (x 15), toggle (x 175), chip (x 272) and cart (x 343) all on the first
   row; the menu row under it; no search, no hamburger, no horizontal overflow.
+
+## Round nine, second pass
+
+Three refinements after the client looked again:
+
+1. **The bobbing arrow now points at the popup button.** The `StoreNudge` moved
+   out of the header and back inside the store control, anchored above the globe
+   chip, so the hint sits over the thing that opens the store panel rather than
+   over the toggle. It is still hidden below 1200px, as before.
+2. **The selected store pill is rounded on every side.** The toggle is now a
+   light grey pill with 3px padding: each half is a full `rounded-full` pill with
+   a small gap between them, the active one filled with its store's background and
+   the other greyed out. (Before, the halves only had their outer corners
+   rounded, and the selected half looked clipped against the other.)
+3. **The /category tiles are never empty.** Root categories have no tile artwork
+   in the admin yet, so each tile falls back to the **first product image** in
+   that category (a real photo of what is inside; an admin-uploaded tile still
+   wins). A category with neither would render a brand-purple block rather than a
+   blank one. Verified: all four tiles on `/category` now load a product image.
+
+Also verified at 390px: logo (x 15), toggle (x 166, 100 × 28), chip (x 272) and
+cart (x 343) still share the first row with no overflow, and the nudge is hidden.

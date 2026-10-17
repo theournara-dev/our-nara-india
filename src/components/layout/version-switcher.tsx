@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Globe, Loader2 } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { StoreNudge } from "@/components/layout/store-nudge";
 import {
   StorePickerCards,
   STORE_PICKER_PANEL_CLASS,
@@ -98,13 +99,14 @@ export function VersionSwitcher({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="flex items-center gap-1.5">
-        {/* 1. The quick switch: two small connected halves. */}
+        {/* 1. The quick switch: two small pills, the active one rounded on every
+            side and wearing its store's background, the other greyed out. */}
         <div
           role="group"
           aria-label="Choose your store"
-          className="flex h-7 shrink-0 items-stretch overflow-hidden rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.15)] max-[1200px]:h-6"
+          className="flex h-7 shrink-0 items-center gap-[3px] rounded-full bg-zinc-100 p-[3px] shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
         >
-          {options.map(({ store, label, background }, index) => {
+          {options.map(({ store, label, background }) => {
             const active = version === store;
             const pending = pendingTo === store;
             return (
@@ -123,9 +125,7 @@ export function VersionSwitcher({
                     ? "International store — K-Drop"
                     : `${label} store`
                 }
-                className={`relative flex items-center justify-center gap-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2 max-[1200px]:text-[9px] ${
-                  index === 0 ? "rounded-l-full" : "rounded-r-full"
-                } ${
+                className={`relative flex h-full items-center justify-center gap-1 rounded-full px-2.5 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2 max-[1200px]:text-[9px] ${
                   active
                     ? "text-white shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.9)]"
                     : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
@@ -142,41 +142,49 @@ export function VersionSwitcher({
         </div>
 
         {/* 2. The popup trigger — unchanged: names the store and opens the
-            panel of store cards. */}
-        <button
-          type="button"
-          onClick={() => {
-            if (!open && ref.current) {
-              const phone = window.innerWidth < 768;
-              setPanelLeft(
-                phone ? 12 - ref.current.getBoundingClientRect().left : null,
-              );
-            }
-            setOpen((v) => !v);
-          }}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
-          title={`Store: ${activeBlock?.title ?? version}`}
-          className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
-        >
-          {pendingTo ? (
-            <Loader2
-              className="h-3.5 w-3.5 animate-spin text-point-500"
-              aria-hidden
-            />
-          ) : (
-            <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
-          )}
-          <span className="text-zinc-900 max-[374px]:hidden">
-            {activeBlock?.title ?? version}
-          </span>
-          {/* The currency is the first thing to go where the icons share the
+            panel of store cards. The admin's bobbing nudge sits right above
+            this button (client's note: it points at the trigger, not the
+            toggle). */}
+        <div className="relative">
+          <StoreNudge
+            nudge={content.nudge}
+            className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!open && ref.current) {
+                const phone = window.innerWidth < 768;
+                setPanelLeft(
+                  phone ? 12 - ref.current.getBoundingClientRect().left : null,
+                );
+              }
+              setOpen((v) => !v);
+            }}
+            aria-haspopup="menu"
+            aria-expanded={open}
+            aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
+            title={`Store: ${activeBlock?.title ?? version}`}
+            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+          >
+            {pendingTo ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin text-point-500"
+                aria-hidden
+              />
+            ) : (
+              <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
+            )}
+            <span className="text-zinc-900 max-[374px]:hidden">
+              {activeBlock?.title ?? version}
+            </span>
+            {/* The currency is the first thing to go where the icons share the
               row with the menu. */}
-          <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
-            {activeBlock?.currency}
-          </span>
-        </button>
+            <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
+              {activeBlock?.currency}
+            </span>
+          </button>
+        </div>
       </div>
 
       {open && (

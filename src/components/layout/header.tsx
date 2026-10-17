@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, Home } from "lucide-react";
 import { TopBanner } from "@/components/layout/top-banner";
-import { StoreNudge } from "@/components/layout/store-nudge";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import type { NavCategory } from "@/data/categories";
 import { authClient } from "@/lib/auth-client";
@@ -451,17 +450,11 @@ export function Header({
           {/* Right: the store control (toggle + popup button), account, cart
               and search. Phones keep the cart only. */}
           <div className="relative order-3 flex shrink-0 items-center max-[1200px]:order-2 max-[1200px]:ml-auto">
-            <div className="relative">
-              <StoreNudge
-                nudge={siteContent.switcher.nudge}
-                className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
-              />
-              <VersionSwitcher
-                content={siteContent.switcher}
-                backgrounds={storeBackgrounds}
-                className="mr-2 max-[1200px]:mr-1"
-              />
-            </div>
+            <VersionSwitcher
+              content={siteContent.switcher}
+              backgrounds={storeBackgrounds}
+              className="mr-2 max-[1200px]:mr-1"
+            />
 
             <ul className="inline-flex items-center">
               <li className="group relative min-w-6 px-1 max-[1200px]:hidden">
