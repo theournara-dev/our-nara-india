@@ -945,14 +945,20 @@ export function ShowcaseTabsField({
   value,
   onChange,
   options,
+  columns,
+  rows,
 }: {
   value: ShowcaseTab[];
   onChange: (tabs: ShowcaseTab[]) => void;
   options: SectionFormOptions;
+  /** The section's fixed grid, so each filter can say how many slots it fills. */
+  columns: number;
+  rows: number;
 }) {
   const tabs = value ?? [];
   const [openId, setOpenId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
+  const slots = columns * rows;
 
   function updateTab(id: string, patch: Partial<ShowcaseTab>) {
     onChange(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -971,8 +977,6 @@ export function ShowcaseTabsField({
         sub: "",
         href: "",
         productSlugs: [],
-        columns: 4,
-        rows: 1,
       },
     ]);
     setExpandAll(false);
@@ -1036,7 +1040,6 @@ export function ShowcaseTabsField({
                 tab.productSlugs.includes(p.slug),
             )
           : options.products;
-        const rowCap = (tab.columns ?? 4) * (tab.rows ?? 1);
         return (
           <div key={tab.id} className="rounded-lg border border-zinc-200">
             {/* Header — always visible; click to expand/collapse. */}
@@ -1182,26 +1185,11 @@ export function ShowcaseTabsField({
                     value={tab.alt}
                     onChange={(v) => updateTab(tab.id, { alt: v })}
                   />
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <NumberField
-                      label="Columns"
-                      value={tab.columns ?? 4}
-                      min={2}
-                      max={6}
-                      onChange={(columns) => updateTab(tab.id, { columns })}
-                    />
-                    <NumberField
-                      label="Rows"
-                      value={tab.rows ?? 1}
-                      min={1}
-                      max={5}
-                      onChange={(rows) => updateTab(tab.id, { rows })}
-                    />
-                  </div>
                   <p className="text-xs leading-5 text-zinc-400">
-                    This filter shows at most {rowCap} product
-                    {rowCap === 1 ? "" : "s"} ({tab.columns ?? 4} ×{" "}
-                    {tab.rows ?? 1}).
+                    Every filter fills the same {columns} × {rows} grid, so up
+                    to {slots} product{slots === 1 ? "" : "s"} show here, in the
+                    order picked below. Extra picks are kept and appear when the
+                    grid grows.
                   </p>
                   <SearchableCheckboxList
                     items={brandProducts.map((p) => ({

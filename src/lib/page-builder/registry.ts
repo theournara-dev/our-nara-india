@@ -189,38 +189,43 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
         title?: string;
         tabs?: ShowcaseTab[];
         columns?: number;
+        rows?: number;
         height?: number;
         moreHref?: string;
         moreLabel?: string;
       };
       const version = await getRequestSiteVersion();
+      // One grid for the whole showcase (the client's follow-up): every filter
+      // fills the same fixed columns × rows box, so the layout never jumps
+      // between filters.
+      const columns = c.columns ?? 4;
+      const rows = c.rows ?? 2;
       // Filter labels and banner links come from the attached brand, so one
       // brand lookup serves every filter (client's slide 2).
       const brands = new Map(
         (await getBrands()).map((b) => [b.slug, b] as const),
       );
-      const tabs = (c.tabs ?? []).map((tab) => {
-        const brand = tab.brandSlug ? brands.get(tab.brandSlug) : undefined;
-        const columns = tab.columns ?? c.columns ?? 4;
-        const rows = tab.rows ?? 1;
-        return { tab, brand, columns, rows };
-      });
       return {
         title: c.title ?? "",
         tabs: await Promise.all(
-          tabs.map(async ({ tab, brand, columns, rows }) => ({
-            ...tab,
-            columns,
-            label: tab.label.trim() || brand?.name || "",
-            href: tab.href.trim() || (brand ? `/brand/${brand.slug}` : ""),
-            // Columns × rows is the ceiling, so a long list can never blow the
-            // row up (the client's slide 2).
-            products: (
-              await getProductsBySlugs(tab.productSlugs, version)
-            ).slice(0, columns * rows),
-          })),
+          (c.tabs ?? []).map(async (tab) => {
+            const brand = tab.brandSlug ? brands.get(tab.brandSlug) : undefined;
+            return {
+              ...tab,
+              columns,
+              rows,
+              label: tab.label.trim() || brand?.name || "",
+              href: tab.href.trim() || (brand ? `/brand/${brand.slug}` : ""),
+              // Columns × rows is the box: the picks fill it in order, and any
+              // extra ones wait for the grid to grow.
+              products: (
+                await getProductsBySlugs(tab.productSlugs, version)
+              ).slice(0, columns * rows),
+            };
+          }),
         ),
-        columns: c.columns ?? 4,
+        columns,
+        rows,
         height: c.height ?? 400,
         moreHref: c.moreHref,
         moreLabel: c.moreLabel,

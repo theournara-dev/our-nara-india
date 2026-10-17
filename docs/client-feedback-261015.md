@@ -377,3 +377,100 @@ carousel.”), which is an admin-facing label for the section, not storefront co
   (`delta / scale / 600 × 100`). The sliders moved the zoom and the vertical
   focus the same way. The temporary image and framing were then restored and the
   throwaway script deleted.
+
+# Round nine — the next client pass
+
+Six items. Two of them needed a decision the reference did not settle (the HOT
+link's destination and what CATEGORY should open); both are called out at the end.
+
+## 1. Shorts audio
+
+**Checked, and it was not fine.** The YouTube and TikTok embeds were built with
+`mute=1` *and* `controls=0`: autoplay has to start muted (browser policy), but
+hiding the controls also hid the speaker button, so a muted TikTok looked like a
+clip with no audio and there was no way to turn it on. Both embeds now keep
+`mute=1` **and show their controls** (`controls=1`, plus TikTok's
+`volume_control` / `play_button` / `progress_bar`), so the sound is one tap away.
+Instagram's embed already carries its own player with sound. Uploaded video files
+were already `<video muted controls>` — the same pattern: autoplay muted, unmute
+in the controls. No other media on the site is affected.
+
+## 2. Tabbed showcase: columns and rows
+
+- **Why 5 columns did nothing:** the section stored `columns: 5`, but each filter
+  also carried its own `columns: 4` from an older default, and the loader preferred
+  the filter's value. The filter's columns/rows are now optional and ignored — the
+  **section's grid is fixed for every filter**.
+- The section gained a **Rows** control (1–5, default 2) next to **Columns**
+  (2–6): `columns × rows` is the box, the picked products fill it in the admin's
+  order, and extra picks stay stored until the grid grows. The tab editor says how
+  many slots its filter fills and no longer offers a grid of its own.
+- The renderer slices to the same ceiling, so the static fallback and the builder
+  agree.
+
+## 3. Top banner: gradients
+
+- A block's background is now either a **solid colour** or a **gradient** (2–6
+  stops, each a colour and a 0–100% position, drawn left to right), edited in the
+  block's Background panel with a live swatch. The strip, the admin preview and the
+  store selector all read one helper (`topBannerBackgroundCss`).
+- **The International store's banner is the client's gradient** — 0% `#F83658`,
+  50% `#0894FD`, 100% `#7920FB`, left to right — in the defaults and in the
+  existing row (migration `20261017040000_global_top_banner_gradient` rewrites the
+  first block only, and only if it is not already a gradient). The India store
+  keeps its purple.
+
+## 4. Store selector
+
+The header's switch + chip + popup trigger is now **two connected buttons**:
+**KDROP** on the left over the International store's top-banner background (the
+gradient) and the local store's name on the right over its purple. Both halves
+carry their text inside; the active one is ringed white and the other is dimmed
+until hovered; pressing a half switches the store. The colours come from each
+store's own top banner (`layout.tsx` computes them for both stores), so changing a
+banner recolours the selector too. The old popup trigger is gone from the header;
+the site-wide store popup still exists.
+
+## 5. Menu
+
+- The bar is trimmed to the client's list: **hamburger · CATEGORY · HOT · BRAND ·
+  REVIEW · EVENT · STORES · B2B · AMBASSADOR**.
+- The hamburger (and CATEGORY) opens a **two-pane menu**: the left pane lists every
+  top-level item (the category roots, then the storefront's pages, community, my
+  page and couponzone); hovering, focusing or clicking a row swaps the right pane
+  to that item's links (subcategories as `?sub=` filters, plus the rest of the
+  site's internal links). Both panes are scroll containers with their own max
+  height, so long lists never stretch the panel.
+- On phones and tablets the same two panes live in the right-hand drawer, under the
+  logo/login row and the account shortcuts.
+
+## 6. Mobile header
+
+Phones and tablets now read **top banner → one justified row (logo · store
+selector · icons) → one row of menu links** (which scrolls sideways when it does
+not fit). The duplicate hamburger inside the menu row is hidden below 1200px — the
+icons' own menu button opens the drawer.
+
+## Assumptions to confirm
+
+1. **HOT** has no destination in the project (no hot collection, page or link).
+   `/hot` was added: a live listing of the newest products using the same listing
+   as the category pages. Give me the real target and it is a one-line change.
+2. **CATEGORY** opens the same two-pane menu rather than a page (there is no
+   category index), which is why it is a button rather than a link.
+
+## Verified in a browser
+
+- Header at 1440: the bar shows exactly the eight links; the selector is 150 × 40
+  with KDROP on `linear-gradient(90deg, #F83658 0%, #0894FD 50%, #7920FB 100%)`
+  and INDIA on `#6f2dbd`, the active half ringed; CATEGORY opens the menu; the left
+  pane lists 13 items and switching to "Brand" swaps the right pane to "All
+  brands".
+- With `NEXT_PUBLIC_SITE_VERSION=global` the rendered HTML carries the gradient on
+  the top banner and on the selector's KDROP half (the env was then reverted).
+- Showcase at 1440: `grid-template-columns` resolved to five columns and the six
+  selected ZOOOM products placed 5 + 1 across two rows.
+- `/hot` renders "HOT" in Pretendard with the listing; the shorts iframe `src`
+  carries `controls=1`.
+- 390 and 834: logo + selector + icons on one row, the menu links on the next, no
+  horizontal overflow; the drawer's two panes render at 390.

@@ -13,12 +13,15 @@ import {
 } from "@/components/upload/upload-queue";
 import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
-import type {
-  SiteContent,
-  SwitcherBlock,
-  SwitcherContent,
-  SwitcherNudgeIcon,
-  TopBannerBlock,
+import {
+  GLOBAL_STORE_GRADIENT,
+  topBannerBackgroundCss,
+  type SiteContent,
+  type SwitcherBlock,
+  type SwitcherContent,
+  type SwitcherNudgeIcon,
+  type TopBannerBlock,
+  type TopBannerGradientStop,
 } from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
 
@@ -531,6 +534,140 @@ function MoneyInput({
   );
 }
 
+/** Solid colour or gradient background for one top-banner block. */
+function BackgroundField({
+  id,
+  block,
+  onTypeChange,
+  onColorChange,
+  onStopsChange,
+}: {
+  id: string;
+  block: TopBannerBlock;
+  onTypeChange: (type: "solid" | "gradient") => void;
+  onColorChange: (color: string) => void;
+  onStopsChange: (stops: TopBannerGradientStop[]) => void;
+}) {
+  const gradient = block.backgroundType === "gradient";
+  const stops = block.gradientStops ?? [];
+
+  function patchStop(index: number, patch: Partial<TopBannerGradientStop>) {
+    onStopsChange(stops.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  }
+
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-white p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs font-medium text-zinc-500">Background</span>
+        <div className="flex gap-1">
+          {(["solid", "gradient"] as const).map((type) => {
+            const active = gradient ? type === "gradient" : type === "solid";
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onTypeChange(type)}
+                aria-pressed={active}
+                className={`h-7 rounded px-2 text-xs font-medium transition-colors ${
+                  active
+                    ? "bg-point-500 text-white"
+                    : "border border-zinc-200 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+                }`}
+              >
+                {type === "solid" ? "Solid colour" : "Gradient"}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {gradient ? (
+        <div className="mt-2 space-y-2">
+          {stops.map((stop, index) => (
+            <div
+              key={`${id}-stop-${index}`}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="color"
+                aria-label={`Gradient stop ${index + 1} colour`}
+                value={
+                  /^#[0-9a-f]{6}$/i.test(stop.color) ? stop.color : "#000000"
+                }
+                onChange={(e) => patchStop(index, { color: e.target.value })}
+                className="h-8 w-10 shrink-0 cursor-pointer rounded border border-zinc-200 bg-white p-0.5"
+              />
+              <input
+                aria-label={`Gradient stop ${index + 1} hex`}
+                value={stop.color}
+                onChange={(e) => patchStop(index, { color: e.target.value })}
+                className={`${inputCls} w-28`}
+              />
+              <label className="flex items-center gap-1 text-xs text-zinc-500">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  aria-label={`Gradient stop ${index + 1} position`}
+                  value={stop.position}
+                  onChange={(e) =>
+                    patchStop(index, {
+                      position: Math.max(
+                        0,
+                        Math.min(100, Number(e.target.value) || 0),
+                      ),
+                    })
+                  }
+                  className={`${inputCls} w-16`}
+                />
+                %
+              </label>
+              <button
+                type="button"
+                onClick={() =>
+                  onStopsChange(stops.filter((_, i) => i !== index))
+                }
+                disabled={stops.length <= 2}
+                className="rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-30"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onStopsChange([...stops, { color: "#ffffff", position: 100 }])
+              }
+              disabled={stops.length >= 6}
+              className="h-8 rounded border border-dashed border-zinc-300 px-2 text-xs font-medium text-zinc-600 hover:border-point-500 hover:text-point-500 disabled:opacity-40"
+            >
+              + Add stop
+            </button>
+            <span
+              aria-hidden
+              className="h-7 min-w-24 flex-1 rounded border border-zinc-200"
+              style={{ background: topBannerBackgroundCss(block) }}
+            />
+          </div>
+          <p className="text-xs text-zinc-400">
+            Left to right: 0% is the strip&apos;s left edge, 100% its right.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-2">
+          <ColorInput
+            label="Colour"
+            value={block.background}
+            onChange={onColorChange}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** Editor + live preview for the strips pinned above the header. */
 function TopBannerEditor({
   blocks,
@@ -568,6 +705,37 @@ function TopBannerEditor({
         textColor: "#ffffff",
       },
     ]);
+  }
+
+  /** The fields that survive a block's type switch (text ⇄ image). */
+  function backgroundOf(block: TopBannerBlock) {
+    return {
+      background: block.background,
+      backgroundType: block.backgroundType,
+      gradientStops: block.gradientStops,
+    };
+  }
+
+  function setBackgroundType(
+    index: number,
+    block: TopBannerBlock,
+    backgroundType: "solid" | "gradient",
+  ) {
+    // Switching to a gradient with nothing to draw seeds the brand gradient, so
+    // the control never opens on an invisible background.
+    const gradientStops =
+      backgroundType === "gradient" && (block.gradientStops?.length ?? 0) < 2
+        ? GLOBAL_STORE_GRADIENT
+        : block.gradientStops;
+    update(index, { ...block, backgroundType, gradientStops });
+  }
+
+  function updateStops(
+    index: number,
+    block: TopBannerBlock,
+    gradientStops: TopBannerGradientStop[],
+  ) {
+    update(index, { ...block, gradientStops });
   }
 
   return (
@@ -614,14 +782,14 @@ function TopBannerEditor({
                           id: block.id,
                           kind: "image",
                           image: "",
-                          background: block.background,
+                          ...backgroundOf(block),
                         }
                       : {
                           id: block.id,
                           kind: "text",
                           text: "",
-                          background: block.background,
                           textColor: "#ffffff",
+                          ...backgroundOf(block),
                         },
                   )
                 }
@@ -672,11 +840,6 @@ function TopBannerEditor({
                   />
                 </label>
                 <ColorInput
-                  label="Background"
-                  value={block.background}
-                  onChange={(background) => update(i, { ...block, background })}
-                />
-                <ColorInput
                   label="Text colour"
                   value={block.textColor}
                   onChange={(textColor) => update(i, { ...block, textColor })}
@@ -692,6 +855,17 @@ function TopBannerEditor({
                     className={inputCls}
                   />
                 </label>
+                <div className="sm:col-span-2 lg:col-span-4">
+                  <BackgroundField
+                    id={`block-${block.id}`}
+                    block={block}
+                    onTypeChange={(type) => setBackgroundType(i, block, type)}
+                    onColorChange={(background) =>
+                      update(i, { ...block, background })
+                    }
+                    onStopsChange={(stops) => updateStops(i, block, stops)}
+                  />
+                </div>
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
@@ -703,11 +877,6 @@ function TopBannerEditor({
                     hint="Shown at the strip's height, centered."
                   />
                 </div>
-                <ColorInput
-                  label="Background"
-                  value={block.background}
-                  onChange={(background) => update(i, { ...block, background })}
-                />
                 <label className="block">
                   <span className={labelCls}>Link (optional)</span>
                   <input
@@ -719,6 +888,15 @@ function TopBannerEditor({
                     className={inputCls}
                   />
                 </label>
+                <BackgroundField
+                  id={`block-${block.id}`}
+                  block={block}
+                  onTypeChange={(type) => setBackgroundType(i, block, type)}
+                  onColorChange={(background) =>
+                    update(i, { ...block, background })
+                  }
+                  onStopsChange={(stops) => updateStops(i, block, stops)}
+                />
               </div>
             )}
           </div>
@@ -734,7 +912,7 @@ function TopBannerEditor({
                 key={block.id}
                 className="flex h-[34px] items-center justify-center text-center text-xs font-medium"
                 style={{
-                  backgroundColor: block.background,
+                  background: topBannerBackgroundCss(block),
                   color: block.kind === "text" ? block.textColor : "#ffffff",
                 }}
               >

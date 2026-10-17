@@ -10,14 +10,29 @@ import { DEFAULT_GST_BPS, clampBps } from "@/lib/tax";
  * components can render the same shapes; the DB read is in `site-config.ts`.
  */
 
+/** How a top-banner block's background is drawn. */
+export type TopBannerBackgroundType = "solid" | "gradient";
+
+/** One colour stop of a gradient background (client's store-banner feedback). */
+export interface TopBannerGradientStop {
+  /** Any CSS colour, normally a hex. */
+  color: string;
+  /** Where the stop sits along the strip, 0–100%. */
+  position: number;
+}
+
 /** A strip pinned above the header — one line of text or an image. */
 export type TopBannerBlock =
   | {
       id: string;
       kind: "text";
       text: string;
-      /** Hex background for the strip. */
+      /** Hex background for the strip (used when the type is solid). */
       background: string;
+      /** "solid" (the default) or "gradient". */
+      backgroundType?: TopBannerBackgroundType;
+      /** The gradient's stops, left to right; only read for a gradient. */
+      gradientStops?: TopBannerGradientStop[];
       textColor: string;
       href?: string;
     }
@@ -28,6 +43,8 @@ export type TopBannerBlock =
       alt?: string;
       href?: string;
       background: string;
+      backgroundType?: TopBannerBackgroundType;
+      gradientStops?: TopBannerGradientStop[];
     };
 
 /** One store card inside the store-picker popup. */
@@ -175,6 +192,30 @@ const DEFAULT_BANNER: TopBannerBlock[] = [
 ];
 
 /**
+ * The International (global) store's strip: the client's gradient — red to blue
+ * to purple, left to right (slide: "0% #F83658 / 50% #0894FD / 100% #7920FB").
+ * The same value fills the global side of the header's store selector.
+ */
+export const GLOBAL_STORE_GRADIENT: TopBannerGradientStop[] = [
+  { color: "#F83658", position: 0 },
+  { color: "#0894FD", position: 50 },
+  { color: "#7920FB", position: 100 },
+];
+
+const DEFAULT_GLOBAL_BANNER: TopBannerBlock[] = [
+  {
+    id: "b1",
+    kind: "text",
+    text: "Your new K-Beauty destination 🎁",
+    background: "#6f2dbd",
+    backgroundType: "gradient",
+    gradientStops: GLOBAL_STORE_GRADIENT,
+    textColor: "#ffffff",
+  },
+  ...DEFAULT_BANNER.slice(1),
+];
+
+/**
  * The store picker describes both stores, so its default is identical on every
  * version; admins edit it once (the save writes both rows).
  */
@@ -260,7 +301,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
       taxId: "",
       note: "",
     },
-    topBanner: DEFAULT_BANNER,
+    topBanner: DEFAULT_GLOBAL_BANNER,
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
     taxRates: DEFAULT_TAX_RATES,
@@ -290,6 +331,29 @@ function clampNumber(
 }
 
 /**
+ * The CSS `background` a top-banner block draws: its solid colour, or its
+ * gradient read left to right. Stops are sorted so the CSS never depends on the
+ * order the admin typed them in. The store selector quotes the same value, which
+ * is how its two halves match the strips above the header.
+ */
+export function topBannerBackgroundCss(
+  block:
+    | Pick<TopBannerBlock, "background" | "backgroundType" | "gradientStops">
+    | null
+    | undefined,
+): string {
+  const solid = block?.background?.trim() || "#18181b";
+  if (block?.backgroundType !== "gradient") return solid;
+  const stops = [...(block.gradientStops ?? [])].sort(
+    (a, b) => a.position - b.position,
+  );
+  if (stops.length < 2) return solid;
+  const painted = stops.map((s) => `${s.color} ${s.position}%`).join(", ");
+  // Horizontal: 0% is the left edge, 100% the right, as the client describes it.
+  return `linear-gradient(90deg, ${painted})`;
+}
+
+/**
  * Parse the top-banner JSON. Blocks that have nothing to show (no text / no
  * image) are normally dropped, so a half-finished block can't render an empty
  * strip; the admin save path passes `allowEmpty` so an admin's in-progress
@@ -307,6 +371,9 @@ export function normalizeTopBanner(
     const id = str(raw.id) || `b${i + 1}`;
     const background = str(raw.background, "#18181b") || "#18181b";
     const href = str(raw.href) || undefined;
+    const backgroundType: TopBannerBackgroundType =
+      raw.backgroundType === "gradient" ? "gradient" : "solid";
+    const gradientStops = normalizeGradientStops(raw.gradientStops);
     if (raw.kind === "image") {
       const image = str(raw.image);
       if (!image && !options.allowEmpty) return;
@@ -317,6 +384,8 @@ export function normalizeTopBanner(
         alt: str(raw.alt) || undefined,
         href,
         background,
+        backgroundType,
+        gradientStops,
       });
       return;
     }
@@ -327,11 +396,31 @@ export function normalizeTopBanner(
       kind: "text",
       text,
       background,
+      backgroundType,
+      gradientStops,
       textColor: str(raw.textColor, "#ffffff") || "#ffffff",
       href,
     });
   });
   return blocks.length > 0 ? blocks : fallback;
+}
+
+/** A stored gradient's stops, repaired: colours kept, positions clamped. */
+function normalizeGradientStops(
+  value: unknown,
+): TopBannerGradientStop[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const stops = value
+    .map((raw) => {
+      if (!isRecord(raw)) return null;
+      const color = str(raw.color).trim();
+      if (!color) return null;
+      return { color, position: clampNumber(raw.position, 0, 100, 0) };
+    })
+    .filter((stop): stop is TopBannerGradientStop => stop !== null)
+    .slice(0, 6);
+  // A gradient needs two stops to be a gradient at all.
+  return stops.length >= 2 ? stops : undefined;
 }
 
 /** Parse the store-picker JSON, falling back per missing piece. */

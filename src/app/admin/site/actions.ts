@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import {
   DEFAULT_SWITCHER_CONTENT,
   normalizeSwitcher,
@@ -89,7 +90,8 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
     email: data.email,
     phone: data.phone?.trim() || null,
     address: data.address?.trim() || null,
-    topBanner,
+    // The normalizer guarantees the shape; Prisma's JSON type wants the nudge.
+    topBanner: topBanner as unknown as Prisma.InputJsonValue,
     // Only write the fields the client sent: a stale tab that predates a
     // section must not wipe the values it doesn't know about.
     ...(data.shippingCents !== undefined

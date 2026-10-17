@@ -244,6 +244,8 @@ export function ReviewsForm() {
  * brand and swaps the full-width banner plus that brand's chosen products.
  */
 export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
+  const columns = config.columns ?? 4;
+  const rows = config.rows ?? 2;
   return (
     <div className="space-y-4">
       <TextField
@@ -256,12 +258,23 @@ export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
         Sits above the filters. Leave it empty (the default) and nothing is
         shown.
       </p>
-      <ShowcaseTabsField
-        value={config.tabs ?? []}
-        onChange={(tabs) => onChange({ ...config, tabs })}
-        options={options}
-      />
-      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2">
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-3">
+        <NumberField
+          label="Columns"
+          value={columns}
+          min={2}
+          max={6}
+          onChange={(value) => onChange({ ...config, columns: value })}
+          hint="Fixed for every filter — 5 really is five across."
+        />
+        <NumberField
+          label="Rows"
+          value={rows}
+          min={1}
+          max={5}
+          onChange={(value) => onChange({ ...config, rows: value })}
+          hint={`Each filter fills ${columns} × ${rows} = ${columns * rows} slots.`}
+        />
         <NumberField
           label="Banner height (px)"
           value={config.height ?? 400}
@@ -270,15 +283,14 @@ export function TabbedShowcaseForm({ config, onChange, options }: FormProps) {
           onChange={(height) => onChange({ ...config, height })}
           hint="Every tab's banner renders at this height."
         />
-        <NumberField
-          label="Default columns"
-          value={config.columns ?? 4}
-          min={2}
-          max={6}
-          onChange={(columns) => onChange({ ...config, columns })}
-          hint="Used by filters that don't set their own."
-        />
       </div>
+      <ShowcaseTabsField
+        value={config.tabs ?? []}
+        onChange={(tabs) => onChange({ ...config, tabs })}
+        options={options}
+        columns={columns}
+        rows={rows}
+      />
       <MoreLinkField
         value={config.moreHref ?? ""}
         onChange={(moreHref) => onChange({ ...config, moreHref })}

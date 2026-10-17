@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { TopBannerBlock } from "@/lib/site-content";
+import { topBannerBackgroundCss } from "@/lib/site-content";
 
 /**
  * Auto-rotating strip pinned above the header. Content comes from the admin
@@ -35,7 +36,8 @@ export function TopBanner({ blocks }: { blocks: TopBannerBlock[] }) {
 
   const current = blocks[index % blocks.length];
   const style = {
-    backgroundColor: current.background,
+    // A solid colour or the admin's gradient, whichever the block draws.
+    background: topBannerBackgroundCss(current),
     color: current.kind === "text" ? current.textColor : "#ffffff",
   };
 

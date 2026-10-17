@@ -113,10 +113,9 @@ export const showcaseTabSchema = z.object({
   href: z.string().default(""),
   /** The brand's products this filter shows, in display order. */
   productSlugs: z.array(z.string()).default([]),
-  /** Columns in this filter's product row. */
-  columns: z.number().int().min(2).max(6).default(4),
-  /** Rows in this filter's product row (columns × rows = most shown). */
-  rows: z.number().int().min(1).max(5).default(1),
+  /** Kept from before the grid became fixed at the section's shape; ignored. */
+  columns: z.number().int().min(2).max(6).optional(),
+  rows: z.number().int().min(1).max(5).optional(),
 });
 export type ShowcaseTab = z.infer<typeof showcaseTabSchema>;
 
@@ -220,7 +219,9 @@ export const sectionConfigSchemas = {
     /** Heading above the filters; empty hides it (the client's slide 2). */
     title: z.string().default(""),
     tabs: z.array(showcaseTabSchema).default([]),
+    /** The grid every filter's products fill: columns wide, rows tall. */
     columns: z.number().int().min(2).max(6).default(4),
+    rows: z.number().int().min(1).max(5).default(2),
     /** Banner height in pixels (the admin adjusts it, not a ratio). */
     height: z.number().int().min(80).max(1200).default(400),
     moreHref: z.string().optional(),

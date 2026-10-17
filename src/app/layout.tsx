@@ -13,6 +13,7 @@ import { SiteVersionProvider } from "@/components/site-version-provider";
 import { getCategoryNav } from "@/data/categories";
 import { SITE } from "@/lib/constants";
 import { getSiteConfig } from "@/lib/site-config";
+import { topBannerBackgroundCss } from "@/lib/site-content";
 import { getSiteUrl, resolveRequestSiteVersion } from "@/lib/site-version";
 import "./globals.css";
 
@@ -93,6 +94,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       dispatchCutoffHour: globalSite.dispatchCutoffHour,
     },
   };
+  // The store selector's two halves wear each store's top-banner background
+  // (client's slide 4): the International gradient and the India purple.
+  const storeBackgrounds = {
+    local: topBannerBackgroundCss(localSite.topBanner[0]),
+    global: topBannerBackgroundCss(globalSite.topBanner[0]),
+  };
 
   return (
     <html
@@ -115,7 +122,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           brandLogo={siteContent.switcher.brandLogo}
         >
           <CartProvider>
-            <Header siteContent={siteContent} navCategories={navCategories} />
+            <Header
+              siteContent={siteContent}
+              navCategories={navCategories}
+              storeBackgrounds={storeBackgrounds}
+            />
             <main className="flex-1">{children}</main>
             <Footer />
           </CartProvider>

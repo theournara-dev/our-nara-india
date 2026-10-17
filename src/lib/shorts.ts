@@ -55,17 +55,20 @@ export function parseShortsUrl(url: string): ParsedShort | null {
 
 /** Build an embeddable iframe `src` for an already-parsed short. */
 export function getEmbedSrc(parsed: ParsedShort): string {
+  // Both players start muted because browsers only allow autoplay that way — but
+  // their **controls stay visible**, so the speaker button is right there and the
+  // sound is one tap away. Hiding the controls (the old `controls=0`) also hid
+  // the unmute button, which is why some TikToks looked like they had no audio
+  // at all (client's feedback).
   switch (parsed.type) {
     case "youtube":
       // `enablejsapi=1` lets the host listen for `onStateChange` (ended) via
       // postMessage. No `loop` — it would prevent the ended state from firing.
-      return `//www.youtube.com/embed/${parsed.id}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&playsinline=1&enablejsapi=1`;
+      return `//www.youtube.com/embed/${parsed.id}?autoplay=1&mute=1&controls=1&rel=0&playsinline=1&enablejsapi=1`;
     case "tiktok":
       // No `loop` — the player's postMessage API reports the ended state
-      // (onStateChange 0) only when the video actually finishes. `muted=1`
-      // is required for browsers to allow autoplay (unmuted autoplay is
-      // blocked and the player would sit waiting for a click).
-      return `https://www.tiktok.com/player/v1/${parsed.id}?autoplay=1&mute=1&controls=0&description=0`;
+      // (onStateChange 0) only when the video actually finishes.
+      return `https://www.tiktok.com/player/v1/${parsed.id}?autoplay=1&mute=1&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1&description=0`;
     case "instagram":
       return `https://www.instagram.com/reel/${parsed.id}/embed/`;
   }

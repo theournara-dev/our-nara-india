@@ -32,13 +32,16 @@ const GRID_CLASS: Record<number, string> = {
  *   left/right margins. Every filter's banner lives on one horizontal track, so
  *   picking a filter (or an arrow) **slides** to that banner rather than
  *   swapping the picture, and the visible slide is one link to the brand;
- * - the brand's product row (at most `columns × rows` items), which **fades
- *   in** on every change.
+ * - the brand's products in **one fixed grid**: `columns × rows` slots, filled
+ *   in the admin's order, which **fades in** on every change. The shape belongs
+ *   to the section, so changing the columns to 5 really does give five columns
+ *   on every filter.
  */
 export function TabbedShowcase({
   title = "",
   tabs,
   columns = 4,
+  rows = 2,
   height = 400,
   moreHref,
   moreLabel,
@@ -46,8 +49,10 @@ export function TabbedShowcase({
   /** Heading above the filters; empty renders nothing. */
   title?: string;
   tabs: TabbedShowcaseTab[];
-  /** Fallback columns for filters that don't set their own. */
+  /** Fixed grid columns for every filter's products. */
   columns?: number;
+  /** Fixed grid rows for every filter's products. */
+  rows?: number;
   /** Banner height in pixels (admin-set; 400 by default). */
   height?: number;
   moreHref?: string;
@@ -60,8 +65,10 @@ export function TabbedShowcase({
     tabs.findIndex((t) => t.id === activeId),
   );
   const active = tabs[activeIndex];
-  const activeColumns = active.columns ?? columns;
-  const gridClass = GRID_CLASS[activeColumns] ?? GRID_CLASS[4];
+  const gridClass = GRID_CLASS[columns] ?? GRID_CLASS[4];
+  // Enough picks to fill the box, in the admin's order; extra picks stay out of
+  // the grid until it grows (the loader applies the same ceiling).
+  const visible = active.products.slice(0, columns * rows);
 
   /** Step the filter row, wrapping at both ends (the arrows do this). */
   function step(direction: 1 | -1) {
@@ -221,9 +228,9 @@ export function TabbedShowcase({
           aria-labelledby={`showcase-tab-${active.id}`}
         >
           <div key={active.id} className="showcase-products">
-            {active.products.length > 0 && (
+            {visible.length > 0 && (
               <div className={`mt-8 grid gap-x-4 gap-y-8 ${gridClass}`}>
-                {active.products.map((product, index) => (
+                {visible.map((product, index) => (
                   <div key={`${active.id}-${product.id}`}>
                     <ThemeProductCard
                       product={product}
