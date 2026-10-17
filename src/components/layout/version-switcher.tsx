@@ -1,22 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Globe, Loader2 } from "lucide-react";
 import { useSiteVersion } from "@/components/site-version-provider";
+import {
+  StorePickerCards,
+  STORE_PICKER_PANEL_CLASS,
+} from "@/components/layout/store-picker-cards";
 import { notify } from "@/lib/toast";
 import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
 
 /**
- * The store selector (client's slide: two connected buttons).
+ * Store control, in two parts (client's last round):
  *
- * Left is the International (K-Drop) store, right the India store, joined into
- * one pill. Each half wears its store's own top-banner background — the
- * International store's gradient and the India store's purple — so the control
- * matches the strip above the header; pressing a half switches the store (in
- * development) or goes to that store's domain (in production). The active half
- * carries a white inner ring and the other is dimmed until hovered, so the
- * current store stays readable without hiding either colour.
+ * 1. **The toggle** — two connected halves. The active half wears its store's
+ *    top-banner background (the International gradient or the India purple); the
+ *    other is greyed out. It is deliberately small: it sits beside the icons as
+ *    a quick switch, not as a banner.
+ * 2. **The popup button** — the chip that names the current store and opens the
+ *    panel of store cards (content is admin-editable per store in /admin/site).
+ *    Kept as it was: the descriptions, badges and "Don't show again" hint live
+ *    there.
+ *
+ * Pressing a toggle half switches the store (runtime version in development,
+ * the other domain in production).
  */
 export function VersionSwitcher({
   content,
@@ -29,11 +37,36 @@ export function VersionSwitcher({
   className?: string;
 }) {
   const { version, setVersion } = useSiteVersion();
+  const [open, setOpen] = useState(false);
   const [pendingTo, setPendingTo] = useState<SiteVersion | null>(null);
+  // On phones the panel is pinned to the viewport edge instead of the chip's
+  // right edge (the chip sits at the right of the header, so a right-aligned
+  // panel would run off the left side of the screen).
+  const [panelLeft, setPanelLeft] = useState<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const isDev = process.env.NODE_ENV !== "production";
 
-  // The India store's name is the content's own (admin-editable); the
-  // International side is the K-Drop mark, as the client wrote it.
+  // Close on outside click / Escape, like any other menu.
+  useEffect(() => {
+    if (!open) return;
+    function onPointer(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const activeBlock = content.blocks.find((b) => b.store === version);
+  // The toggle's right-hand side is the India store, so its label is that
+  // store's name — fixed, it names a side of the toggle, not the current store.
   const localTitle =
     content.blocks.find((b) => b.store === "local")?.title ?? "India";
 
@@ -43,6 +76,7 @@ export function VersionSwitcher({
   ];
 
   function choose(next: SiteVersion) {
+    setOpen(false);
     if (next === version) return;
     const target = content.blocks.find((b) => b.store === next);
     if (isDev) {
@@ -62,46 +96,113 @@ export function VersionSwitcher({
   }
 
   return (
-    <div
-      role="group"
-      aria-label="Choose your store"
-      className={`flex h-10 shrink-0 items-stretch overflow-hidden rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.18)] max-[1200px]:h-8 ${className}`}
-    >
-      {options.map(({ store, label, background }, index) => {
-        const active = version === store;
-        const pending = pendingTo === store;
-        return (
-          <button
-            key={store}
-            type="button"
-            onClick={() => choose(store)}
-            aria-pressed={active}
-            aria-label={
-              store === "global"
-                ? "Shop the International (K-Drop) store"
-                : `Shop the ${label} store`
+    <div ref={ref} className={`relative ${className}`}>
+      <div className="flex items-center gap-1.5">
+        {/* 1. The quick switch: two small connected halves. */}
+        <div
+          role="group"
+          aria-label="Choose your store"
+          className="flex h-7 shrink-0 items-stretch overflow-hidden rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.15)] max-[1200px]:h-6"
+        >
+          {options.map(({ store, label, background }, index) => {
+            const active = version === store;
+            const pending = pendingTo === store;
+            return (
+              <button
+                key={store}
+                type="button"
+                onClick={() => choose(store)}
+                aria-pressed={active}
+                aria-label={
+                  store === "global"
+                    ? "Shop the International (K-Drop) store"
+                    : `Shop the ${label} store`
+                }
+                title={
+                  store === "global"
+                    ? "International store — K-Drop"
+                    : `${label} store`
+                }
+                className={`relative flex items-center justify-center gap-1 px-2.5 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2 max-[1200px]:text-[9px] ${
+                  index === 0 ? "rounded-l-full" : "rounded-r-full"
+                } ${
+                  active
+                    ? "text-white shadow-[inset_0_0_0_1.5px_rgba(255,255,255,0.9)]"
+                    : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300"
+                }`}
+                style={active ? { background } : undefined}
+              >
+                {pending && (
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden />
+                )}
+                <span className="whitespace-nowrap">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 2. The popup trigger — unchanged: names the store and opens the
+            panel of store cards. */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!open && ref.current) {
+              const phone = window.innerWidth < 768;
+              setPanelLeft(
+                phone ? 12 - ref.current.getBoundingClientRect().left : null,
+              );
             }
-            title={
-              store === "global"
-                ? "International store — K-Drop"
-                : `${label} store`
-            }
-            className={`relative flex items-center justify-center gap-1 px-4 text-[13px] font-bold uppercase tracking-[0.06em] text-white transition-[opacity,box-shadow] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-point-500 max-[1200px]:px-2.5 max-[1200px]:text-[11px] ${
-              index === 0 ? "rounded-l-full" : "rounded-r-full"
-            } ${
-              active
-                ? "shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]"
-                : "opacity-70 hover:opacity-100"
-            }`}
-            style={{ background }}
-          >
-            {pending && (
-              <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+            setOpen((v) => !v);
+          }}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
+          title={`Store: ${activeBlock?.title ?? version}`}
+          className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+        >
+          {pendingTo ? (
+            <Loader2
+              className="h-3.5 w-3.5 animate-spin text-point-500"
+              aria-hidden
+            />
+          ) : (
+            <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
+          )}
+          <span className="text-zinc-900 max-[374px]:hidden">
+            {activeBlock?.title ?? version}
+          </span>
+          {/* The currency is the first thing to go where the icons share the
+              row with the menu. */}
+          <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
+            {activeBlock?.currency}
+          </span>
+        </button>
+      </div>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Choose store"
+          className={`absolute right-0 top-full z-50 mt-2 ${STORE_PICKER_PANEL_CLASS}`}
+          style={
+            panelLeft == null
+              ? undefined
+              : { left: panelLeft, right: "auto", width: "calc(100vw - 24px)" }
+          }
+        >
+          <div className="mb-3 px-1 text-center">
+            <p className="text-sm font-semibold text-ink">{content.title}</p>
+            {content.subtitle && (
+              <p className="mt-0.5 text-xs text-[#888]">{content.subtitle}</p>
             )}
-            <span className="whitespace-nowrap">{label}</span>
-          </button>
-        );
-      })}
+          </div>
+          <StorePickerCards
+            content={content}
+            activeStore={version}
+            onChoose={choose}
+          />
+        </div>
+      )}
     </div>
   );
 }

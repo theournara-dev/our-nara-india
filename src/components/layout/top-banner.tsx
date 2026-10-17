@@ -3,16 +3,29 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSiteVersion } from "@/components/site-version-provider";
 import type { TopBannerBlock } from "@/lib/site-content";
 import { topBannerBackgroundCss } from "@/lib/site-content";
+import type { SiteVersion } from "@/lib/site-version";
 
 /**
  * Auto-rotating strip pinned above the header. Content comes from the admin
  * site settings (per store): each block is a line of text or an image with its
- * own colours, and the strip rotates through them. Closing animates the height
- * down to 0 over 0.5s (minimizing) before unmounting.
+ * own colours or gradient, and the strip rotates through them. Closing animates
+ * the height down to 0 over 0.5s (minimizing) before unmounting.
+ *
+ * Both stores' blocks are passed in and the *active* one is read from the
+ * client-side version, so switching the store in the header also swaps the
+ * strip — the admin sets a different banner per store (the International store's
+ * is a gradient), and the switch must show it without a reload.
  */
-export function TopBanner({ blocks }: { blocks: TopBannerBlock[] }) {
+export function TopBanner({
+  blocksByVersion,
+}: {
+  blocksByVersion: Record<SiteVersion, TopBannerBlock[]>;
+}) {
+  const { version } = useSiteVersion();
+  const blocks = blocksByVersion[version] ?? [];
   const [closing, setClosing] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [index, setIndex] = useState(0);

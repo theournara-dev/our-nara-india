@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Home } from "lucide-react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { StoreNudge } from "@/components/layout/store-nudge";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
@@ -13,26 +13,23 @@ import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { notify } from "@/lib/toast";
-import type { SiteContent } from "@/lib/site-content";
+import type { SiteContent, TopBannerBlock } from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
 
 /**
  * Header (Tailwind-native).
  *
- * The client's last round trimmed the bar to one set of links and moved
- * everything else into the hamburger's two-pane menu:
+ * The bar keeps the client's list — **CATEGORY · BRAND · REVIEW · EVENT ·
+ * STORES · B2B · AMBASSADOR** — beside the desktop hamburger, which opens a
+ * two-pane dropdown anchored under itself (not a full-width panel): every
+ * top-level item on the left, its links on the right, both panes scrollable.
  *
- * - the bar keeps **hamburger · CATEGORY · HOT · BRAND · REVIEW · EVENT ·
- *   STORES · B2B · AMBASSADOR**;
- * - the hamburger opens a panel whose **left pane** lists every top-level item
- *   and whose **right pane** shows that item's links — hovering, focusing or
- *   clicking a row swaps the right pane, and both panes scroll on their own;
- * - phones and tablets put the logo, the store selector and the icons on one
- *   row with the menu links on the row below.
+ * On phones and tablets the logo, the store control and the icons share one
+ * row, and the links sit on the row below, scrolling sideways. There is no
+ * drawer there: every link in that row opens its own page.
  */
 
 const BAR_LINKS = [
-  { label: "HOT", href: "/hot" },
   { label: "BRAND", href: "/brands" },
   { label: "REVIEW", href: "/review" },
   { label: "EVENT", href: "/event" },
@@ -173,26 +170,31 @@ function MenuPanes({
   activeId,
   onActive,
   onNavigate,
-  drawer = false,
 }: {
   groups: MenuGroup[];
   activeId: string;
   onActive: (id: string) => void;
   onNavigate: () => void;
-  /** The drawer's tighter column widths. */
-  drawer?: boolean;
 }) {
   const active = groups.find((g) => g.id === activeId) ?? groups[0];
 
   return (
     <div className="flex h-full min-h-0 w-full">
-      {/* Left: every top-level item, scrollable on its own. */}
+      {/* Left: home, then every top-level item — scrollable on its own. */}
       <ul
         aria-label="Menu sections"
-        className={`shrink-0 overflow-y-auto border-r border-zinc-100 py-2 ${
-          drawer ? "w-[42%]" : "w-[34%] max-w-[280px]"
-        }`}
+        className="w-[38%] max-w-[260px] shrink-0 overflow-y-auto border-r border-zinc-100 py-2"
       >
+        <li className="border-b border-zinc-100">
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-point-600 transition-colors hover:bg-zinc-50"
+          >
+            <Home size={14} aria-hidden />
+            OUR:NARA
+          </Link>
+        </li>
         {groups.map((group) => {
           const current = group.id === active?.id;
           return (
@@ -203,7 +205,7 @@ function MenuPanes({
                 onFocus={() => onActive(group.id)}
                 onClick={() => onActive(group.id)}
                 aria-current={current ? "true" : undefined}
-                className={`flex w-full items-center justify-between gap-1 px-4 py-2.5 text-left text-sm transition-colors duration-200 max-md:px-3 max-md:py-2 ${
+                className={`flex w-full items-center justify-between gap-1 px-4 py-2.5 text-left text-sm transition-colors duration-200 ${
                   current
                     ? "bg-point-50 font-semibold text-point-600"
                     : "text-zinc-700 hover:bg-zinc-50"
@@ -222,7 +224,7 @@ function MenuPanes({
       </ul>
 
       {/* Right: the selected item's links, also scrollable. */}
-      <div className="min-w-0 flex-1 overflow-y-auto px-5 py-3 max-md:px-3">
+      <div className="min-w-0 flex-1 overflow-y-auto px-5 py-3">
         {active && (
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
             {active.label}
@@ -250,18 +252,20 @@ export function Header({
   siteContent,
   navCategories = [],
   storeBackgrounds,
+  topBanners,
 }: {
   siteContent: SiteContent;
   /** The admin's category tree; the menu follows it without a deploy. */
   navCategories?: NavCategory[];
-  /** Each store's top-banner background — the store selector's two colours. */
+  /** Each store's top-banner background — the store toggle's two colours. */
   storeBackgrounds: Record<SiteVersion, string>;
+  /** Each store's rotating strip, so a store switch swaps it client-side. */
+  topBanners: Record<SiteVersion, TopBannerBlock[]>;
 }) {
   const router = useRouter();
   const { config } = useSiteVersion();
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeGroup, setActiveGroup] = useState<string>("");
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchPanelTop, setSearchPanelTop] = useState<number | null>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
@@ -330,17 +334,17 @@ export function Header({
 
   return (
     <div>
-      <TopBanner blocks={siteContent.topBanner} />
+      <TopBanner blocksByVersion={topBanners} />
 
       <div
         data-site-header
         className="relative z-[99] w-full bg-white shadow-[2px_2px_5px_rgba(0,0,0,0.1)]"
       >
         {/* One row on desktop (logo · menu · icons); on phones and tablets the
-            logo and the icons share the first row and the menu links take the
+            logo and icons share the first row and the menu links take the
             second. */}
         <div className="mx-auto flex min-h-20 w-[96%] max-w-[1560px] flex-wrap items-center justify-between max-[1200px]:min-h-0 max-[1200px]:px-[7px] max-[1200px]:py-2">
-          <h1 className="relative order-1 flex shrink-0 items-center pl-[18px] pr-8 max-[1200px]:pl-1 max-[1200px]:pr-2">
+          <h1 className="relative order-1 flex shrink-0 items-center pl-[18px] pr-4 max-[1200px]:pl-1 max-[1200px]:pr-2">
             <Link href="/">
               <Image
                 src="/upload/goodymall1/en/main/logo_.png"
@@ -348,51 +352,72 @@ export function Header({
                 width={2483}
                 height={392}
                 loading="eager"
-                className="h-auto w-auto max-h-8 max-w-[170px] max-[1200px]:max-w-[140px] max-md:max-w-[112px]"
+                className="h-auto w-auto max-h-8 max-w-[170px] max-[1200px]:max-w-[130px] max-md:max-w-[104px]"
               />
             </Link>
           </h1>
 
-          {/* The bar: hamburger, CATEGORY, then the storefront pages. */}
-          <div className="order-2 flex min-w-0 flex-1 items-center justify-center max-[1200px]:order-3 max-[1200px]:h-10 max-[1200px]:basis-full max-[1200px]:justify-start">
+          {/* The bar, left-aligned right after the logo: the desktop hamburger,
+              then CATEGORY and the storefront pages. */}
+          <div className="order-2 flex min-w-0 flex-1 items-center justify-start max-[1200px]:order-3 max-[1200px]:h-10 max-[1200px]:basis-full">
             <div className="flex min-w-0 items-center max-[1200px]:w-full">
-              <button
-                type="button"
-                ref={menuTriggerRef}
-                aria-label="Open menu"
-                aria-haspopup="true"
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((v) => !v)}
-                className="flex h-10 w-12 shrink-0 cursor-pointer flex-col items-center justify-center gap-[5px] max-[1200px]:hidden"
-              >
-                {[0, 1, 2].map((bar) => (
-                  <span
-                    key={bar}
-                    className={`block h-0.5 w-[18px] bg-[#222] transition-transform duration-300 ${
-                      menuOpen && bar === 0
-                        ? "translate-y-[7px] rotate-45"
-                        : menuOpen && bar === 1
-                          ? "opacity-0"
-                          : menuOpen
-                            ? "-translate-y-[7px] -rotate-45"
-                            : ""
-                    }`}
-                  />
-                ))}
-              </button>
+              {/* The hamburger and its dropdown, anchored under the icon. The
+                  button is centred in the 80px row, so `mt-5` lands the panel
+                  on the header's bottom edge. */}
+              <div className="relative shrink-0 max-[1200px]:hidden">
+                <button
+                  type="button"
+                  ref={menuTriggerRef}
+                  aria-label="Open menu"
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen}
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="flex h-10 w-12 cursor-pointer flex-col items-center justify-center gap-[5px]"
+                >
+                  {[0, 1, 2].map((bar) => (
+                    <span
+                      key={bar}
+                      className={`block h-0.5 w-[18px] bg-[#222] transition-transform duration-300 ${
+                        menuOpen && bar === 0
+                          ? "translate-y-[7px] rotate-45"
+                          : menuOpen && bar === 1
+                            ? "opacity-0"
+                            : menuOpen
+                              ? "-translate-y-[7px] -rotate-45"
+                              : ""
+                      }`}
+                    />
+                  ))}
+                </button>
+
+                {menuOpen && (
+                  <div
+                    ref={menuPanelRef}
+                    role="dialog"
+                    aria-label="Menu"
+                    className="absolute left-0 top-full z-[100] mt-5 w-[760px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-[0_12px_32px_rgba(0,0,0,0.16)]"
+                  >
+                    <div className="h-[min(60vh,520px)]">
+                      <MenuPanes
+                        groups={groups}
+                        activeId={activeId}
+                        onActive={setActiveGroup}
+                        onNavigate={closeMenu}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <nav aria-label="Main" className="min-w-0 flex-1">
                 <ul className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] max-[1200px]:h-10 max-[1200px]:gap-4 [&::-webkit-scrollbar]:hidden">
                   <li className="shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setMenuOpen(true)}
-                      aria-haspopup="true"
-                      aria-expanded={menuOpen}
+                    <Link
+                      href="/category"
                       className="relative mx-1 inline-flex h-10 items-center px-1.5 text-base font-semibold text-ink transition-colors duration-500 hover:text-point-500 max-[1200px]:mx-0 max-[1200px]:text-[15px]"
                     >
                       CATEGORY
-                    </button>
+                    </Link>
                   </li>
                   {BAR_LINKS.map((item) => (
                     <li key={item.href} className="shrink-0">
@@ -423,10 +448,9 @@ export function Header({
             </div>
           </div>
 
-          {/* Right: store selector, account, cart, search, and the phone's own
-              menu button. */}
-          <div className="order-3 flex shrink-0 items-center max-[1200px]:order-2 max-[1200px]:ml-auto">
-            {/* The admin's bobbing hint stays above the selector, as before. */}
+          {/* Right: the store control (toggle + popup button), account, cart
+              and search. Phones keep the cart only. */}
+          <div className="relative order-3 flex shrink-0 items-center max-[1200px]:order-2 max-[1200px]:ml-auto">
             <div className="relative">
               <StoreNudge
                 nudge={siteContent.switcher.nudge}
@@ -532,8 +556,9 @@ export function Header({
               </li>
             </ul>
 
-            {/* Search */}
-            <div className="relative min-w-6 cursor-pointer pl-1 max-[1200px]:pl-0">
+            {/* Search — desktop only; the phone bar keeps the cart and the
+                store control. */}
+            <div className="relative min-w-6 cursor-pointer pl-1 max-[1200px]:hidden">
               <button
                 type="button"
                 ref={searchTriggerRef}
@@ -561,25 +586,6 @@ export function Header({
                   height={32}
                   unoptimized
                   className="mx-auto block w-8"
-                />
-              </button>
-            </div>
-
-            {/* The phone/tablet menu button, beside the icons. */}
-            <div className="relative ml-1 hidden h-8 w-8 max-[1200px]:block">
-              <button
-                type="button"
-                aria-label="Open menu"
-                onClick={() => setMobileOpen(true)}
-                className="block h-full w-full cursor-pointer"
-              >
-                <Image
-                  src="/upload/goodymall1/icon/option.svg"
-                  alt=""
-                  width={32}
-                  height={32}
-                  unoptimized
-                  className="h-8 w-8"
                 />
               </button>
             </div>
@@ -651,106 +657,6 @@ export function Header({
             )}
           </div>
         </div>
-
-        {/* The two-pane menu, under the header on desktop. */}
-        {menuOpen && (
-          <div
-            ref={menuPanelRef}
-            role="dialog"
-            aria-label="Menu"
-            className="absolute inset-x-0 top-full z-[100] border-t border-zinc-100 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] max-[1200px]:hidden"
-          >
-            <div className="mx-auto w-[92%] max-w-[1560px]">
-              <div className="h-[min(60vh,520px)]">
-                <MenuPanes
-                  groups={groups}
-                  activeId={activeId}
-                  onActive={setActiveGroup}
-                  onNavigate={closeMenu}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* The phone drawer: account shortcuts on top, then the same two panes. */}
-        {mobileOpen && (
-          <div className="fixed inset-0 z-[110]" data-overlay>
-            <button
-              type="button"
-              aria-label="Close menu"
-              onClick={() => setMobileOpen(false)}
-              className="absolute inset-0 bg-black/40"
-            />
-            <aside className="absolute inset-y-0 right-0 flex h-full w-full min-w-[225px] max-w-[380px] flex-col bg-white shadow-xl">
-              <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-4">
-                <Image
-                  src="/upload/goodymall1/en/main/logo_.png"
-                  alt="OUR:NARA"
-                  width={2483}
-                  height={392}
-                  className="h-auto w-auto max-w-[110px]"
-                />
-                <div className="flex items-center gap-3 text-sm font-normal text-[#222]">
-                  <Link href="/login" className="hover:text-black">
-                    Login
-                  </Link>
-                  <span className="h-[11px] w-px bg-[#ddd]" />
-                  <Link href="/join" className="hover:text-black">
-                    Join
-                  </Link>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Close"
-                  onClick={() => setMobileOpen(false)}
-                  className="-mr-1 p-1 text-lg text-[#555]"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-x-4 gap-y-2 px-4 pb-4 text-[13px]">
-                <Link href="/account" className="text-[#555] hover:text-black">
-                  My page
-                </Link>
-                <Link
-                  href="/account/orders"
-                  className="text-[#555] hover:text-black"
-                >
-                  Order
-                </Link>
-                <Link href="/cart" className="text-[#555] hover:text-black">
-                  Cart
-                  {cartCount > 0 && (
-                    <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-point-500 px-1 text-[11px] font-semibold text-white">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
-                <Link
-                  href="/account/wishlist"
-                  className="text-[#555] hover:text-black"
-                >
-                  Wish list
-                </Link>
-                <Link href="/coupons" className="text-[#555] hover:text-black">
-                  Couponzone
-                </Link>
-              </div>
-
-              <div className="flex min-h-0 flex-1 flex-col border-t border-zinc-100">
-                <MenuPanes
-                  groups={groups}
-                  activeId={activeId}
-                  onActive={setActiveGroup}
-                  onNavigate={() => setMobileOpen(false)}
-                  drawer
-                />
-              </div>
-            </aside>
-          </div>
-        )}
       </div>
     </div>
   );

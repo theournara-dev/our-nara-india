@@ -11,7 +11,7 @@ import { Clock, Heart, Home, LayoutGrid, User } from "lucide-react";
  * admin screens, which have their own chrome.
  */
 const TABS = [
-  { label: "CATE", href: "/category/skin-care", icon: LayoutGrid },
+  { label: "CATE", href: "/category", icon: LayoutGrid },
   { label: "MY PAGE", href: "/account", icon: User },
   { label: "HOME", href: "/", icon: Home },
   { label: "WISH", href: "/account/wishlist", icon: Heart },

@@ -126,6 +126,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               siteContent={siteContent}
               navCategories={navCategories}
               storeBackgrounds={storeBackgrounds}
+              topBanners={{
+                local: localSite.topBanner,
+                global: globalSite.topBanner,
+              }}
             />
             <main className="flex-1">{children}</main>
             <Footer />
