@@ -4,7 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Home } from "lucide-react";
+import {
+  Briefcase,
+  Brush,
+  CalendarDays,
+  ChevronRight,
+  Clock,
+  Home,
+  LayoutGrid,
+  MapPin,
+  Megaphone,
+  Scissors,
+  Sparkles,
+  Star,
+  Tags,
+  Ticket,
+  User,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import type { NavCategory } from "@/data/categories";
@@ -79,8 +97,18 @@ interface MenuGroup {
   id: string;
   label: string;
   href: string;
+  /** Shown before the label in the left pane, like the home row's icon. */
+  icon: LucideIcon;
   links: MenuLink[];
 }
+
+/** Category roots get their own icon; a new one falls back to the grid. */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  "skin-care": Sparkles,
+  makeup: Brush,
+  "hair-care": Scissors,
+  "pre-order": Clock,
+};
 
 /**
  * The full menu, in one place. Every internal link of the site hangs off a
@@ -100,6 +128,7 @@ function buildMenu(
       id: `category-${category.slug}`,
       label: category.name,
       href: `/category/${category.slug}`,
+      icon: CATEGORY_ICONS[category.slug] ?? LayoutGrid,
       links: [
         {
           label: `Shop all ${category.name}`,
@@ -115,49 +144,63 @@ function buildMenu(
       id: "brand",
       label: "Brand",
       href: "/brands",
+      icon: Tags,
       links: [{ label: "All brands", href: "/brands" }],
     },
     {
       id: "review",
       label: "Review",
       href: "/review",
+      icon: Star,
       links: [{ label: "What our customers say", href: "/review" }],
     },
     {
       id: "event",
       label: "Event",
       href: "/event",
+      icon: CalendarDays,
       links: [{ label: "All events", href: "/event" }],
     },
     {
       id: "stores",
       label: "Stores",
       href: "/stores",
+      icon: MapPin,
       links: [{ label: "Our stores", href: "/stores" }],
     },
     {
       id: "b2b",
       label: "B2B",
       href: "/b2b",
+      icon: Briefcase,
       links: [{ label: "Wholesale", href: "/b2b" }],
     },
     {
       id: "ambassador",
       label: "Ambassador",
       href: "/ambassador",
+      icon: Megaphone,
       links: [{ label: "Ambassador programme", href: "/ambassador" }],
     },
     {
       id: "community",
       label: "Community",
       href: "/community",
+      icon: Users,
       links: communityLinks,
     },
-    { id: "account", label: "My page", href: "/account", links: myPageLinks },
+    {
+      id: "account",
+      label: "My page",
+      href: "/account",
+      icon: User,
+      links: myPageLinks,
+    },
     {
       id: "coupons",
       label: "Couponzone",
       href: "/coupons",
+      icon: Ticket,
       links: [{ label: "Couponzone", href: "/coupons" }],
     },
   ];
@@ -190,12 +233,13 @@ function MenuPanes({
             onClick={onNavigate}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-point-600 transition-colors hover:bg-zinc-50"
           >
-            <Home size={14} aria-hidden />
+            <Home size={15} aria-hidden className="shrink-0" />
             OUR:NARA
           </Link>
         </li>
         {groups.map((group) => {
           const current = group.id === active?.id;
+          const Icon = group.icon;
           return (
             <li key={group.id}>
               <button
@@ -210,7 +254,16 @@ function MenuPanes({
                     : "text-zinc-700 hover:bg-zinc-50"
                 }`}
               >
-                <span className="truncate">{group.label}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <Icon
+                    size={15}
+                    aria-hidden
+                    className={`shrink-0 ${
+                      current ? "text-point-500" : "text-zinc-400"
+                    }`}
+                  />
+                  <span className="truncate">{group.label}</span>
+                </span>
                 <ChevronRight
                   size={14}
                   aria-hidden

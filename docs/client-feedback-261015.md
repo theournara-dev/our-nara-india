@@ -525,3 +525,15 @@ is therefore the component's own shape, not a second pill's corner — the contr
 reads as one slider with the coloured part laid over the grey track. Checked in
 both directions in the browser: 60px + 53px halves, 12px overlap, the inactive
 one `border-radius: 0`.
+
+### Fifth pass — icons in the menu's left pane
+
+Every row of the dropdown's left pane now carries an icon, the way the OUR:NARA
+(home) row already did: Sparkles for Skin Care, Brush for Makeup, Scissors for
+Hair Care, Clock for PRE-ORDER, and Tags / Star / CalendarDays / MapPin /
+Briefcase / Megaphone / Users / User / Ticket for Brand, Review, Event, Stores,
+B2B, Ambassador, Community, My page and Couponzone. A category added later
+without a mapping falls back to the grid icon. The icon sits in a fixed 15px slot
+before the label, turns point-purple on the selected row (like the label) and is
+`aria-hidden` — the label still names the row. Verified: all 14 rows report an
+`svg` in the DOM and the panel renders with them aligned.
