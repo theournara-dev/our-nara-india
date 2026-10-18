@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
+import { MenuIconPicker } from "@/components/admin/site/menu-icon-picker";
 import { MenuRowIcon } from "@/components/layout/menu-row-icon";
 import { StoreNudge } from "@/components/layout/store-nudge";
 import {
@@ -21,7 +22,6 @@ import {
 import { notify } from "@/lib/toast";
 import {
   defaultMenuIcon,
-  MENU_ICON_GROUPS,
   MENU_ICON_LABELS,
   menuIconSetting,
 } from "@/lib/menu-icons";
@@ -739,9 +739,9 @@ function MenuIconsEditor({
     <section className="rounded-2xl border border-zinc-100 bg-white p-5">
       <h2 className="mb-1 text-sm font-semibold text-zinc-900">Menu icons</h2>
       <p className="mb-4 text-xs text-zinc-400">
-        Pick a menu item, then use one of the icons below or upload any image to
-        replace it. The preview beside each row is exactly what the header
-        draws. Shared by both stores.
+        Pick a menu item, then choose an icon from ten libraries — search across
+        all of them — or upload any image to replace it. The preview beside each
+        row is exactly what the header draws. Shared by both stores.
       </p>
 
       <div className="space-y-2">
@@ -799,49 +799,13 @@ function MenuIconsEditor({
 
                 <div>
                   <span className={labelCls}>Icon</span>
-                  {/* The available icons, listed by the library they come
-                      from: Lucide and the Material Design set from
-                      react-icons. */}
-                  <div className="space-y-3">
-                    {MENU_ICON_GROUPS.map((group) => (
-                      <div key={group.id}>
-                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                          {group.label}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {group.icons.map(({ key, label, Icon }) => {
-                            const selected = setting.icon === key;
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() =>
-                                  patchRow(
-                                    row.id,
-                                    key,
-                                    setting.image ?? undefined,
-                                  )
-                                }
-                                aria-pressed={selected}
-                                aria-label={`${group.label}: ${label}`}
-                                title={`${group.label}: ${label}`}
-                                className={`grid h-8 w-8 place-items-center rounded border transition-colors ${
-                                  selected
-                                    ? "border-point-500 bg-point-50 text-point-600"
-                                    : "border-zinc-200 bg-white text-zinc-500 hover:border-point-300 hover:text-point-600"
-                                }`}
-                              >
-                                <Icon size={16} aria-hidden />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-1.5 text-xs text-zinc-400">
-                    {MENU_ICON_LABELS[setting.icon] ?? setting.icon}
-                  </p>
+                  <MenuIconPicker
+                    value={setting.icon}
+                    defaultKey={fallback}
+                    onChange={(icon) =>
+                      patchRow(row.id, icon, setting.image ?? undefined)
+                    }
+                  />
                 </div>
 
                 <ImageField

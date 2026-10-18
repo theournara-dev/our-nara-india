@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   defaultMenuIcon,
+  filterMenuIcons,
   isMenuIconImage,
   MENU_ICON_GROUPS,
   MENU_ICONS,
@@ -28,12 +29,14 @@ test("a category nobody mapped still gets an icon", () => {
   assert.equal(defaultMenuIcon("some-future-row"), "lucide:grid");
 });
 
-test("the picker lists icons from more than one library", () => {
-  assert.ok(MENU_ICON_GROUPS.length >= 2);
+test("the picker lists icons from ten libraries", () => {
+  assert.equal(MENU_ICON_GROUPS.length, 10);
   assert.equal(MENU_ICON_GROUPS[0].id, "lucide");
   assert.equal(MENU_ICON_GROUPS[1].id, "material");
   for (const group of MENU_ICON_GROUPS) {
-    assert.ok(group.icons.length > 0, `${group.id} is empty`);
+    assert.ok(group.icons.length >= 20, `${group.id} is too small`);
+    assert.ok(group.label.length > 0);
+    assert.ok(group.shortLabel.length > 0);
     for (const icon of group.icons) {
       assert.ok(
         icon.key.startsWith(`${group.id}:`),
@@ -43,6 +46,28 @@ test("the picker lists icons from more than one library", () => {
       assert.ok(icon.Icon);
     }
   }
+});
+
+test("search matches labels, keys and library names, across libraries", () => {
+  const all = filterMenuIcons(MENU_ICON_GROUPS, "");
+  assert.equal(all.length, MENU_ICON_GROUPS.length);
+
+  const home = filterMenuIcons(MENU_ICON_GROUPS, "home");
+  assert.ok(home.length >= 8);
+  assert.ok(home.every((entry) => entry.icons.length > 0));
+  assert.ok(
+    home.some((entry) => entry.group.id === "lucide") &&
+      home.some((entry) => entry.group.id === "pi"),
+  );
+
+  const tabler = filterMenuIcons(MENU_ICON_GROUPS, "tabler");
+  assert.deepEqual(
+    tabler.map((entry) => entry.group.id),
+    ["tb"],
+  );
+
+  const none = filterMenuIcons(MENU_ICON_GROUPS, "no-such-icon");
+  assert.deepEqual(none, []);
 });
 
 test("every key is unique and has a lookup and a label", () => {

@@ -607,3 +607,34 @@ Verified with the action's own write path: `home` as `material:store` rendered t
 Material glyph (a plain 24px-viewBox SVG, no Lucide classes), `brand` as
 `lucide:crown` rendered `lucide-crown`, and the legacy `"flame"` rendered
 `lucide-flame`; cleared afterwards.
+
+### Ninth pass — ten libraries in a compact, searchable picker
+
+The client asked for the full set of libraries, not a vertical list, and for a
+search that copes with the same icon name existing in several sets:
+
+- **Ten libraries** are now available: Lucide (the site's own set), Material
+  Design, Font Awesome 6, Bootstrap Icons, Ionicons 5, Feather, Tabler, Remix
+  Icon, Phosphor and Boxicons. That is ~250 icons, every one checked against the
+  installed `react-icons` package, keyed per library (`fa6:star`,
+  `pi:heart`, `tb:calendar`, `bi:store`) so names cannot collide.
+- **The picker is one compact panel**, not stacked groups: a search box, a
+  horizontally scrollable row of library tabs (with counts and an "All" tab), and
+  a single 32px grid that scrolls inside the panel. Tooltips and accessible names
+  read "Star · Font Awesome 6", so identical names stay distinguishable.
+- **Search spans every library** by label, key and library name, drops groups with
+  no match, reports "N of 250 icons", and offers a clear button and an empty
+  state. A "Selected … · library" footer names the current choice and offers
+  `Use default` when the row is not on its default.
+- The row's live preview, default-icon line and image upload are unchanged; the
+  picker only replaces the old static grid. `filterMenuIcons` lives in
+  `src/lib/menu-icons.ts` and is covered by the tests (group count, unique keys,
+  labels, search across libraries, defaults).
+
+Verified with the admin's own write path: `brand` as `fa6:star`, `review` as
+`pi:heart`, `event` as `tb:calendar` and `stores` as `bi:store` all rendered their
+own library's glyph in the open header menu (Font Awesome's 576×512 viewBox,
+Phosphor's 256×256, Tabler and Boxicons' 24×24 stroke/fill shapes), while
+unconfigured rows kept their Lucide defaults. The settings were restored
+afterwards. `/admin/site` still redirects to `/login` when unauthenticated, so the
+picker screen itself was only type-checked and built, not screenshotted.
