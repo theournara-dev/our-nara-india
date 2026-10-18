@@ -2,14 +2,16 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   defaultMenuIcon,
+  isMenuIconImage,
   MENU_ICONS,
   MENU_ICON_LABELS,
   MENU_STATIC_ROWS,
   menuIconKey,
+  menuIconSetting,
 } from "../src/lib/menu-icons";
 import { normalizeMenuIcons } from "../src/lib/site-content";
 
-test("every menu row keeps its designed default", () => {
+test("every menu row keeps its designed default icon", () => {
   assert.equal(defaultMenuIcon("home"), "home");
   assert.equal(defaultMenuIcon("category-skin-care"), "sparkles");
   assert.equal(defaultMenuIcon("category-makeup"), "brush");
@@ -35,32 +37,79 @@ test("every default is a real icon with a label", () => {
   }
 });
 
-test("the admin's choice wins over the default", () => {
-  assert.equal(menuIconKey("brand", { brand: "crown" }), "crown");
-  assert.equal(menuIconKey("home", { home: "sparkles" }), "sparkles");
-  assert.equal(
-    menuIconKey("category-skin-care", { "category-skin-care": "droplets" }),
-    "droplets",
+test("an untouched row resolves to its default icon and no image", () => {
+  assert.deepEqual(menuIconSetting("brand"), { icon: "tags", image: null });
+  assert.deepEqual(menuIconSetting("brand", {}), {
+    icon: "tags",
+    image: null,
+  });
+});
+
+test("the admin's icon choice wins over the default", () => {
+  assert.deepEqual(menuIconSetting("brand", { brand: { icon: "crown" } }), {
+    icon: "crown",
+    image: null,
+  });
+  assert.equal(menuIconKey("home", { home: { icon: "sparkles" } }), "sparkles");
+});
+
+test("an uploaded image is kept alongside the icon and wins in use", () => {
+  const setting = menuIconSetting("brand", {
+    brand: { icon: "crown", image: "/upload/menu/brand.png" },
+  });
+  assert.equal(setting.icon, "crown");
+  assert.equal(setting.image, "/upload/menu/brand.png");
+});
+
+test("the first round's flat values still resolve", () => {
+  assert.deepEqual(menuIconSetting("brand", { brand: "crown" }), {
+    icon: "crown",
+    image: null,
+  });
+  assert.deepEqual(
+    menuIconSetting("brand", { brand: "https://blob.example/x.png" }),
+    { icon: "tags", image: "https://blob.example/x.png" },
   );
 });
 
-test("an unknown or missing choice falls back, never draws nothing", () => {
-  assert.equal(menuIconKey("brand", { brand: "not-an-icon" }), "tags");
-  assert.equal(menuIconKey("brand", { brand: 42 }), "tags");
-  assert.equal(menuIconKey("brand", null), "tags");
-  assert.equal(menuIconKey("brand", {}), "tags");
+test("unknown values fall back, but never leave a row blank", () => {
+  assert.deepEqual(menuIconSetting("brand", { brand: { icon: "nope" } }), {
+    icon: "tags",
+    image: null,
+  });
+  assert.deepEqual(menuIconSetting("brand", { brand: { image: "" } }), {
+    icon: "tags",
+    image: null,
+  });
+  assert.deepEqual(menuIconSetting("brand", { brand: 42 }), {
+    icon: "tags",
+    image: null,
+  });
 });
 
-test("the stored map keeps usable pairs and drops the rest", () => {
+test("only URLs and site paths count as images", () => {
+  assert.equal(isMenuIconImage("https://x.example/a.png"), true);
+  assert.equal(isMenuIconImage("/upload/a.png"), true);
+  assert.equal(isMenuIconImage("crown"), false);
+  assert.equal(isMenuIconImage(""), false);
+  assert.equal(isMenuIconImage(null), false);
+});
+
+test("the stored map keeps both shapes and drops the rest", () => {
   assert.deepEqual(normalizeMenuIcons(null), {});
   assert.deepEqual(normalizeMenuIcons("nope"), {});
   assert.deepEqual(
     normalizeMenuIcons({
-      brand: "crown",
-      home: "",
-      "category-x": 7,
+      brand: { icon: "crown", image: "/upload/brand.png" },
+      home: { icon: "sparkles" },
       review: "star",
+      "category-x": 7,
+      empty: {},
     }),
-    { brand: "crown", review: "star" },
+    {
+      brand: { icon: "crown", image: "/upload/brand.png" },
+      home: { icon: "sparkles" },
+      review: "star",
+    },
   );
 });

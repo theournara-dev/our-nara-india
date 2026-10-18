@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { ChevronDown } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
+import { MenuRowIcon } from "@/components/layout/menu-row-icon";
 import { StoreNudge } from "@/components/layout/store-nudge";
 import {
   StorePickerCards,
@@ -18,16 +20,17 @@ import {
 } from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
 import {
+  defaultMenuIcon,
   MENU_ICONS,
   MENU_ICON_LABELS,
-  menuIcon,
-  menuIconKey,
+  menuIconSetting,
   type MenuIconKey,
 } from "@/lib/menu-icons";
 import {
   GLOBAL_STORE_GRADIENT,
   topBannerBackgroundCss,
   type SiteContent,
+  type MenuIconRecord,
   type SwitcherBlock,
   type SwitcherContent,
   type SwitcherNudgeIcon,
@@ -86,7 +89,7 @@ export function SiteSettingsForm({
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
-  initialMenuIcons: Record<string, string>;
+  initialMenuIcons: MenuIconRecord;
   /** Every row of the header menu, for the icon picker. */
   menuRows: { id: string; label: string }[];
 }) {
@@ -110,7 +113,7 @@ function SiteSettingsInner({
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
-  initialMenuIcons: Record<string, string>;
+  initialMenuIcons: MenuIconRecord;
   menuRows: { id: string; label: string }[];
 }) {
   const [tab, setTab] = useState<SiteVersion>("local");
@@ -707,7 +710,11 @@ function BackgroundField({
   );
 }
 
-/** The header menu's icons: one row per menu item, with a live preview. */
+/**
+ * The header menu's icons: pick a row, then an icon or any uploaded image. The
+ * preview in the row is the shared `MenuRowIcon`, i.e. exactly what the header
+ * draws.
+ */
 function MenuIconsEditor({
   rows,
   value,
@@ -717,50 +724,111 @@ function MenuIconsEditor({
   disabled,
 }: {
   rows: { id: string; label: string }[];
-  value: Record<string, string>;
-  onChange: (next: Record<string, string>) => void;
+  value: MenuIconRecord;
+  onChange: (next: MenuIconRecord) => void;
   onSave: () => void;
   saving: boolean;
   disabled: boolean;
 }) {
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  function patchRow(id: string, icon: string, image?: string) {
+    onChange({ ...value, [id]: { icon, image } });
+  }
+
   return (
     <section className="rounded-2xl border border-zinc-100 bg-white p-5">
       <h2 className="mb-1 text-sm font-semibold text-zinc-900">Menu icons</h2>
       <p className="mb-4 text-xs text-zinc-400">
-        The icon beside each row of the header&apos;s menu (the dropdown and the
-        OUR:NARA home row). Shared by both stores; a row left alone keeps its
-        default.
+        Pick a menu item, then use one of the icons below or upload any image to
+        replace it. The preview beside each row is exactly what the header
+        draws. Shared by both stores.
       </p>
 
       <div className="space-y-2">
         {rows.map((row) => {
-          const Icon = menuIcon(row.id, value);
-          const selected = menuIconKey(row.id, value);
+          const setting = menuIconSetting(row.id, value);
+          const fallback = defaultMenuIcon(row.id);
+          const open = openId === row.id;
           return (
             <div
               key={row.id}
-              className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2"
+              className="overflow-hidden rounded-lg border border-zinc-100 bg-zinc-50/60"
             >
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm">
-                <Icon size={15} aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm text-zinc-700">
-                {row.label}
-              </span>
-              <select
-                value={selected}
-                onChange={(e) =>
-                  onChange({ ...value, [row.id]: e.target.value })
-                }
-                aria-label={`Icon for ${row.label}`}
-                className={`${inputCls} w-40`}
+              <button
+                type="button"
+                onClick={() => setOpenId(open ? null : row.id)}
+                aria-expanded={open}
+                className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-zinc-100/60"
               >
-                {(Object.keys(MENU_ICONS) as MenuIconKey[]).map((key) => (
-                  <option key={key} value={key}>
-                    {MENU_ICON_LABELS[key]}
-                  </option>
-                ))}
-              </select>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm">
+                  <MenuRowIcon setting={setting} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm text-zinc-700">
+                  {row.label}
+                </span>
+                <span className="shrink-0 text-xs text-zinc-400">
+                  {setting.image
+                    ? "Custom image"
+                    : MENU_ICON_LABELS[setting.icon]}
+                </span>
+                <ChevronDown
+                  size={16}
+                  aria-hidden
+                  className={`shrink-0 text-zinc-400 transition-transform ${
+                    open ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Hidden rather than unmounted, so a picked-but-unsaved image
+                  survives collapsing the row. */}
+              <div
+                className={
+                  open ? "space-y-3 border-t border-zinc-100 p-3" : "hidden"
+                }
+              >
+                <p className="flex items-center gap-2 text-xs text-zinc-500">
+                  <span>Default icon</span>
+                  <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-zinc-500 shadow-sm">
+                    <MenuRowIcon setting={{ icon: fallback, image: null }} />
+                  </span>
+                  <span className="font-medium text-zinc-600">
+                    {MENU_ICON_LABELS[fallback]}
+                  </span>
+                </p>
+
+                <label className="block">
+                  <span className={labelCls}>Icon</span>
+                  <select
+                    value={setting.icon}
+                    onChange={(e) =>
+                      patchRow(
+                        row.id,
+                        e.target.value,
+                        setting.image ?? undefined,
+                      )
+                    }
+                    aria-label={`Icon for ${row.label}`}
+                    className={inputCls}
+                  >
+                    {(Object.keys(MENU_ICONS) as MenuIconKey[]).map((key) => (
+                      <option key={key} value={key}>
+                        {MENU_ICON_LABELS[key]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <ImageField
+                  label="Custom image (optional)"
+                  value={setting.image ?? ""}
+                  onChange={(image) =>
+                    patchRow(row.id, setting.icon, image || undefined)
+                  }
+                  hint="Replaces the icon for this row. Any image works; it is drawn 15px square, so a simple mark reads best."
+                />
+              </div>
             </div>
           );
         })}

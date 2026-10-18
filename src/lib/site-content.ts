@@ -174,10 +174,14 @@ export type SiteContent = {
   brandsPage: BrandsPageContent;
   /**
    * The header menu's icons, by row id (`home`, `category-<slug>`, `brand`, …).
-   * Empty means "every row keeps its default"; see `menu-icons.ts`.
+   * Each row is an icon key or `{ icon?, image? }`; see `menu-icons.ts`.
    */
-  menuIcons: Record<string, string>;
+  menuIcons: MenuIconRecord;
 };
+
+/** One menu row's stored icon: the first round's flat value, or `{ icon, image }`. */
+export type MenuIconValue = string | { icon?: string; image?: string };
+export type MenuIconRecord = Record<string, MenuIconValue>;
 
 const DEFAULT_BANNER: TopBannerBlock[] = [
   {
@@ -364,17 +368,30 @@ export function topBannerBackgroundCss(
  * Parse the stored menu-icon map: row ids to icon keys. Anything that isn't a
  * short string is dropped, so a hand-written row can't reach the renderer.
  */
-export function normalizeMenuIcons(value: unknown): Record<string, string> {
+export function normalizeMenuIcons(value: unknown): MenuIconRecord {
   if (!isRecord(value)) return {};
-  const icons: Record<string, string> = {};
+  const icons: MenuIconRecord = {};
   let count = 0;
-  for (const [key, icon] of Object.entries(value)) {
+  for (const [key, raw] of Object.entries(value)) {
     if (count >= 200) break;
     if (key.length === 0 || key.length > 80) continue;
-    if (typeof icon !== "string" || icon.length === 0 || icon.length > 40) {
+    // A first-round value: one flat icon key or image path.
+    if (typeof raw === "string") {
+      if (raw.length === 0 || raw.length > 2000) continue;
+      icons[key] = raw;
+      count += 1;
       continue;
     }
-    icons[key] = icon;
+    if (!isRecord(raw)) continue;
+    const setting: { icon?: string; image?: string } = {};
+    if (typeof raw.icon === "string" && raw.icon.length > 0) {
+      setting.icon = raw.icon.slice(0, 40);
+    }
+    if (typeof raw.image === "string" && raw.image.length > 0) {
+      setting.image = raw.image.slice(0, 2000);
+    }
+    if (!setting.icon && !setting.image) continue;
+    icons[key] = setting;
     count += 1;
   }
   return icons;

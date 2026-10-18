@@ -4,16 +4,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { MenuRowIcon } from "@/components/layout/menu-row-icon";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import type { NavCategory } from "@/data/categories";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
-import { menuIcon, MENU_STATIC_ROWS } from "@/lib/menu-icons";
+import {
+  menuIconSetting,
+  MENU_STATIC_ROWS,
+  type MenuIconSetting,
+} from "@/lib/menu-icons";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { notify } from "@/lib/toast";
-import type { SiteContent, TopBannerBlock } from "@/lib/site-content";
+import type {
+  MenuIconRecord,
+  SiteContent,
+  TopBannerBlock,
+} from "@/lib/site-content";
 import type { SiteVersion } from "@/lib/site-version";
 
 /**
@@ -81,7 +90,7 @@ interface MenuGroup {
   label: string;
   href: string;
   /** Shown before the label in the left pane, like the home row's icon. */
-  icon: LucideIcon;
+  icon: MenuIconSetting;
   links: MenuLink[];
 }
 
@@ -121,7 +130,7 @@ const STATIC_LINKS: Record<string, { href: string; links: MenuLink[] }> = {
 function buildMenu(
   navCategories: NavCategory[],
   preOrderEnabled: boolean,
-  menuIcons: Record<string, string>,
+  menuIcons: MenuIconRecord,
 ): MenuGroup[] {
   const roots = preOrderEnabled
     ? navCategories
@@ -132,7 +141,7 @@ function buildMenu(
       id: `category-${category.slug}`,
       label: category.name,
       href: `/category/${category.slug}`,
-      icon: menuIcon(`category-${category.slug}`, menuIcons),
+      icon: menuIconSetting(`category-${category.slug}`, menuIcons),
       links: [
         {
           label: `Shop all ${category.name}`,
@@ -148,7 +157,7 @@ function buildMenu(
       id: row.id,
       label: row.label,
       href: STATIC_LINKS[row.id].href,
-      icon: menuIcon(row.id, menuIcons),
+      icon: menuIconSetting(row.id, menuIcons),
       links: STATIC_LINKS[row.id].links,
     })),
   ];
@@ -160,14 +169,14 @@ function MenuPanes({
   activeId,
   onActive,
   onNavigate,
-  homeIcon: HomeIcon,
+  homeIcon,
 }: {
   groups: MenuGroup[];
   activeId: string;
   onActive: (id: string) => void;
   onNavigate: () => void;
-  /** The icon for the OUR:NARA (home) row, chosen in Site settings. */
-  homeIcon: LucideIcon;
+  /** The OUR:NARA (home) row's icon, chosen in Site settings. */
+  homeIcon: MenuIconSetting;
 }) {
   const active = groups.find((g) => g.id === activeId) ?? groups[0];
 
@@ -184,13 +193,13 @@ function MenuPanes({
             onClick={onNavigate}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-point-600 transition-colors hover:bg-zinc-50"
           >
-            <HomeIcon size={15} aria-hidden className="shrink-0" />
+            <MenuRowIcon setting={homeIcon} />
             OUR:NARA
           </Link>
         </li>
         {groups.map((group) => {
           const current = group.id === active?.id;
-          const Icon = group.icon;
+          const groupIcon = group.icon;
           return (
             <li key={group.id}>
               <button
@@ -206,12 +215,9 @@ function MenuPanes({
                 }`}
               >
                 <span className="flex min-w-0 items-center gap-2">
-                  <Icon
-                    size={15}
-                    aria-hidden
-                    className={`shrink-0 ${
-                      current ? "text-point-500" : "text-zinc-400"
-                    }`}
+                  <MenuRowIcon
+                    setting={groupIcon}
+                    className={current ? "text-point-500" : "text-zinc-400"}
                   />
                   <span className="truncate">{group.label}</span>
                 </span>
@@ -266,7 +272,7 @@ export function Header({
   /** Each store's rotating strip, so a store switch swaps it client-side. */
   topBanners: Record<SiteVersion, TopBannerBlock[]>;
   /** The admin's menu icons, by row id; empty keeps every default. */
-  menuIcons: Record<string, string>;
+  menuIcons: MenuIconRecord;
 }) {
   const router = useRouter();
   const { config } = useSiteVersion();
@@ -288,7 +294,7 @@ export function Header({
     [navCategories, config.preOrderEnabled, menuIcons],
   );
   // The home row is not a group, so its icon is resolved here.
-  const homeIcon = menuIcon("home", menuIcons);
+  const homeIcon = menuIconSetting("home", menuIcons);
   const activeId = activeGroup || groups[0]?.id || "";
 
   // Close the panels on an outside press or Escape, and when a link inside them

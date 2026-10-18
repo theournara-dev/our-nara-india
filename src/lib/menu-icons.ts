@@ -24,7 +24,6 @@ import {
   Ticket,
   User,
   Users,
-  type LucideIcon,
 } from "lucide-react";
 
 /**
@@ -130,30 +129,64 @@ export function defaultMenuIcon(key: string): MenuIconKey {
   if (key.startsWith("category-")) {
     return CATEGORY_DEFAULT_ICONS[key.slice("category-".length)] ?? "grid";
   }
-  return (
-    MENU_STATIC_ROWS.find((row) => row.id === key)?.defaultIcon ?? "grid"
-  );
+  return MENU_STATIC_ROWS.find((row) => row.id === key)?.defaultIcon ?? "grid";
+}
+
+/** One row's resolved icon: an uploaded image when there is one, else an icon. */
+export interface MenuIconSetting {
+  icon: MenuIconKey;
+  image: string | null;
+}
+
+/** An uploaded image (a full URL or a path on this site), not an icon key. */
+export function isMenuIconImage(value: unknown): value is string {
+  return typeof value === "string" && /^(https?:\/\/|\/)/i.test(value.trim());
 }
 
 /**
  * The icon key a row should draw: the admin's choice when it is a known icon,
- * otherwise the row's default.
+ * otherwise the row's default. (Kept for the admin's icon dropdown, which shows
+ * the fallback icon even while an image is set.)
  */
 export function menuIconKey(
   key: string,
   custom?: Record<string, unknown> | null,
 ): MenuIconKey {
-  const stored = custom?.[key];
-  if (typeof stored === "string" && stored in MENU_ICONS) {
-    return stored as MenuIconKey;
-  }
-  return defaultMenuIcon(key);
+  return menuIconSetting(key, custom).icon;
 }
 
-/** The component a row should draw. */
-export function menuIcon(
+/**
+ * Resolve one row's setting. Stored values may be the current shape
+ * (`{ icon?, image? }`) or the first round's flat string (an icon key or an
+ * image path), so both keep working.
+ */
+export function menuIconSetting(
   key: string,
   custom?: Record<string, unknown> | null,
-): LucideIcon {
-  return MENU_ICONS[menuIconKey(key, custom)];
+): MenuIconSetting {
+  const raw = custom?.[key];
+  const record =
+    typeof raw === "object" && raw !== null
+      ? (raw as { icon?: unknown; image?: unknown })
+      : null;
+
+  const iconRaw = record
+    ? record.icon
+    : typeof raw === "string" && !isMenuIconImage(raw)
+      ? raw
+      : undefined;
+  const imageRaw = record
+    ? record.image
+    : isMenuIconImage(raw)
+      ? raw
+      : undefined;
+
+  return {
+    icon:
+      typeof iconRaw === "string" && iconRaw in MENU_ICONS
+        ? (iconRaw as MenuIconKey)
+        : defaultMenuIcon(key),
+    image:
+      typeof imageRaw === "string" && imageRaw.trim() ? imageRaw.trim() : null,
+  };
 }

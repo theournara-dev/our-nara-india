@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { MENU_ICONS } from "@/lib/menu-icons";
+import { isMenuIconImage, MENU_ICONS } from "@/lib/menu-icons";
 import { Prisma } from "@/generated/prisma/client";
 import {
   DEFAULT_SWITCHER_CONTENT,
@@ -179,29 +179,58 @@ function revalidateSite() {
 }
 
 /**
- * The header menu's icons (client's follow-up): row id → icon key, chosen in
- * Site settings. Like the store picker, the menu is shared, so the save writes
- * both stores' rows from one editor.
+ * The header menu's icons (client's follow-up): row id → an icon key or an
+ * uploaded image, chosen in Site settings. Like the store picker, the menu is
+ * shared, so the save writes both stores' rows from one editor.
  */
-export async function saveMenuIcons(icons: Record<string, string>) {
+const menuIconItem = z.union([
+  safeText(40),
+  z.object({
+    icon: safeText(40).optional(),
+    image: safeText(2000).optional(),
+  }),
+]);
+
+export async function saveMenuIcons(icons: Record<string, unknown>) {
   await requireAdmin();
   const data = parseInput(
-    z.object({ icons: z.record(z.string(), safeText(40)) }),
+    z.object({ icons: z.record(z.string(), menuIconItem) }),
     { icons },
     "site.menuIcons",
   );
-  // Only known icon names are stored; a stale key falls back to the default in
-  // the renderer instead of writing something it cannot draw.
+  // Keep only what the renderer can draw: a known icon name, an image URL/path,
+  // or both (the image wins). A stale key falls back to the default there.
   const known = new Set(Object.keys(MENU_ICONS));
-  const menuIcons = Object.fromEntries(
-    Object.entries(data.icons).filter(([, icon]) => known.has(icon)),
-  );
+  const menuIcons: Record<string, { icon?: string; image?: string }> = {};
+  for (const [key, raw] of Object.entries(data.icons)) {
+    const setting =
+      typeof raw === "string"
+        ? isMenuIconImage(raw)
+          ? { image: raw }
+          : { icon: raw }
+        : raw;
+    const icon =
+      setting.icon && known.has(setting.icon) ? setting.icon : undefined;
+    const image =
+      setting.image && isMenuIconImage(setting.image)
+        ? setting.image
+        : undefined;
+    if (icon || image) {
+      menuIcons[key] = {
+        ...(icon ? { icon } : {}),
+        ...(image ? { image } : {}),
+      };
+    }
+  }
 
   for (const version of ["local", "global"] as const) {
     await db.siteConfig.upsert({
       where: { version },
-      create: { version, menuIcons },
-      update: { menuIcons },
+      create: {
+        version,
+        menuIcons: menuIcons as unknown as Prisma.InputJsonValue,
+      },
+      update: { menuIcons: menuIcons as unknown as Prisma.InputJsonValue },
     });
   }
 

@@ -562,3 +562,28 @@ Verified with the admin's own write path: setting `home: sparkles`,
 `category-skin-care: droplets`, `brand: crown` in `site_configs` made the header
 render `lucide-sparkles`, `lucide-droplets` and `lucide-crown` for those rows
 while every other row kept its default; the values were then cleared.
+
+### Seventh pass — a row picker, a default icon, image uploads and a preview
+
+Site settings → Menu icons now works the way the client described:
+
+- **Pick a menu item.** Each row of the menu is listed; clicking one opens its
+  editor. Every row shows a live preview (the shared `MenuRowIcon`), so the picker
+  and the header cannot draw different things.
+- **The default icon is named and drawn** at the top of the editor, next to the
+  icon dropdown, so an admin always sees what "leave it alone" looks like.
+- **Upload any image.** An `ImageField` under the icon takes an upload (held until
+  Save, like every other image in the admin) and replaces the icon for that row.
+  Clearing it restores the chosen icon.
+- **Storage** stays in `site_configs.menu_icons`, one entry per row, now
+  `{ icon, image }` (the image wins). The first round's flat values — an icon key
+  or an image path — still resolve, so no data migration was needed. The save
+  keeps only known icon names and real image URLs/paths.
+- **Rendering**: `src/components/layout/menu-row-icon.tsx` draws a 15px
+  `object-cover` image when there is one and the Lucide glyph otherwise; the
+  header and the admin preview both use it.
+
+Verified with the admin's own write path: `home` and `brand` set to images,
+`review` to `{ icon: "flame" }`, `event` to the old flat `"star"` — the open menu
+rendered `<img>` on the first two, `lucide-flame` and `lucide-star` on those rows,
+and the defaults everywhere else. Values were cleared afterwards.
