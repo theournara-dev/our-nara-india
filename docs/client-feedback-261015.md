@@ -537,3 +537,28 @@ without a mapping falls back to the grid icon. The icon sits in a fixed 15px slo
 before the label, turns point-purple on the selected row (like the label) and is
 `aria-hidden` — the label still names the row. Verified: all 14 rows report an
 `svg` in the DOM and the panel renders with them aligned.
+
+### Sixth pass — admins choose the menu icons
+
+The icons are configurable in **Site settings → Menu icons**: one row per menu
+item (OUR:NARA home, the admin's category roots, then the static rows), each with
+a live preview and a dropdown of the icon set. Saved once for both stores, the
+same way the store picker is.
+
+- `src/lib/menu-icons.ts` owns the whole thing: the icon set (25 icons, each with
+  a label), the menu's static rows and their default icons, the category-slug
+  defaults and the resolver. The header builds its static groups from
+  `MENU_STATIC_ROWS`, so the picker and the menu cannot drift apart; a category
+  added later without a mapping falls back to the grid icon, and every default is
+  guarded by a test.
+- Storage: `SiteConfig.menuIcons` (JSON, row id → icon key) via migration
+  `20261017050000_menu_icons`. Empty means "all defaults". The save rejects icon
+  names it cannot draw, so a stale key can never leave a row icon-less.
+- The values reach the header through the root layout (`local` row, shared by
+  both stores), and a custom icon is rendered by the same component that draws
+  the defaults.
+
+Verified with the admin's own write path: setting `home: sparkles`,
+`category-skin-care: droplets`, `brand: crown` in `site_configs` made the header
+render `lucide-sparkles`, `lucide-droplets` and `lucide-crown` for those rows
+while every other row kept its default; the values were then cleared.

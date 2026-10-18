@@ -1055,6 +1055,8 @@ model SiteConfig {
   // Rotating strips pinned above the header: an ordered list of blocks, each a
   // line of text or an image, with its own colours link.
   topBanner Json?
+  // The header menu's icons, by row id (`home`, `category-<slug>`, `brand`, …).
+  menuIcons Json? @map("menu_icons")
   // The store-picker popup: heading, note and one block per store.
   switcher  Json?
   // /brands: the directory's own blocks (client's slide 6): the preview grid's

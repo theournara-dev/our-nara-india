@@ -11,8 +11,19 @@ import {
   UploadQueueProvider,
   useUploadGate,
 } from "@/components/upload/upload-queue";
-import { saveSiteContent, saveStorePicker } from "@/app/admin/site/actions";
+import {
+  saveSiteContent,
+  saveStorePicker,
+  saveMenuIcons,
+} from "@/app/admin/site/actions";
 import { notify } from "@/lib/toast";
+import {
+  MENU_ICONS,
+  MENU_ICON_LABELS,
+  menuIcon,
+  menuIconKey,
+  type MenuIconKey,
+} from "@/lib/menu-icons";
 import {
   GLOBAL_STORE_GRADIENT,
   topBannerBackgroundCss,
@@ -70,13 +81,23 @@ function newId(prefix: string) {
 export function SiteSettingsForm({
   initial,
   initialSwitcher,
+  initialMenuIcons,
+  menuRows,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
+  initialMenuIcons: Record<string, string>;
+  /** Every row of the header menu, for the icon picker. */
+  menuRows: { id: string; label: string }[];
 }) {
   return (
     <UploadQueueProvider>
-      <SiteSettingsInner initial={initial} initialSwitcher={initialSwitcher} />
+      <SiteSettingsInner
+        initial={initial}
+        initialSwitcher={initialSwitcher}
+        initialMenuIcons={initialMenuIcons}
+        menuRows={menuRows}
+      />
     </UploadQueueProvider>
   );
 }
@@ -84,13 +105,18 @@ export function SiteSettingsForm({
 function SiteSettingsInner({
   initial,
   initialSwitcher,
+  initialMenuIcons,
+  menuRows,
 }: {
   initial: Record<SiteVersion, SiteContent>;
   initialSwitcher: SwitcherContent;
+  initialMenuIcons: Record<string, string>;
+  menuRows: { id: string; label: string }[];
 }) {
   const [tab, setTab] = useState<SiteVersion>("local");
   const [content, setContent] = useState(initial);
   const [switcher, setSwitcher] = useState(initialSwitcher);
+  const [menuIcons, setMenuIcons] = useState(initialMenuIcons);
   const [saving, setSaving] = useState<string | null>(null);
   // Raw percent text while the admin types the GST rates (null = show stored).
   const [taxMhText, setTaxMhText] = useState<string | null>(null);
@@ -159,6 +185,9 @@ function SiteSettingsInner({
     gate.registerHandler("invoice", () => saveStore("invoice"));
     gate.registerHandler("switcher", () =>
       run("switcher", () => saveStorePicker(switcher)),
+    );
+    gate.registerHandler("menu-icons", () =>
+      run("menu-icons", () => saveMenuIcons(menuIcons)),
     );
   });
 
@@ -422,6 +451,16 @@ function SiteSettingsInner({
         disabled={saving !== null}
       />
 
+      {/* ── Header menu icons ───────────────────────────────────────────── */}
+      <MenuIconsEditor
+        rows={menuRows}
+        value={menuIcons}
+        onChange={setMenuIcons}
+        onSave={() => void gate.save("menu-icons")}
+        saving={saving === "menu-icons"}
+        disabled={saving !== null}
+      />
+
       {/* Store-picker editor */}
       {/* ── India GST (local store only) ────────────────────────────────── */}
       {tab === "local" && (
@@ -665,6 +704,79 @@ function BackgroundField({
         </div>
       )}
     </div>
+  );
+}
+
+/** The header menu's icons: one row per menu item, with a live preview. */
+function MenuIconsEditor({
+  rows,
+  value,
+  onChange,
+  onSave,
+  saving,
+  disabled,
+}: {
+  rows: { id: string; label: string }[];
+  value: Record<string, string>;
+  onChange: (next: Record<string, string>) => void;
+  onSave: () => void;
+  saving: boolean;
+  disabled: boolean;
+}) {
+  return (
+    <section className="rounded-2xl border border-zinc-100 bg-white p-5">
+      <h2 className="mb-1 text-sm font-semibold text-zinc-900">Menu icons</h2>
+      <p className="mb-4 text-xs text-zinc-400">
+        The icon beside each row of the header&apos;s menu (the dropdown and the
+        OUR:NARA home row). Shared by both stores; a row left alone keeps its
+        default.
+      </p>
+
+      <div className="space-y-2">
+        {rows.map((row) => {
+          const Icon = menuIcon(row.id, value);
+          const selected = menuIconKey(row.id, value);
+          return (
+            <div
+              key={row.id}
+              className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2"
+            >
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm">
+                <Icon size={15} aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-zinc-700">
+                {row.label}
+              </span>
+              <select
+                value={selected}
+                onChange={(e) =>
+                  onChange({ ...value, [row.id]: e.target.value })
+                }
+                aria-label={`Icon for ${row.label}`}
+                className={`${inputCls} w-40`}
+              >
+                {(Object.keys(MENU_ICONS) as MenuIconKey[]).map((key) => (
+                  <option key={key} value={key}>
+                    {MENU_ICON_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={disabled}
+          className={saveBtnCls}
+        >
+          {saving ? "Saving…" : "Save menu icons"}
+        </button>
+      </div>
+    </section>
   );
 }
 

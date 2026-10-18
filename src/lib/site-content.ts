@@ -172,6 +172,11 @@ export type SiteContent = {
   switcher: SwitcherContent;
   /** /brands: the preview grid's tile height, columns and rows. */
   brandsPage: BrandsPageContent;
+  /**
+   * The header menu's icons, by row id (`home`, `category-<slug>`, `brand`, …).
+   * Empty means "every row keeps its default"; see `menu-icons.ts`.
+   */
+  menuIcons: Record<string, string>;
 };
 
 const DEFAULT_BANNER: TopBannerBlock[] = [
@@ -282,6 +287,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     topBanner: DEFAULT_BANNER,
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
+    menuIcons: {},
     taxRates: DEFAULT_TAX_RATES,
   },
   global: {
@@ -304,6 +310,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     topBanner: DEFAULT_GLOBAL_BANNER,
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
+    menuIcons: {},
     taxRates: DEFAULT_TAX_RATES,
   },
 };
@@ -351,6 +358,26 @@ export function topBannerBackgroundCss(
   const painted = stops.map((s) => `${s.color} ${s.position}%`).join(", ");
   // Horizontal: 0% is the left edge, 100% the right, as the client describes it.
   return `linear-gradient(90deg, ${painted})`;
+}
+
+/**
+ * Parse the stored menu-icon map: row ids to icon keys. Anything that isn't a
+ * short string is dropped, so a hand-written row can't reach the renderer.
+ */
+export function normalizeMenuIcons(value: unknown): Record<string, string> {
+  if (!isRecord(value)) return {};
+  const icons: Record<string, string> = {};
+  let count = 0;
+  for (const [key, icon] of Object.entries(value)) {
+    if (count >= 200) break;
+    if (key.length === 0 || key.length > 80) continue;
+    if (typeof icon !== "string" || icon.length === 0 || icon.length > 40) {
+      continue;
+    }
+    icons[key] = icon;
+    count += 1;
+  }
+  return icons;
 }
 
 /**
@@ -497,6 +524,7 @@ export function siteContentFromRow(
     invoiceNote: string | null;
     topBanner: unknown;
     switcher: unknown;
+    menuIcons: unknown;
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
@@ -534,6 +562,7 @@ export function siteContentFromRow(
         ? base.topBanner
         : normalizeTopBanner(row.topBanner, []),
     switcher: normalizeSwitcher(row.switcher, base.switcher),
+    menuIcons: normalizeMenuIcons(row.menuIcons),
     // The /brands preview grid, clamped to sane ranges; anything missing falls
     // back to the defaults (100px tiles, 4 columns × 2 rows).
     brandsPage: {

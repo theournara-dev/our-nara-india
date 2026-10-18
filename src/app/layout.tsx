@@ -130,6 +130,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
                 local: localSite.topBanner,
                 global: globalSite.topBanner,
               }}
+              menuIcons={localSite.menuIcons}
             />
             <main className="flex-1">{children}</main>
             <Footer />

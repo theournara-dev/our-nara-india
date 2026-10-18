@@ -4,30 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Briefcase,
-  Brush,
-  CalendarDays,
-  ChevronRight,
-  Clock,
-  Home,
-  LayoutGrid,
-  MapPin,
-  Megaphone,
-  Scissors,
-  Sparkles,
-  Star,
-  Tags,
-  Ticket,
-  User,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronRight, type LucideIcon } from "lucide-react";
 import { TopBanner } from "@/components/layout/top-banner";
 import { VersionSwitcher } from "@/components/layout/version-switcher";
 import type { NavCategory } from "@/data/categories";
 import { authClient } from "@/lib/auth-client";
 import { useCart } from "@/lib/cart";
+import { menuIcon, MENU_STATIC_ROWS } from "@/lib/menu-icons";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { notify } from "@/lib/toast";
 import type { SiteContent, TopBannerBlock } from "@/lib/site-content";
@@ -103,21 +86,42 @@ interface MenuGroup {
 }
 
 /** Category roots get their own icon; a new one falls back to the grid. */
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  "skin-care": Sparkles,
-  makeup: Brush,
-  "hair-care": Scissors,
-  "pre-order": Clock,
+
+/** The links a static menu row opens; ids come from `MENU_STATIC_ROWS`. */
+const STATIC_LINKS: Record<string, { href: string; links: MenuLink[] }> = {
+  brand: { href: "/brands", links: [{ label: "All brands", href: "/brands" }] },
+  review: {
+    href: "/review",
+    links: [{ label: "What our customers say", href: "/review" }],
+  },
+  event: { href: "/event", links: [{ label: "All events", href: "/event" }] },
+  stores: {
+    href: "/stores",
+    links: [{ label: "Our stores", href: "/stores" }],
+  },
+  b2b: { href: "/b2b", links: [{ label: "Wholesale", href: "/b2b" }] },
+  ambassador: {
+    href: "/ambassador",
+    links: [{ label: "Ambassador programme", href: "/ambassador" }],
+  },
+  community: { href: "/community", links: communityLinks },
+  account: { href: "/account", links: myPageLinks },
+  coupons: {
+    href: "/coupons",
+    links: [{ label: "Couponzone", href: "/coupons" }],
+  },
 };
 
 /**
  * The full menu, in one place. Every internal link of the site hangs off a
  * top-level row, so the right pane is never empty: the category tree on top,
- * then the storefront's own pages.
+ * then the storefront's own pages. Icons are the admin's choices (Site settings
+ * → Menu icons) resolved over `menu-icons.ts`' defaults.
  */
 function buildMenu(
   navCategories: NavCategory[],
   preOrderEnabled: boolean,
+  menuIcons: Record<string, string>,
 ): MenuGroup[] {
   const roots = preOrderEnabled
     ? navCategories
@@ -128,7 +132,7 @@ function buildMenu(
       id: `category-${category.slug}`,
       label: category.name,
       href: `/category/${category.slug}`,
-      icon: CATEGORY_ICONS[category.slug] ?? LayoutGrid,
+      icon: menuIcon(`category-${category.slug}`, menuIcons),
       links: [
         {
           label: `Shop all ${category.name}`,
@@ -140,69 +144,13 @@ function buildMenu(
         })),
       ],
     })),
-    {
-      id: "brand",
-      label: "Brand",
-      href: "/brands",
-      icon: Tags,
-      links: [{ label: "All brands", href: "/brands" }],
-    },
-    {
-      id: "review",
-      label: "Review",
-      href: "/review",
-      icon: Star,
-      links: [{ label: "What our customers say", href: "/review" }],
-    },
-    {
-      id: "event",
-      label: "Event",
-      href: "/event",
-      icon: CalendarDays,
-      links: [{ label: "All events", href: "/event" }],
-    },
-    {
-      id: "stores",
-      label: "Stores",
-      href: "/stores",
-      icon: MapPin,
-      links: [{ label: "Our stores", href: "/stores" }],
-    },
-    {
-      id: "b2b",
-      label: "B2B",
-      href: "/b2b",
-      icon: Briefcase,
-      links: [{ label: "Wholesale", href: "/b2b" }],
-    },
-    {
-      id: "ambassador",
-      label: "Ambassador",
-      href: "/ambassador",
-      icon: Megaphone,
-      links: [{ label: "Ambassador programme", href: "/ambassador" }],
-    },
-    {
-      id: "community",
-      label: "Community",
-      href: "/community",
-      icon: Users,
-      links: communityLinks,
-    },
-    {
-      id: "account",
-      label: "My page",
-      href: "/account",
-      icon: User,
-      links: myPageLinks,
-    },
-    {
-      id: "coupons",
-      label: "Couponzone",
-      href: "/coupons",
-      icon: Ticket,
-      links: [{ label: "Couponzone", href: "/coupons" }],
-    },
+    ...MENU_STATIC_ROWS.map((row) => ({
+      id: row.id,
+      label: row.label,
+      href: STATIC_LINKS[row.id].href,
+      icon: menuIcon(row.id, menuIcons),
+      links: STATIC_LINKS[row.id].links,
+    })),
   ];
 }
 
@@ -212,11 +160,14 @@ function MenuPanes({
   activeId,
   onActive,
   onNavigate,
+  homeIcon: HomeIcon,
 }: {
   groups: MenuGroup[];
   activeId: string;
   onActive: (id: string) => void;
   onNavigate: () => void;
+  /** The icon for the OUR:NARA (home) row, chosen in Site settings. */
+  homeIcon: LucideIcon;
 }) {
   const active = groups.find((g) => g.id === activeId) ?? groups[0];
 
@@ -233,7 +184,7 @@ function MenuPanes({
             onClick={onNavigate}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-point-600 transition-colors hover:bg-zinc-50"
           >
-            <Home size={15} aria-hidden className="shrink-0" />
+            <HomeIcon size={15} aria-hidden className="shrink-0" />
             OUR:NARA
           </Link>
         </li>
@@ -305,6 +256,7 @@ export function Header({
   navCategories = [],
   storeBackgrounds,
   topBanners,
+  menuIcons,
 }: {
   siteContent: SiteContent;
   /** The admin's category tree; the menu follows it without a deploy. */
@@ -313,6 +265,8 @@ export function Header({
   storeBackgrounds: Record<SiteVersion, string>;
   /** Each store's rotating strip, so a store switch swaps it client-side. */
   topBanners: Record<SiteVersion, TopBannerBlock[]>;
+  /** The admin's menu icons, by row id; empty keeps every default. */
+  menuIcons: Record<string, string>;
 }) {
   const router = useRouter();
   const { config } = useSiteVersion();
@@ -330,9 +284,11 @@ export function Header({
   const cartCount = useCart().reduce((sum, item) => sum + item.qty, 0);
 
   const groups = useMemo(
-    () => buildMenu(navCategories, config.preOrderEnabled),
-    [navCategories, config.preOrderEnabled],
+    () => buildMenu(navCategories, config.preOrderEnabled, menuIcons),
+    [navCategories, config.preOrderEnabled, menuIcons],
   );
+  // The home row is not a group, so its icon is resolved here.
+  const homeIcon = menuIcon("home", menuIcons);
   const activeId = activeGroup || groups[0]?.id || "";
 
   // Close the panels on an outside press or Escape, and when a link inside them
@@ -455,6 +411,7 @@ export function Header({
                         activeId={activeId}
                         onActive={setActiveGroup}
                         onNavigate={closeMenu}
+                        homeIcon={homeIcon}
                       />
                     </div>
                   </div>
