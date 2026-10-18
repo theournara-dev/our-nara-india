@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   defaultMenuIcon,
   isMenuIconImage,
+  MENU_ICON_GROUPS,
   MENU_ICONS,
   MENU_ICON_LABELS,
   MENU_STATIC_ROWS,
@@ -12,77 +13,106 @@ import {
 import { normalizeMenuIcons } from "../src/lib/site-content";
 
 test("every menu row keeps its designed default icon", () => {
-  assert.equal(defaultMenuIcon("home"), "home");
-  assert.equal(defaultMenuIcon("category-skin-care"), "sparkles");
-  assert.equal(defaultMenuIcon("category-makeup"), "brush");
-  assert.equal(defaultMenuIcon("category-hair-care"), "scissors");
-  assert.equal(defaultMenuIcon("category-pre-order"), "clock");
-  assert.equal(defaultMenuIcon("brand"), "tags");
-  assert.equal(defaultMenuIcon("review"), "star");
-  assert.equal(defaultMenuIcon("coupons"), "ticket");
+  assert.equal(defaultMenuIcon("home"), "lucide:home");
+  assert.equal(defaultMenuIcon("category-skin-care"), "lucide:sparkles");
+  assert.equal(defaultMenuIcon("category-makeup"), "lucide:brush");
+  assert.equal(defaultMenuIcon("category-hair-care"), "lucide:scissors");
+  assert.equal(defaultMenuIcon("category-pre-order"), "lucide:clock");
+  assert.equal(defaultMenuIcon("brand"), "lucide:tags");
+  assert.equal(defaultMenuIcon("review"), "lucide:star");
+  assert.equal(defaultMenuIcon("coupons"), "lucide:ticket");
 });
 
 test("a category nobody mapped still gets an icon", () => {
-  assert.equal(defaultMenuIcon("category-brand-new"), "grid");
-  assert.equal(defaultMenuIcon("some-future-row"), "grid");
+  assert.equal(defaultMenuIcon("category-brand-new"), "lucide:grid");
+  assert.equal(defaultMenuIcon("some-future-row"), "lucide:grid");
 });
 
-test("every default is a real icon with a label", () => {
+test("the picker lists icons from more than one library", () => {
+  assert.ok(MENU_ICON_GROUPS.length >= 2);
+  assert.equal(MENU_ICON_GROUPS[0].id, "lucide");
+  assert.equal(MENU_ICON_GROUPS[1].id, "material");
+  for (const group of MENU_ICON_GROUPS) {
+    assert.ok(group.icons.length > 0, `${group.id} is empty`);
+    for (const icon of group.icons) {
+      assert.ok(
+        icon.key.startsWith(`${group.id}:`),
+        `${icon.key} is not in ${group.id}`,
+      );
+      assert.ok(icon.label.length > 0);
+      assert.ok(icon.Icon);
+    }
+  }
+});
+
+test("every key is unique and has a lookup and a label", () => {
+  const keys = MENU_ICON_GROUPS.flatMap((group) =>
+    group.icons.map((icon) => icon.key),
+  );
+  assert.equal(new Set(keys).size, keys.length);
+  for (const key of keys) {
+    assert.ok(MENU_ICONS[key], `${key} has no component`);
+    assert.ok(MENU_ICON_LABELS[key]?.length > 0, `${key} has no label`);
+  }
+});
+
+test("every default is a real, labelled icon", () => {
   for (const row of MENU_STATIC_ROWS) {
     assert.ok(MENU_ICONS[row.defaultIcon], `${row.id} default is unknown`);
     assert.ok(MENU_ICON_LABELS[row.defaultIcon]?.length > 0);
   }
-  for (const key of Object.keys(MENU_ICONS)) {
-    assert.ok(MENU_ICON_LABELS[key as keyof typeof MENU_ICONS]?.length > 0);
-  }
+  assert.ok(MENU_ICONS[defaultMenuIcon("home")]);
+  assert.ok(MENU_ICONS[defaultMenuIcon("category-skin-care")]);
 });
 
 test("an untouched row resolves to its default icon and no image", () => {
-  assert.deepEqual(menuIconSetting("brand"), { icon: "tags", image: null });
-  assert.deepEqual(menuIconSetting("brand", {}), {
-    icon: "tags",
+  assert.deepEqual(menuIconSetting("brand"), {
+    icon: "lucide:tags",
     image: null,
   });
 });
 
-test("the admin's icon choice wins over the default", () => {
-  assert.deepEqual(menuIconSetting("brand", { brand: { icon: "crown" } }), {
-    icon: "crown",
+test("the admin's choice wins, from either library", () => {
+  assert.deepEqual(
+    menuIconSetting("brand", { brand: { icon: "lucide:crown" } }),
+    { icon: "lucide:crown", image: null },
+  );
+  assert.equal(
+    menuIconKey("brand", { brand: { icon: "material:store" } }),
+    "material:store",
+  );
+});
+
+test("the first round's bare Lucide keys still resolve", () => {
+  assert.deepEqual(menuIconSetting("brand", { brand: "crown" }), {
+    icon: "lucide:crown",
     image: null,
   });
-  assert.equal(menuIconKey("home", { home: { icon: "sparkles" } }), "sparkles");
+  assert.deepEqual(menuIconSetting("brand", { brand: { icon: "flame" } }), {
+    icon: "lucide:flame",
+    image: null,
+  });
 });
 
 test("an uploaded image is kept alongside the icon and wins in use", () => {
   const setting = menuIconSetting("brand", {
-    brand: { icon: "crown", image: "/upload/menu/brand.png" },
+    brand: { icon: "material:store", image: "/upload/menu/brand.png" },
   });
-  assert.equal(setting.icon, "crown");
+  assert.equal(setting.icon, "material:store");
   assert.equal(setting.image, "/upload/menu/brand.png");
-});
-
-test("the first round's flat values still resolve", () => {
-  assert.deepEqual(menuIconSetting("brand", { brand: "crown" }), {
-    icon: "crown",
-    image: null,
-  });
-  assert.deepEqual(
-    menuIconSetting("brand", { brand: "https://blob.example/x.png" }),
-    { icon: "tags", image: "https://blob.example/x.png" },
-  );
 });
 
 test("unknown values fall back, but never leave a row blank", () => {
   assert.deepEqual(menuIconSetting("brand", { brand: { icon: "nope" } }), {
-    icon: "tags",
+    icon: "lucide:tags",
     image: null,
   });
   assert.deepEqual(menuIconSetting("brand", { brand: { image: "" } }), {
-    icon: "tags",
+    icon: "lucide:tags",
     image: null,
   });
   assert.deepEqual(menuIconSetting("brand", { brand: 42 }), {
-    icon: "tags",
+    icon: "lucide:tags",
     image: null,
   });
 });
@@ -90,7 +120,7 @@ test("unknown values fall back, but never leave a row blank", () => {
 test("only URLs and site paths count as images", () => {
   assert.equal(isMenuIconImage("https://x.example/a.png"), true);
   assert.equal(isMenuIconImage("/upload/a.png"), true);
-  assert.equal(isMenuIconImage("crown"), false);
+  assert.equal(isMenuIconImage("lucide:crown"), false);
   assert.equal(isMenuIconImage(""), false);
   assert.equal(isMenuIconImage(null), false);
 });
@@ -100,16 +130,16 @@ test("the stored map keeps both shapes and drops the rest", () => {
   assert.deepEqual(normalizeMenuIcons("nope"), {});
   assert.deepEqual(
     normalizeMenuIcons({
-      brand: { icon: "crown", image: "/upload/brand.png" },
-      home: { icon: "sparkles" },
-      review: "star",
+      brand: { icon: "material:store", image: "/upload/brand.png" },
+      home: { icon: "lucide:sparkles" },
+      review: "lucide:star",
       "category-x": 7,
       empty: {},
     }),
     {
-      brand: { icon: "crown", image: "/upload/brand.png" },
-      home: { icon: "sparkles" },
-      review: "star",
+      brand: { icon: "material:store", image: "/upload/brand.png" },
+      home: { icon: "lucide:sparkles" },
+      review: "lucide:star",
     },
   );
 });

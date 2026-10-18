@@ -21,10 +21,9 @@ import {
 import { notify } from "@/lib/toast";
 import {
   defaultMenuIcon,
-  MENU_ICONS,
+  MENU_ICON_GROUPS,
   MENU_ICON_LABELS,
   menuIconSetting,
-  type MenuIconKey,
 } from "@/lib/menu-icons";
 import {
   GLOBAL_STORE_GRADIENT,
@@ -798,27 +797,52 @@ function MenuIconsEditor({
                   </span>
                 </p>
 
-                <label className="block">
+                <div>
                   <span className={labelCls}>Icon</span>
-                  <select
-                    value={setting.icon}
-                    onChange={(e) =>
-                      patchRow(
-                        row.id,
-                        e.target.value,
-                        setting.image ?? undefined,
-                      )
-                    }
-                    aria-label={`Icon for ${row.label}`}
-                    className={inputCls}
-                  >
-                    {(Object.keys(MENU_ICONS) as MenuIconKey[]).map((key) => (
-                      <option key={key} value={key}>
-                        {MENU_ICON_LABELS[key]}
-                      </option>
+                  {/* The available icons, listed by the library they come
+                      from: Lucide and the Material Design set from
+                      react-icons. */}
+                  <div className="space-y-3">
+                    {MENU_ICON_GROUPS.map((group) => (
+                      <div key={group.id}>
+                        <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          {group.label}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {group.icons.map(({ key, label, Icon }) => {
+                            const selected = setting.icon === key;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() =>
+                                  patchRow(
+                                    row.id,
+                                    key,
+                                    setting.image ?? undefined,
+                                  )
+                                }
+                                aria-pressed={selected}
+                                aria-label={`${group.label}: ${label}`}
+                                title={`${group.label}: ${label}`}
+                                className={`grid h-8 w-8 place-items-center rounded border transition-colors ${
+                                  selected
+                                    ? "border-point-500 bg-point-50 text-point-600"
+                                    : "border-zinc-200 bg-white text-zinc-500 hover:border-point-300 hover:text-point-600"
+                                }`}
+                              >
+                                <Icon size={16} aria-hidden />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     ))}
-                  </select>
-                </label>
+                  </div>
+                  <p className="mt-1.5 text-xs text-zinc-400">
+                    {MENU_ICON_LABELS[setting.icon] ?? setting.icon}
+                  </p>
+                </div>
 
                 <ImageField
                   label="Custom image (optional)"

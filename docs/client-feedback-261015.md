@@ -587,3 +587,23 @@ Verified with the admin's own write path: `home` and `brand` set to images,
 `review` to `{ icon: "flame" }`, `event` to the old flat `"star"` — the open menu
 rendered `<img>` on the first two, `lucide-flame` and `lucide-star` on those rows,
 and the defaults everywhere else. Values were cleared afterwards.
+
+### Eighth pass — icons from both libraries, listed
+
+The picker no longer hides its choices behind a dropdown: opening a menu row shows
+the available icons **as a grid, grouped by the library they come from** — the
+Lucide set the site already uses and the Material Design set from
+`react-icons/md`, which the header already ships. Each button is 32px, carries a
+tooltip and the accessible name (`Lucide: Sparkles`), and the current choice is
+ringed in point-purple. The image upload sits under the grid, unchanged.
+
+Stored keys are now library-qualified (`lucide:sparkles`, `material:brush`), so
+the two sets can never collide. The first round's bare Lucide names still resolve
+(`flame` → `lucide:flame`), and the defaults name their library too. Added
+Material choices include Face retouching, Spa, Water drop, Store, Coupon,
+Campaign, Premium and Fire.
+
+Verified with the action's own write path: `home` as `material:store` rendered the
+Material glyph (a plain 24px-viewBox SVG, no Lucide classes), `brand` as
+`lucide:crown` rendered `lucide-crown`, and the legacy `"flame"` rendered
+`lucide-flame`; cleared afterwards.
