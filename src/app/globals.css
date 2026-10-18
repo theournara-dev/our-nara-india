@@ -187,6 +187,8 @@ body {
 }
 .shorts-section .shorts-slide {
   position: relative;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
   border: 1px solid #ccc;
   border-radius: 16px;
@@ -198,7 +200,8 @@ body {
   overflow: hidden;
   box-sizing: border-box;
   /* The original widens the media box past the card and clips it, so the
-       poster/player fills the card edge to edge (and its sides are cropped). */
+       poster fills the card edge to edge (and its sides are cropped). Once a
+       player is mounted, `.has-player` below cancels the crop. */
   width: 116%;
   right: 8%;
   aspect-ratio: 9 / 14;
@@ -213,19 +216,28 @@ body {
 .shorts-section .swiper-slide-active .video-wrap {
   aspect-ratio: 9 / 16;
 }
-.shorts-section .video-wrap iframe {
+.shorts-section .video-wrap iframe,
+.shorts-section .video-wrap video {
   position: absolute;
+  inset: 0;
   width: 100%;
-  height: 124%;
-  top: -12%;
-  left: 0;
+  height: 100%;
   border: 0;
 }
-.shorts-section .info-bar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
+.shorts-section .video-wrap video {
+  object-fit: cover;
+}
+/* Only the poster bleeds past the card (and is clipped by it). A mounted
+   player must sit inside the card: the 116% crop also clipped the platform's
+   edge controls (YouTube's volume/fullscreen, TikTok's action rail). */
+.shorts-section .video-wrap.has-player {
   width: 100%;
+  right: 0;
+}
+.shorts-section .info-bar {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
   display: flex;
   gap: 16px;
   /* The product thumbnail sits at the top, level with the first text line. */
@@ -234,7 +246,6 @@ body {
   background: #fff;
   border-top: 1px solid #ccc;
   padding: 16px;
-  z-index: 3;
 }
 .shorts-section .info-bar .thumb {
   width: 72px;
@@ -300,6 +311,63 @@ body {
   line-height: 1.4;
   color: #333;
 }
+/* The carousel's only player control: a speaker toggle plus a 0–100 slider,
+   overlaid on the top-right of the active video. */
+.shorts-section .shorts-volume {
+  position: absolute;
+  top: 44px;
+  right: 10px;
+  z-index: 4;
+  display: none;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+.shorts-section .swiper-slide-active .shorts-volume {
+  display: flex;
+}
+.shorts-section .shorts-volume-toggle {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.shorts-section .shorts-volume-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.shorts-section .shorts-volume-range {
+  width: 74px;
+  height: 14px;
+  margin: 0;
+  accent-color: #fff;
+  cursor: pointer;
+}
+.shorts-section .shorts-volume-range:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 9999px;
+}
+.shorts-section .shorts-volume .shorts-volume-on {
+  display: none;
+}
+.shorts-section .shorts-volume[data-muted="false"] .shorts-volume-on {
+  display: block;
+}
+.shorts-section .shorts-volume[data-muted="false"] .shorts-volume-off {
+  display: none;
+}
 /* Progressbar matches the original's 3px track. The
    `.swiper-pagination-progressbar` part outranks Swiper's own 4px default. */
 .shorts-section .swiper-pagination-shorts,
@@ -354,14 +422,19 @@ body {
   .shorts-section .info-text .price {
     font-size: 13px;
   }
+  .shorts-section .shorts-volume {
+    top: 40px;
+    right: 8px;
+    gap: 5px;
+    padding: 4px 7px;
+  }
+  .shorts-section .shorts-volume-range {
+    width: 58px;
+  }
   /* Original mobile title size (20.64px) — the desktop 24px is too large here. */
   .shorts-section .shorts-inner > .title h2 {
     font-size: 20.64px;
     line-height: 27.52px;
-  }
-  .shorts-section .video-wrap iframe {
-    height: 126%;
-    top: -13%;
   }
 }
 

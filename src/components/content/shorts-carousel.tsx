@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { Volume2, VolumeX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Swiper from "swiper";
 import { Pagination } from "swiper/modules";
@@ -15,6 +16,8 @@ import {
   getTikTokThumbnail,
   getYouTubeThumbnail,
   parseShortsUrl,
+  setVolumeCommand,
+  volumeCommand,
 } from "@/lib/shorts";
 import { SliderNav } from "@/components/ui/slider-nav";
 
@@ -45,6 +48,33 @@ function autoAdvance() {
 }
 
 /**
+ * Keep the custom volume control in step with the player. The slider shows 0
+ * while muted but remembers the last audible level in `data-volume`.
+ */
+function syncVolumeControl(
+  control: HTMLElement,
+  muted: boolean,
+  volume: number,
+) {
+  const level = Math.max(0, Math.min(100, Math.round(volume)));
+  control.dataset.muted = String(muted);
+  if (level > 0) control.dataset.volume = String(level);
+  const slider = control.querySelector<HTMLInputElement>(
+    ".shorts-volume-range",
+  );
+  if (slider) slider.value = String(muted ? 0 : level);
+  const toggle = control.querySelector<HTMLButtonElement>(
+    ".shorts-volume-toggle",
+  );
+  if (toggle) {
+    const label = muted ? "Unmute video" : "Mute video";
+    toggle.setAttribute("aria-label", label);
+    toggle.setAttribute("aria-pressed", String(muted));
+    toggle.title = label;
+  }
+}
+
+/**
  * Advance when the embedded player (TikTok / YouTube) reports that its video
  * ended, mirroring the native `<video>` `ended` handling. Both platforms post
  * `onStateChange` where 0 = ended; YouTube wraps the value in `info`, TikTok
@@ -56,14 +86,39 @@ function handlePlayerMessage(ev: MessageEvent) {
   const data = ev.data;
   if (!data || typeof data !== "object") return;
   const d = data as Record<string, unknown>;
-  if (d.event !== "onStateChange" && d.type !== "onStateChange") return;
-  if ((d.value ?? d.info) !== 0) return;
 
-  // Only the active slide's player may advance the carousel.
+  // Only the active slide's player may drive the carousel or its volume UI.
   const active = document.querySelector<HTMLIFrameElement>(
     ".shorts-section .swiper-slide-active iframe",
   );
   if (!active || ev.source !== active.contentWindow) return;
+
+  const control = document.querySelector<HTMLElement>(
+    ".shorts-section .swiper-slide-active .shorts-volume",
+  );
+  if (control) {
+    if (d.event === "infoDelivery" && d.info && typeof d.info === "object") {
+      const info = d.info as Record<string, unknown>;
+      if (typeof info.muted === "boolean") {
+        const volume =
+          typeof info.volume === "number"
+            ? info.volume
+            : Number(control.dataset.volume) || 100;
+        syncVolumeControl(control, info.muted, volume);
+      }
+    } else if (d.type === "onMute" && typeof d.value === "boolean") {
+      syncVolumeControl(
+        control,
+        d.value,
+        Number(control.dataset.volume) || 100,
+      );
+    } else if (d.type === "onVolumeChange" && typeof d.value === "number") {
+      syncVolumeControl(control, control.dataset.muted === "true", d.value);
+    }
+  }
+
+  if (d.event !== "onStateChange" && d.type !== "onStateChange") return;
+  if ((d.value ?? d.info) !== 0) return;
 
   autoAdvance();
 }
@@ -250,14 +305,16 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
   }, [parsed, pick.videoUrl]);
 
   const backgroundImage =
-    videoThumb ??
-    videoFileThumb ??
-    pick.thumbnailUrl ??
-    pick.posterUrl ??
-    "";
+    videoThumb ?? videoFileThumb ?? pick.thumbnailUrl ?? pick.posterUrl ?? "";
 
   // Always show a product thumbnail; fall back to the poster when unset.
   const productImage = pick.productImage ?? pick.posterUrl;
+  // A platform iframe gets the carousel's single volume control. An uploaded
+  // file keeps the browser's own controls (there is no cross-origin player to
+  // message). Instagram exposes no mute API, so it also keeps its own UI.
+  const hasEmbed =
+    !pick.videoFile &&
+    (parsed?.type === "youtube" || parsed?.type === "tiktok");
 
   return (
     <div className="shorts-slide">
@@ -272,6 +329,91 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
           backgroundImage: `url("${backgroundImage}")`,
         }}
       />
+
+      {hasEmbed && parsed ? (
+        <div
+          className="shorts-volume"
+          data-muted={parsed.type === "youtube" ? "true" : "false"}
+          data-volume="100"
+        >
+          <button
+            type="button"
+            className="shorts-volume-toggle"
+            aria-label={
+              parsed.type === "youtube" ? "Unmute video" : "Mute video"
+            }
+            aria-pressed={parsed.type === "youtube"}
+            title={parsed.type === "youtube" ? "Unmute video" : "Mute video"}
+            onClick={(event) => {
+              const control =
+                event.currentTarget.closest<HTMLElement>(".shorts-volume");
+              if (!control) return;
+              const muting = control.dataset.muted !== "true";
+              const lastVolume = Number(control.dataset.volume) || 100;
+              const iframe = control
+                .closest(".shorts-slide")
+                ?.querySelector("iframe");
+              const muteMessage = volumeCommand(parsed.type, muting);
+              if (iframe && muteMessage) {
+                iframe.contentWindow?.postMessage(muteMessage, "*");
+              }
+              if (muting) {
+                syncVolumeControl(control, true, lastVolume);
+                return;
+              }
+              const volumeMessage = setVolumeCommand(parsed.type, lastVolume);
+              if (iframe && volumeMessage) {
+                iframe.contentWindow?.postMessage(volumeMessage, "*");
+              }
+              syncVolumeControl(control, false, lastVolume);
+            }}
+          >
+            <VolumeX size={15} aria-hidden className="shorts-volume-off" />
+            <Volume2 size={15} aria-hidden className="shorts-volume-on" />
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            defaultValue={parsed.type === "youtube" ? 0 : 100}
+            className="shorts-volume-range"
+            aria-label="Volume"
+            onInput={(event) => {
+              const slider = event.currentTarget;
+              const control = slider.closest<HTMLElement>(".shorts-volume");
+              if (!control) return;
+              const volume = Number(slider.value);
+              const iframe = control
+                .closest(".shorts-slide")
+                ?.querySelector("iframe");
+              if (volume === 0) {
+                const message = volumeCommand(parsed.type, true);
+                if (iframe && message) {
+                  iframe.contentWindow?.postMessage(message, "*");
+                }
+                syncVolumeControl(
+                  control,
+                  true,
+                  Number(control.dataset.volume) || 100,
+                );
+                return;
+              }
+              if (control.dataset.muted === "true") {
+                const message = volumeCommand(parsed.type, false);
+                if (iframe && message) {
+                  iframe.contentWindow?.postMessage(message, "*");
+                }
+              }
+              const message = setVolumeCommand(parsed.type, volume);
+              if (iframe && message) {
+                iframe.contentWindow?.postMessage(message, "*");
+              }
+              syncVolumeControl(control, false, volume);
+            }}
+          />
+        </div>
+      ) : null}
 
       <div className="info-bar">
         {productImage && (
@@ -335,6 +477,7 @@ function ShortsSlide({ pick }: { pick: ShortsPick }) {
 function playActiveShortsVideo(root: HTMLElement) {
   root.querySelectorAll<HTMLDivElement>(".video-wrap").forEach((wrap) => {
     wrap.innerHTML = "";
+    wrap.classList.remove("has-player");
   });
 
   const active = root.querySelector(".swiper-slide-active");
@@ -361,6 +504,7 @@ function playActiveShortsVideo(root: HTMLElement) {
     video.addEventListener("ended", autoAdvance);
     const poster = wrap.dataset.posterUrl;
     if (poster) video.setAttribute("poster", poster);
+    wrap.classList.add("has-player");
     wrap.appendChild(video);
     return;
   }
@@ -368,6 +512,11 @@ function playActiveShortsVideo(root: HTMLElement) {
   const type = wrap.dataset.videoType as ShortsPlatform | undefined;
   const id = wrap.dataset.videoId;
   if (!type || !id) return;
+
+  // The slider must match the freshly-mounted player: YouTube starts muted
+  // (autoplay policy), TikTok starts at full volume.
+  const control = active.querySelector<HTMLElement>(".shorts-volume");
+  if (control) syncVolumeControl(control, type === "youtube", 100);
 
   const iframe = document.createElement("iframe");
   iframe.src = getEmbedSrc({ type, id });
@@ -389,5 +538,6 @@ function playActiveShortsVideo(root: HTMLElement) {
     );
   });
 
+  wrap.classList.add("has-player");
   wrap.appendChild(iframe);
 }

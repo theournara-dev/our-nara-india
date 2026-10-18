@@ -378,7 +378,6 @@ carousel.”), which is an admin-facing label for the section, not storefront co
   focus the same way. The temporary image and framing were then restored and the
   throwaway script deleted.
 
-
 # Round nine — the next client pass
 
 Six items, then the client's revisions of four of them. The one thing that could
@@ -388,7 +387,7 @@ client removed it.
 ## 1. Shorts audio
 
 **Checked, and it was not fine.** The YouTube and TikTok embeds were built with
-`mute=1` *and* `controls=0`: autoplay has to start muted (browser policy), but
+`mute=1` _and_ `controls=0`: autoplay has to start muted (browser policy), but
 hiding the controls also hid the speaker button, so a muted TikTok looked like a
 clip with no audio and there was no way to turn it on. Both embeds now keep
 `mute=1` **and show their controls** (`controls=1`, plus TikTok's
@@ -427,7 +426,7 @@ in the controls.
   blocks and picks the active one from the client version, so the gradient appears
   the moment the toggle is pressed. Verified in the DOM: after pressing KDROP the
   strip's `background-image` is `linear-gradient(90deg, #F83658 0%, #0894FD 50%,
-  #7920FB 100%)`.
+#7920FB 100%)`.
 
 ## 4. Store control
 
@@ -638,3 +637,49 @@ Phosphor's 256×256, Tabler and Boxicons' 24×24 stroke/fill shapes), while
 unconfigured rows kept their Lucide defaults. The settings were restored
 afterwards. `/admin/site` still redirects to `/login` when unauthenticated, so the
 picker screen itself was only type-checked and built, not screenshotted.
+
+### Tenth pass — one volume control, and no more cropped or muted players
+
+The client reported cropped iframes and silent TikToks, then asked for a single
+volume control after seeing the platform control bars:
+
+- **Why it was cut off.** Inactive slides deliberately widen the poster box to
+  116% and clip it, and the iframe was then sized to 124% of that box and
+  shifted up 12%. The white product info bar was absolutely positioned over the
+  bottom of the card. At a 220px card that hid the bottom 176px of the player —
+  exactly where YouTube and TikTok put their control bars — and clipped ~8% from
+  each side, including TikTok's right-hand action rail.
+- **Player now fits the card.** When a player mounts, `playActiveShortsVideo`
+  adds `has-player` to the `.video-wrap`; that cancels the 116% poster bleed and
+  the iframe/video fills the 9:16 box with no offset. The old 124%/-12% crop and
+  its mobile 126%/-13% override are gone.
+- **The info bar sits below the media.** `.shorts-slide` is a column and the
+  info bar is back in normal flow, so it can no longer cover the player. Cards
+  still keep the poster bleed and rounded frame for inactive slides.
+- **One visible volume control.** The native bars are off (`controls=0`):
+  YouTube only exposes its gear and CC buttons inside that bar, and TikTok
+  ignores its per-button flags, so hiding the bar is the only way to remove
+  them. The carousel overlays a compact control at the **top-right of the
+  active video**: a speaker toggle and a real 0–100 slider. Inactive cards show
+  no control. YouTube starts muted (autoplay policy) and TikTok starts at full
+  volume; clicking the picture still plays/pauses.
+- **Volume, not just mute.** The slider sends `setVolume` through the platform
+  APIs, clamped to 0–100. TikTok does not document `setVolume`, but its player
+  accepts it and reports the new level through `onVolumeChange` (verified). The
+  control also reads the players' `infoDelivery` / `onMute` / `onVolumeChange`
+  messages, so the slider and icon stay correct if the platform changes the
+  state itself. Muting remembers the last audible level and restores it.
+- **TikTok quirk.** Its player ignores `unMute` when the message contains a
+  `value` field, so `volumeCommand` sends the parameterless documented shape
+  (`{ type: "mute" | "unMute", "x-tiktok-player": true }`). Verified from the
+  player's own `onMute`/`onVolumeChange` messages for both directions.
+- **Limits.** Instagram's embed exposes no mute or volume API, and uploaded
+  video files use the browser's own player; those two keep their native UI.
+- **Verified** in a real browser at 1440, 768 and 390px widths: the iframe box
+  equals the media box, the info bar starts exactly where the iframe ends, only
+  the active card shows the volume control, and the YouTube/TikTok native gear,
+  CC, progress and fullscreen controls are gone. Dragging the YouTube slider to
+  40 made the player report `muted: false, volume: 40`; 0 muted it; the speaker
+  button restored 40. TikTok reported `onVolumeChange: 30` for the same UI step.
+  `tests/shorts.test.ts` covers URL parsing, both embed URLs and both mute and
+  volume command shapes.
