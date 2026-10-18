@@ -6,7 +6,6 @@ import {
   filterMenuIcons,
   MENU_ICON_GROUPS,
   MENU_ICON_LABELS,
-  type MenuIconGroup,
 } from "@/lib/menu-icons";
 
 /**
@@ -105,8 +104,8 @@ export function MenuIconPicker({
       <div className="max-h-56 overflow-y-auto p-2.5">
         {groups.length ? (
           <div className="flex flex-wrap gap-1.5">
-            {groups.map((entry: { group: MenuIconGroup; icons: MenuIconGroup["icons"] }) =>
-              entry.icons.map(({ key, label, Icon }) => {
+            {groups.map(({ group, icons }) =>
+              icons.map(({ key, label, Icon }) => {
                 const selected = value === key;
                 return (
                   <button
@@ -114,8 +113,8 @@ export function MenuIconPicker({
                     type="button"
                     onClick={() => onChange(key)}
                     aria-pressed={selected}
-                    aria-label={`${entry.group.label}: ${label}`}
-                    title={`${label} · ${entry.group.label}`}
+                    aria-label={`${group.label}: ${label}`}
+                    title={`${label} · ${group.label}`}
                     className={`grid h-8 w-8 place-items-center rounded border transition-colors ${
                       selected
                         ? "border-point-500 bg-point-50 text-point-600 ring-1 ring-point-500"

@@ -34,11 +34,9 @@ function withInjectionGuard<T extends z.ZodType>(
   allowSql: boolean | undefined,
 ): T {
   if (allowSql) return schema;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (schema as any).refine(
-    (v: unknown) => !looksLikeSqlInjection(String(v)),
-    { message: INJECTION_MESSAGE },
-  );
+  return schema.refine((v) => !looksLikeSqlInjection(String(v)), {
+    message: INJECTION_MESSAGE,
+  });
 }
 
 /** A required/optional single-line text field, sanitized and length-capped. */
