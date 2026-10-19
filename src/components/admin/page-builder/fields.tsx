@@ -67,6 +67,8 @@ export interface SectionFormOptions {
 
 export { inputCls, labelCls };
 
+type ProductOption = SectionFormOptions["products"][number];
+
 export function TextField({
   label,
   value,
@@ -958,7 +960,60 @@ export function ShowcaseTabsField({
   const tabs = value ?? [];
   const [openId, setOpenId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
+  const [brandProducts, setBrandProducts] = useState<
+    Record<string, ProductOption[]>
+  >({});
+  const [brandErrors, setBrandErrors] = useState<Record<string, string>>({});
+  const requestedBrands = useRef(new Set<string>());
+  const [retryToken, setRetryToken] = useState(0);
   const slots = columns * rows;
+
+  // The builder's initial product list is capped, so a brand's products may
+  // not all be in it. Fetch the attached brand's complete list on demand; the
+  // endpoint is admin-only and keyed by the brand's slug.
+  const brandKey = tabs
+    .map((tab) => tab.brandSlug)
+    .filter(Boolean)
+    .join("|");
+
+  useEffect(() => {
+    const slugs = Array.from(new Set(brandKey.split("|").filter(Boolean)));
+    for (const slug of slugs) {
+      if (requestedBrands.current.has(slug)) continue;
+      requestedBrands.current.add(slug);
+      fetch(`/api/admin/brands/${encodeURIComponent(slug)}/products`, {
+        cache: "no-store",
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const body = (await res.json().catch(() => null)) as {
+              error?: string;
+            } | null;
+            throw new Error(
+              body?.error ?? "Could not load this brand's products.",
+            );
+          }
+          return res.json() as Promise<{ products: ProductOption[] }>;
+        })
+        .then((data) => {
+          setBrandProducts((prev) => ({ ...prev, [slug]: data.products }));
+          setBrandErrors((prev) => {
+            const next = { ...prev };
+            delete next[slug];
+            return next;
+          });
+        })
+        .catch((err: unknown) => {
+          setBrandErrors((prev) => ({
+            ...prev,
+            [slug]:
+              err instanceof Error
+                ? err.message
+                : "Could not load this brand's products.",
+          }));
+        });
+    }
+  }, [brandKey, retryToken]);
 
   function updateTab(id: string, patch: Partial<ShowcaseTab>) {
     onChange(tabs.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -1030,15 +1085,28 @@ export function ShowcaseTabsField({
         const open = expandAll || tab.id === openId;
         const brandName =
           options.brands.find((b) => b.slug === tab.brandSlug)?.name ?? "";
-        // The product picker offers the attached brand's products, plus any
-        // product already picked from elsewhere so nothing can be lost by
-        // switching or clearing the brand.
-        const brandProducts = tab.brandSlug
-          ? options.products.filter(
-              (p) =>
-                p.brandSlug === tab.brandSlug ||
-                tab.productSlugs.includes(p.slug),
-            )
+        const fetchedProducts = tab.brandSlug
+          ? brandProducts[tab.brandSlug]
+          : undefined;
+        const brandError = tab.brandSlug
+          ? brandErrors[tab.brandSlug]
+          : undefined;
+        const brandLoading =
+          Boolean(tab.brandSlug) &&
+          fetchedProducts === undefined &&
+          !brandError;
+        // Keep already-picked products visible while the brand list loads (or
+        // if a pick is no longer returned), so the selected count never lies.
+        const pickedFallback = tab.brandSlug
+          ? tab.productSlugs
+              .map((slug) => options.products.find((p) => p.slug === slug))
+              .filter((p): p is ProductOption => Boolean(p))
+              .filter(
+                (p) => !(fetchedProducts ?? []).some((f) => f.slug === p.slug),
+              )
+          : [];
+        const tabProducts = tab.brandSlug
+          ? [...(fetchedProducts ?? []), ...pickedFallback]
           : options.products;
         return (
           <div key={tab.id} className="rounded-lg border border-zinc-200">
@@ -1126,15 +1194,10 @@ export function ShowcaseTabsField({
                     onChange={(v) =>
                       updateTab(tab.id, {
                         brandSlug: v,
-                        // A filter shows one brand, so drop products that are
-                        // no longer in it.
-                        productSlugs: v
-                          ? tab.productSlugs.filter((slug) =>
-                              options.products.some(
-                                (p) => p.slug === slug && p.brandSlug === v,
-                              ),
-                            )
-                          : tab.productSlugs,
+                        // A product belongs to one brand, so a new brand starts
+                        // with an empty selection; clearing the brand keeps the
+                        // current picks.
+                        productSlugs: v ? [] : tab.productSlugs,
                       })
                     }
                     options={[
@@ -1191,24 +1254,50 @@ export function ShowcaseTabsField({
                     order picked below. Extra picks are kept and appear when the
                     grid grows.
                   </p>
-                  <SearchableCheckboxList
-                    items={brandProducts.map((p) => ({
-                      id: p.slug,
-                      name: p.name,
-                      brand: p.brandName,
-                    }))}
-                    value={tab.productSlugs}
-                    onChange={(v) => updateTab(tab.id, { productSlugs: v })}
-                    getLabel={(p) => p.name}
-                    getMeta={(p) => p.brand}
-                    placeholder="Search this brand's products…"
-                    emptyText={
-                      tab.brandSlug
-                        ? "This brand has no products yet."
-                        : "Pick a brand above, or search every product."
-                    }
-                    label="Products of this brand"
-                  />
+                  {brandLoading ? (
+                    <p className="text-xs text-zinc-400">
+                      Loading this brand&apos;s products…
+                    </p>
+                  ) : brandError ? (
+                    <div className="rounded border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+                      {brandError}{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!tab.brandSlug) return;
+                          requestedBrands.current.delete(tab.brandSlug);
+                          setBrandErrors((prev) => {
+                            const next = { ...prev };
+                            delete next[tab.brandSlug];
+                            return next;
+                          });
+                          setRetryToken((v) => v + 1);
+                        }}
+                        className="font-medium underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : (
+                    <SearchableCheckboxList
+                      items={tabProducts.map((p) => ({
+                        id: p.slug,
+                        name: p.name,
+                        brand: p.brandName,
+                      }))}
+                      value={tab.productSlugs}
+                      onChange={(v) => updateTab(tab.id, { productSlugs: v })}
+                      getLabel={(p) => p.name}
+                      getMeta={(p) => p.brand}
+                      placeholder="Search this brand's products…"
+                      emptyText={
+                        tab.brandSlug
+                          ? "This brand has no products yet."
+                          : "Pick a brand above, or search every product."
+                      }
+                      label="Products of this brand"
+                    />
+                  )}
                 </div>
               </div>
             )}
