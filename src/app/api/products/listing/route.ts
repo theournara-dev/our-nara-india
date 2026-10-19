@@ -63,8 +63,8 @@ export async function GET(request: NextRequest) {
     page: parseListingPage(params.get("page") ?? undefined),
     pageSize: PRODUCTS_PER_PAGE,
     version,
-    // Only category pages render the brand/availability facets.
-    includeFacets: Boolean(categorySlug),
+    // Category and brand pages render the brand/availability facets.
+    includeFacets: Boolean(categorySlug || brandSlug),
   });
 
   return NextResponse.json(listing, {

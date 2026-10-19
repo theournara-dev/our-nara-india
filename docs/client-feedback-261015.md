@@ -718,6 +718,12 @@ and that VT, AHC, JMsolution and AROCELL were missing from the brand filter:
 - **Totals and the brand filter.** The number below the tabs and the brand facet
   counts now use the full category total. The filter sheet's "Show N items"
   uses the same total.
+- **Availability counts match the cards.** The buckets use the product's own
+  flag for the browsing store, with buy-now winning over pre-order, exactly as
+  `saleStateForVersion` does for the product cards. A brand-wide Buy Now toggle
+  (which the cards ignore) therefore cannot move the counts away from the
+  badges. Brand pages now request the facets too, so their filter sheet keeps
+  real availability counts instead of zeroes.
 - **Verified against the live database and in a browser**: Skin Care reports
   **554** items (was 300), the facets include `AHC 8`, `AROCELL 7`,
   `JMsolution 10`, `MEDIPEEL 45`, `VT 43`, scrolling appends 48 → 96 → 144, and

@@ -59,7 +59,8 @@ export default async function BrandPage({
     page: parseListingPage(page),
     pageSize: PRODUCTS_PER_PAGE,
     version,
-    includeFacets: false,
+    // The mobile filter sheet shows the availability counts on brand pages.
+    includeFacets: true,
   });
 
   return (

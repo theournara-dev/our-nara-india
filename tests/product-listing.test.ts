@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 // Loads .env when the suite runs locally, like the other database-backed test.
 import "dotenv/config";
+import { db } from "../src/lib/db";
 import { getProductListing } from "../src/data/products";
 import { EMPTY_CATEGORY_FILTERS } from "../src/lib/category-filters";
 import {
@@ -126,11 +127,17 @@ test(
       page: 1,
       pageSize: 20,
       version: "local",
-      includeFacets: false,
+      includeFacets: true,
     });
     assert.ok(first.total > 20, "the brand spans more than one batch");
     assert.equal(first.products.length, 20);
     assert.ok(first.hasMore);
+    assert.ok(
+      first.brandFacets.some(
+        (facet) => facet.slug === "medipeel" && facet.count === first.total,
+      ),
+      "brand pages need the facet counts for the filter sheet",
+    );
 
     const second = await getProductListing({
       brandSlug: "medipeel",
@@ -160,6 +167,33 @@ test(
     });
     assert.equal(listing.page, listing.totalPages);
     assert.ok(listing.products.length > 0);
+  },
+);
+
+test(
+  "availability facets follow the card flags, not the brand-wide buy-now",
+  { skip: !process.env.DATABASE_URL },
+  async () => {
+    const rows = await db.product.findMany({
+      where: { brand: { slug: "nowater" }, isActive: true },
+      select: { buyNowEnabled: true, isPreOrder: true },
+    });
+    const ready = rows.filter((row) => row.buyNowEnabled).length;
+    const preorder = rows.filter(
+      (row) => !row.buyNowEnabled && row.isPreOrder,
+    ).length;
+
+    const listing = await getProductListing({
+      brandSlug: "nowater",
+      filters: EMPTY_CATEGORY_FILTERS,
+      sort: "new",
+      page: 1,
+      pageSize: 20,
+      version: "local",
+      includeFacets: true,
+    });
+
+    assert.deepEqual(listing.availabilityFacets, { ready, preorder });
   },
 );
 

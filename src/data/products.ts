@@ -351,23 +351,12 @@ export async function getProductsByBrandSlug(
   return rows.map(toCard);
 }
 
-/** This store's "buy now" rule, including the brand-level rollout. */
-function listingBuyNowWhere(version: SiteVersion): Prisma.ProductWhereInput {
-  return version === "global"
-    ? {
-        OR: [{ globalBuyNowEnabled: true }, { brand: { buyNowEnabled: true } }],
-      }
-    : {
-        OR: [{ buyNowEnabled: true }, { brand: { buyNowEnabled: true } }],
-      };
-}
-
 /** This store's pre-order bucket; buy-now wins when a product has both flags. */
 function listingPreOrderWhere(version: SiteVersion): Prisma.ProductWhereInput {
   return {
     AND: [
       version === "global" ? { globalIsPreOrder: true } : { isPreOrder: true },
-      { NOT: listingBuyNowWhere(version) },
+      { NOT: buyNowWhere(version) },
     ],
   };
 }
@@ -457,7 +446,7 @@ function listingWhere({
   if (includeAvailability && filters.availability.length > 0) {
     const buckets: Prisma.ProductWhereInput[] = [];
     if (filters.availability.includes("ready")) {
-      buckets.push(listingBuyNowWhere(version));
+      buckets.push(buyNowWhere(version));
     }
     if (filters.availability.includes("preorder")) {
       buckets.push(listingPreOrderWhere(version));
@@ -513,9 +502,11 @@ async function listingAvailabilityFacets(
   where: Prisma.ProductWhereInput,
   version: SiteVersion,
 ): Promise<AvailabilityFacets> {
+  // Match the cards' sale state exactly: the product's own flag for this
+  // store, with buy-now winning over pre-order.
   const [ready, preorder] = await Promise.all([
     db.product.count({
-      where: { AND: [where, listingBuyNowWhere(version)] },
+      where: { AND: [where, buyNowWhere(version)] },
     }),
     db.product.count({
       where: { AND: [where, listingPreOrderWhere(version)] },
