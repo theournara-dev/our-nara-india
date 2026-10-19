@@ -1,6 +1,14 @@
 import { db } from "@/lib/db";
 import type { ProductCardView } from "@/data/catalog";
 import type { SiteVersion } from "@/lib/site-version";
+import type { Prisma } from "@/generated/prisma/client";
+import type { CategoryFilters } from "@/lib/category-filters";
+import type {
+  AvailabilityFacets,
+  BrandFacet,
+  ListingSort,
+  ProductListingPage,
+} from "@/lib/product-listing";
 
 /**
  * Database-backed product data layer. Replaces the previous static catalog so
@@ -100,7 +108,7 @@ type ProductRow = {
   subcategories: {
     category: { slug: string; parentId: string | null };
   }[];
-  variants: {
+  variants?: {
     id: string;
     optionLabel: string | null;
     optionValue: string;
@@ -122,8 +130,8 @@ type ProductRow = {
   }[];
 };
 
-/** Shared relation set for card/list queries. */
-const listInclude = {
+/** Shared relation set for card/list queries (no variants). */
+const cardInclude = {
   brand: {
     select: { slug: true, name: true, buyNowEnabled: true },
   },
@@ -132,12 +140,11 @@ const listInclude = {
   subcategories: {
     select: { category: { select: { slug: true, parentId: true } } },
   },
-  variants: true,
 } as const;
 
-/** Detail query additionally loads the active variants (in admin order) and the active DETAIL blocks. */
+/** Detail queries add variants and the active DETAIL blocks. */
 const detailInclude = {
-  ...listInclude,
+  ...cardInclude,
   variants: {
     where: { isActive: true },
     orderBy: { sortOrder: "asc" as const },
@@ -148,6 +155,7 @@ const detailInclude = {
   },
 } as const;
 
+const listInclude = cardInclude;
 const include = listInclude;
 
 function toCard(p: ProductRow): ProductCard {
@@ -195,7 +203,7 @@ function toDetail(p: ProductRow): ProductDetail {
       sortOrder: b.sortOrder,
     })),
     buyNowEnabled: p.buyNowEnabled || p.brand.buyNowEnabled,
-    variants: p.variants.map((v) => ({
+    variants: (p.variants ?? []).map((v) => ({
       id: v.id,
       optionLabel: v.optionLabel ?? undefined,
       optionValue: v.optionValue,
@@ -341,6 +349,303 @@ export async function getProductsByBrandSlug(
     include,
   })) as ProductRow[];
   return rows.map(toCard);
+}
+
+/** This store's "buy now" rule, including the brand-level rollout. */
+function listingBuyNowWhere(version: SiteVersion): Prisma.ProductWhereInput {
+  return version === "global"
+    ? {
+        OR: [{ globalBuyNowEnabled: true }, { brand: { buyNowEnabled: true } }],
+      }
+    : {
+        OR: [{ buyNowEnabled: true }, { brand: { buyNowEnabled: true } }],
+      };
+}
+
+/** This store's pre-order bucket; buy-now wins when a product has both flags. */
+function listingPreOrderWhere(version: SiteVersion): Prisma.ProductWhereInput {
+  return {
+    AND: [
+      version === "global" ? { globalIsPreOrder: true } : { isPreOrder: true },
+      { NOT: listingBuyNowWhere(version) },
+    ],
+  };
+}
+
+/**
+ * The price facet in whole rupees, matching the storefront's `Math.round`
+ * comparison. For the global store the effective price is the global override
+ * when it exists, otherwise the local price.
+ */
+function listingPriceWhere(
+  filters: CategoryFilters,
+  version: SiteVersion,
+): Prisma.ProductWhereInput | null {
+  const min = filters.minRupees;
+  const max = filters.maxRupees;
+  if (min == null && max == null) return null;
+
+  const cents = {
+    ...(min != null ? { gte: min * 100 - 50 } : {}),
+    ...(max != null ? { lte: max * 100 + 49 } : {}),
+  };
+  if (version === "local") return { priceCents: cents };
+  return {
+    OR: [
+      { globalPriceCents: cents },
+      { globalPriceCents: null, priceCents: cents },
+    ],
+  };
+}
+
+interface ListingWhereOptions {
+  categorySlug?: string;
+  brandSlug?: string;
+  query?: string;
+  filters: CategoryFilters;
+  version: SiteVersion;
+  includeBrandFilter?: boolean;
+  includeAvailability?: boolean;
+}
+
+/** One predicate builder for rows, totals and facets. */
+function listingWhere({
+  categorySlug,
+  brandSlug,
+  query,
+  filters,
+  version,
+  includeBrandFilter = true,
+  includeAvailability = true,
+}: ListingWhereOptions): Prisma.ProductWhereInput {
+  const and: Prisma.ProductWhereInput[] = [shownWhere(version)];
+
+  if (categorySlug) {
+    and.push({
+      OR: [
+        { category: { slug: categorySlug } },
+        {
+          subcategories: {
+            some: { category: { parent: { slug: categorySlug } } },
+          },
+        },
+      ],
+    });
+  }
+  if (brandSlug) and.push({ brand: { slug: brandSlug } });
+  if (query) {
+    and.push({
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { summary: { contains: query, mode: "insensitive" } },
+        { brand: { name: { contains: query, mode: "insensitive" } } },
+      ],
+    });
+  }
+  if (filters.sub) {
+    and.push({
+      subcategories: { some: { category: { slug: filters.sub } } },
+    });
+  }
+  if (includeBrandFilter && filters.brands.length > 0) {
+    and.push({ brand: { slug: { in: filters.brands } } });
+  }
+
+  const price = listingPriceWhere(filters, version);
+  if (price) and.push(price);
+
+  if (includeAvailability && filters.availability.length > 0) {
+    const buckets: Prisma.ProductWhereInput[] = [];
+    if (filters.availability.includes("ready")) {
+      buckets.push(listingBuyNowWhere(version));
+    }
+    if (filters.availability.includes("preorder")) {
+      buckets.push(listingPreOrderWhere(version));
+    }
+    if (buckets.length === 1) and.push(buckets[0]);
+    else if (buckets.length > 1) and.push({ OR: buckets });
+  }
+
+  return { AND: and };
+}
+
+function listingOrderBy(
+  sort: ListingSort,
+): Prisma.ProductOrderByWithRelationInput[] {
+  switch (sort) {
+    case "name":
+      return [{ name: "asc" }, { id: "asc" }];
+    case "manufacturer":
+      return [{ brand: { name: "asc" } }, { id: "asc" }];
+    case "new":
+    case "review":
+    default:
+      return [{ createdAt: "desc" }, { id: "desc" }];
+  }
+}
+
+async function listingBrandFacets(
+  where: Prisma.ProductWhereInput,
+): Promise<BrandFacet[]> {
+  const groups = await db.product.groupBy({
+    by: ["brandId"],
+    where,
+    _count: { _all: true },
+  });
+  if (groups.length === 0) return [];
+  const brands = await db.brand.findMany({
+    where: { id: { in: groups.map((group) => group.brandId) } },
+    select: { id: true, slug: true, name: true },
+  });
+  const byId = new Map(brands.map((brand) => [brand.id, brand]));
+  return groups
+    .map((group) => {
+      const brand = byId.get(group.brandId);
+      return brand
+        ? { slug: brand.slug, name: brand.name, count: group._count._all }
+        : null;
+    })
+    .filter((facet): facet is BrandFacet => Boolean(facet))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function listingAvailabilityFacets(
+  where: Prisma.ProductWhereInput,
+  version: SiteVersion,
+): Promise<AvailabilityFacets> {
+  const [ready, preorder] = await Promise.all([
+    db.product.count({
+      where: { AND: [where, listingBuyNowWhere(version)] },
+    }),
+    db.product.count({
+      where: { AND: [where, listingPreOrderWhere(version)] },
+    }),
+  ]);
+  return { ready, preorder };
+}
+
+export interface ProductListingOptions {
+  categorySlug?: string;
+  brandSlug?: string;
+  query?: string;
+  filters: CategoryFilters;
+  sort: ListingSort;
+  page: number;
+  pageSize?: number;
+  version: SiteVersion;
+  /** Brand/availability counts are only needed by category listings. */
+  includeFacets?: boolean;
+}
+
+/**
+ * One page of a category, brand or search listing, plus the full filtered total
+ * and (for category pages) the full facet counts. Every count uses the same
+ * predicate as the rows, so a brand can never disappear just because its
+ * products fall outside the current page.
+ */
+export async function getProductListing({
+  categorySlug,
+  brandSlug,
+  query,
+  filters,
+  sort,
+  page,
+  pageSize = 48,
+  version,
+  includeFacets = true,
+}: ProductListingOptions): Promise<ProductListingPage> {
+  const size = Math.min(96, Math.max(1, Math.floor(pageSize) || 48));
+  const requestedPage = Math.max(1, Math.floor(page) || 1);
+  const where = listingWhere({
+    categorySlug,
+    brandSlug,
+    query,
+    filters,
+    version,
+  });
+
+  const total = await db.product.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  const effectivePage = Math.min(requestedPage, totalPages);
+  const skip = (effectivePage - 1) * size;
+
+  let rows: ProductRow[];
+  if (sort === "lowest" || sort === "highest") {
+    // Prisma cannot order by COALESCE(global_price_cents, price_cents), so
+    // order the matching ids first and then load just this page's cards.
+    const priceRows = await db.product.findMany({
+      where,
+      select: { id: true, priceCents: true, globalPriceCents: true },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    });
+    const priceOf = (row: {
+      priceCents: number;
+      globalPriceCents: number | null;
+    }) =>
+      version === "global"
+        ? (row.globalPriceCents ?? row.priceCents)
+        : row.priceCents;
+    priceRows.sort((a, b) =>
+      sort === "lowest" ? priceOf(a) - priceOf(b) : priceOf(b) - priceOf(a),
+    );
+    const pageIds = priceRows.slice(skip, skip + size).map((row) => row.id);
+    if (pageIds.length === 0) {
+      rows = [];
+    } else {
+      const pageRows = (await db.product.findMany({
+        where: { id: { in: pageIds } },
+        include: cardInclude,
+      })) as ProductRow[];
+      const byId = new Map(pageRows.map((row) => [row.id, row]));
+      rows = pageIds
+        .map((id) => byId.get(id))
+        .filter((row): row is ProductRow => Boolean(row));
+    }
+  } else {
+    rows = (await db.product.findMany({
+      where,
+      orderBy: listingOrderBy(sort),
+      skip,
+      take: size,
+      include: cardInclude,
+    })) as ProductRow[];
+  }
+
+  let brandFacets: BrandFacet[] = [];
+  let availabilityFacets: AvailabilityFacets = { preorder: 0, ready: 0 };
+  if (includeFacets) {
+    const withoutBrand = listingWhere({
+      categorySlug,
+      brandSlug,
+      query,
+      filters,
+      version,
+      includeBrandFilter: false,
+    });
+    const withoutAvailability = listingWhere({
+      categorySlug,
+      brandSlug,
+      query,
+      filters,
+      version,
+      includeAvailability: false,
+    });
+    [brandFacets, availabilityFacets] = await Promise.all([
+      listingBrandFacets(withoutBrand),
+      listingAvailabilityFacets(withoutAvailability, version),
+    ]);
+  }
+
+  return {
+    products: rows.map(toCard),
+    total,
+    page: effectivePage,
+    pageSize: size,
+    totalPages,
+    hasMore: effectivePage < totalPages,
+    brandFacets,
+    availabilityFacets,
+  };
 }
 
 /**

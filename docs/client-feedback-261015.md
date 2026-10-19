@@ -683,3 +683,50 @@ volume control after seeing the platform control bars:
   button restored 40. TikTok reported `onVolumeChange: 30` for the same UI step.
   `tests/shorts.test.ts` covers URL parsing, both embed URLs and both mute and
   volume command shapes.
+
+### Eleventh pass — every product, not the newest 300
+
+The client reported that `/category/skin-care` stopped at "300 items were found"
+and that VT, AHC, JMsolution and AROCELL were missing from the brand filter:
+
+- **Cause.** The category and brand queries were hard-capped at `take: 300` and
+  the count came from that same query, so the heading, the brand facet counts,
+  the subcategory tabs and `?page=` all described the first 300 rows only. The
+  oldest Skin Care product in the query was 2026-10-15; the real oldest is
+  2026-08-08. The same cap sat on brand pages and search.
+- **Real listing query.** `getProductListing` in `src/data/products.ts` builds
+  the where/order from the active store version, applies the category filters,
+  and returns `total`, `page`, `pageSize`, `totalPages`, `hasMore`,
+  `brandFacets` and `availabilityFacets` from the database rather than from the
+  loaded slice. Brand and availability facets are separate groupBy/count
+  queries, and the price sorts sort in JS because Prisma cannot order by
+  `COALESCE(globalPriceCents, priceCents)`.
+- **Batches of 48.** `PRODUCTS_PER_PAGE` is 48. The first batch is still
+  server-rendered; later batches come from the public
+  `GET /api/products/listing` route (`category`, `brandSlug` or `q`, plus
+  `brand`, `sub`, `availability`, `sort`, `page`, `version`). Category, brand
+  and search pages all use it.
+- **Infinite scroll, no new dependency.** `CategoryProductList` and
+  `InfiniteProductGrid` observe a sentinel with `IntersectionObserver`
+  (`rootMargin: 600px`) and append the next batch; a "Load more" button remains
+  as the keyboard/fallback path, with error and retry states. Requests carry an
+  `AbortController` and a request counter so a filter or sort change cannot be
+  overwritten by an in-flight batch. "All N items shown" ends the list.
+- **Store version.** The visible store can switch before the cookie round-trips,
+  so batch requests send the server-resolved `version` explicitly. The API
+  validates it with `parseSiteVersion` and only accepts `local` or `global`.
+- **Totals and the brand filter.** The number below the tabs and the brand facet
+  counts now use the full category total. The filter sheet's "Show N items"
+  uses the same total.
+- **Verified against the live database and in a browser**: Skin Care reports
+  **554** items (was 300), the facets include `AHC 8`, `AROCELL 7`,
+  `JMsolution 10`, `MEDIPEEL 45`, `VT 43`, scrolling appends 48 → 96 → 144, and
+  `?page=2` renders a different 48 cards with the same 554 count.
+  `?sub=facial-care` reports 233 with the same facets. `/brand/medipeel`
+  reports all 45 items. `/search?q=a` reports 763 and appends on scroll. The
+  global store reports 548 Skin Care items — the six that are not active
+  globally — which is the intended storefront split. Price sorts ascend
+  correctly (₹119 → ₹160 → ₹249 for `sort=lowest`).
+- **Admin note.** The admin Categories list counts every row (242 for Facial
+  Care); the storefront shows the 233 active rows. Aligning those two numbers
+  was not requested and is left unchanged.

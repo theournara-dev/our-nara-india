@@ -6,7 +6,13 @@ import { BrandBanner } from "@/components/brands/brand-banner";
 import { Container } from "@/components/ui/container";
 import { CategoryProductList } from "@/components/product/category-product-list";
 import { getBrandBySlug } from "@/data/brands";
-import { getProductsByBrandSlug } from "@/data/products";
+import { getProductListing } from "@/data/products";
+import { EMPTY_CATEGORY_FILTERS } from "@/lib/category-filters";
+import {
+  parseListingPage,
+  parseListingSort,
+  PRODUCTS_PER_PAGE,
+} from "@/lib/product-listing";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
@@ -32,18 +38,29 @@ export async function generateMetadata({
 
 export default async function BrandPage({
   params,
+  searchParams,
 }: {
   params: Promise<Params>;
+  searchParams: Promise<{ page?: string; sort?: string }>;
 }) {
   const { slug } = await params;
-  const [brand, products] = await Promise.all([
+  const { page, sort } = await searchParams;
+  const [brand, version] = await Promise.all([
     getBrandBySlug(slug),
-    getRequestSiteVersion().then((version) =>
-      getProductsByBrandSlug(slug, 60, version),
-    ),
+    getRequestSiteVersion(),
   ]);
 
   if (!brand) notFound();
+
+  const listing = await getProductListing({
+    brandSlug: slug,
+    filters: EMPTY_CATEGORY_FILTERS,
+    sort: parseListingSort(sort),
+    page: parseListingPage(page),
+    pageSize: PRODUCTS_PER_PAGE,
+    version,
+    includeFacets: false,
+  });
 
   return (
     <>
@@ -98,7 +115,13 @@ export default async function BrandPage({
         </div>
 
         {/* Sort toolbar (all 6 options incl. Manufacture Company + Product Review) */}
-        <CategoryProductList products={products} columns={5} />
+        <CategoryProductList
+          initialListing={listing}
+          context={{ brandSlug: slug }}
+          columns={5}
+          initialFilters={EMPTY_CATEGORY_FILTERS}
+          initialSort={parseListingSort(sort)}
+        />
       </Container>
     </>
   );

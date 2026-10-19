@@ -11,8 +11,13 @@ import {
   getCategoryBySlug,
   getCategoryTabs,
 } from "@/data/categories";
-import { getProductsByCategorySlug } from "@/data/products";
+import { getProductListing } from "@/data/products";
 import { parseCategoryFilters } from "@/lib/category-filters";
+import {
+  parseListingPage,
+  parseListingSort,
+  PRODUCTS_PER_PAGE,
+} from "@/lib/product-listing";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +29,8 @@ type SearchParams = {
   min?: string;
   max?: string;
   avail?: string;
+  page?: string;
+  sort?: string;
 };
 
 export async function generateMetadata({
@@ -44,7 +51,7 @@ export default async function CategoryPage({
   searchParams: Promise<SearchParams>;
 }) {
   const { slug } = await params;
-  const { sub, brand, min, max, avail } = await searchParams;
+  const { sub, brand, min, max, avail, page, sort } = await searchParams;
   const [category, version] = await Promise.all([
     getCategoryBySlug(slug),
     getRequestSiteVersion(),
@@ -59,8 +66,7 @@ export default async function CategoryPage({
     if (parent) redirect(`/category/${parent.slug}?sub=${category.slug}`);
   }
 
-  const [products, subcategories, blocks] = await Promise.all([
-    getProductsByCategorySlug(slug, 300, version),
+  const [subcategories, blocks] = await Promise.all([
     getCategoryTabs(slug, version),
     getCategoryPageBlocks(category, version),
   ]);
@@ -70,6 +76,15 @@ export default async function CategoryPage({
   const initialFilters = subcategories.some((s) => s.slug === filters.sub)
     ? filters
     : { ...filters, sub: undefined };
+
+  const listing = await getProductListing({
+    categorySlug: slug,
+    filters: initialFilters,
+    sort: parseListingSort(sort),
+    page: parseListingPage(page),
+    pageSize: PRODUCTS_PER_PAGE,
+    version,
+  });
 
   return (
     <Container wide className="py-8">
@@ -93,10 +108,12 @@ export default async function CategoryPage({
       </h1>
 
       <CategoryProductList
-        products={products}
+        initialListing={listing}
+        context={{ categorySlug: slug }}
         columns={5}
         subcategories={subcategories}
         initialFilters={initialFilters}
+        initialSort={parseListingSort(sort)}
         longBanner={
           // The home page's column strip (client's slide 4): one banner per
           // column, so one runs full width and two or three share the row. The

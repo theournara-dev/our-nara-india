@@ -1,6 +1,8 @@
 import { Container } from "@/components/ui/container";
-import { ProductGrid } from "@/components/product/product-grid";
-import { db } from "@/lib/db";
+import { InfiniteProductGrid } from "@/components/product/infinite-product-grid";
+import { getProductListing } from "@/data/products";
+import { EMPTY_CATEGORY_FILTERS } from "@/lib/category-filters";
+import { parseListingPage, PRODUCTS_PER_PAGE } from "@/lib/product-listing";
 import { getRequestSiteVersion } from "@/lib/site-version.server";
 
 export const dynamic = "force-dynamic";
@@ -8,72 +10,52 @@ export const dynamic = "force-dynamic";
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, page } = await searchParams;
   const query = q?.trim() ?? "";
   const version = await getRequestSiteVersion();
 
-  const results = query
-    ? await db.product.findMany({
-        where: {
-          ...(version === "global"
-            ? { globalIsActive: true }
-            : { isActive: true }),
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { summary: { contains: query, mode: "insensitive" } },
-            { brand: { name: { contains: query, mode: "insensitive" } } },
-          ],
-        },
-        include: { brand: { select: { slug: true, name: true } } },
-        orderBy: { createdAt: "desc" },
+  const listing = query
+    ? await getProductListing({
+        query,
+        filters: EMPTY_CATEGORY_FILTERS,
+        sort: "new",
+        page: parseListingPage(page),
+        pageSize: PRODUCTS_PER_PAGE,
+        version,
+        includeFacets: false,
       })
-    : [];
+    : null;
 
   return (
     <Container className="py-10">
       <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-        {query
-          ? `${results.length} result${results.length === 1 ? "" : "s"}`
+        {listing
+          ? `${listing.total} result${listing.total === 1 ? "" : "s"}`
           : "Search"}
       </p>
       <h1 className="font-category mb-6 text-3xl font-semibold text-zinc-900">
         {query ? `Results for “${query}”` : "Search products"}
       </h1>
 
-      {!query ? (
+      {!listing ? (
         <p className="text-zinc-500">
           Use the search box in the header to find products and brands.
         </p>
-      ) : results.length === 0 ? (
+      ) : listing.total === 0 ? (
         <p className="text-zinc-500">
           No products matched “{query}”. Try a different term.
         </p>
       ) : (
-        <ProductGrid
-          products={results.map((p) => ({
-            id: p.id,
-            slug: p.slug,
-            name: p.name,
-            summary: p.summary ?? undefined,
-            shortTags: p.shortTags,
-            priceCents: p.priceCents,
-            compareAtCents: p.compareAtCents ?? undefined,
-            globalPriceCents: p.globalPriceCents ?? undefined,
-            globalCompareAtCents: p.globalCompareAtCents ?? undefined,
-            currency: p.currency,
-            isActive: p.isActive,
-            isPreOrder: p.isPreOrder,
-            buyNowEnabled: p.buyNowEnabled,
-            globalIsActive: p.globalIsActive,
-            globalIsPreOrder: p.globalIsPreOrder,
-            globalBuyNowEnabled: p.globalBuyNowEnabled,
-            preOrderNotice: p.preOrderNotice ?? undefined,
-            images: p.images,
-            hoverImage: p.images[1] ?? p.images[0],
-            brand: { slug: p.brand.slug, name: p.brand.name },
-          }))}
+        <InfiniteProductGrid
+          key={`${query}:${listing.page}`}
+          initialProducts={listing.products}
+          initialTotal={listing.total}
+          initialNextPage={listing.hasMore ? listing.page + 1 : null}
+          query={query}
+          version={version}
+          columns={4}
         />
       )}
     </Container>
