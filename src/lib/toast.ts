@@ -11,6 +11,9 @@ export const notify = {
   success(id: string | number, message: string, description?: string) {
     toast.success(message, { id, description });
   },
+  info(id: string | number, message: string, description?: string) {
+    toast.info(message, { id, description });
+  },
   error(
     id: string | number,
     message: string,

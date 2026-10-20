@@ -1,6 +1,7 @@
 "use client";
 
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
+import { CartChangedError } from "@/lib/cart-quote";
 import { SITE } from "@/lib/constants";
 import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
 
@@ -120,6 +121,11 @@ export async function checkoutWithRazorpay(
   // arrive as `ok: false` with a user-safe message.
   const result = await createOrder({ ...input, cartToken: cartToken(input) });
   if (!result.ok) {
+    // A stale cart is not a payment failure: the caller needs the quote to
+    // re-price the cart and let the shopper review it.
+    if (result.code === "CART_CHANGED" && result.quote) {
+      throw new CartChangedError(result.quote);
+    }
     throw new Error(result.message);
   }
   const order = result;

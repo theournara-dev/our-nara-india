@@ -16,9 +16,11 @@ import {
   clearCart,
   itemPriceForVersion,
   removeCartItem,
+  setCart,
   updateCartItemQty,
   useCart,
 } from "@/lib/cart";
+import { applyQuote, CartChangedError } from "@/lib/cart-quote";
 import { formatMoney } from "@/lib/money";
 import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
@@ -112,9 +114,9 @@ export default function CartPage() {
         state: userInfo.state,
         postal: userInfo.postal,
         country: userInfo.country,
-        // The server recomputes prices and refuses when they no longer match
-        // what the customer saw in the cart.
-        expectedSubtotalCents: subtotalCents,
+        // The server recomputes the whole total (discounts, coupon, shipping)
+        // and refuses when it no longer matches what the cart showed.
+        expectedTotalCents: totalCents,
         couponCode: appliedCoupon?.code,
         idDocumentUrl: idDocument ?? undefined,
       });
@@ -129,6 +131,27 @@ export default function CartPage() {
           : `Order ${orderNumber} is confirmed.`,
       );
     } catch (err) {
+      // A stale total is not a failure: take the server's quote, re-price the
+      // cart and let the shopper review it. Never auto-retry.
+      if (err instanceof CartChangedError) {
+        setCart(applyQuote(items, err.quote));
+        setAppliedCoupon(
+          err.quote.coupon.valid && err.quote.coupon.code
+            ? {
+                code: err.quote.coupon.code,
+                discountCents: err.quote.coupon.discountCents,
+                freeShipping: err.quote.coupon.freeShipping,
+                title: err.quote.coupon.title,
+              }
+            : null,
+        );
+        notify.info(
+          id,
+          "Cart prices changed",
+          "We updated your cart with the current prices and offers. Review the total, then place your order again.",
+        );
+        return;
+      }
       const friendly = friendlyPaymentError(err);
       const trace =
         err instanceof Error
