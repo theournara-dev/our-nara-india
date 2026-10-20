@@ -113,6 +113,11 @@ export default async function AdminOrderDetailPage({
             Pre-order
           </span>
         )}
+        {order.totalCents === 0 && (
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            Free order
+          </span>
+        )}
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-medium ${
             order.siteVersion === "global"
@@ -150,38 +155,64 @@ export default async function AdminOrderDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {order.items.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-zinc-50 last:border-0"
-                    >
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-zinc-900">{item.name}</p>
-                        {(item.optionValue || item.sku) && (
-                          <p className="mt-0.5 text-xs text-zinc-400">
-                            {[item.optionValue, item.sku]
-                              .filter(Boolean)
-                              .join(" · ")}
+                  {order.items.map((item) => {
+                    const listPriceCents = item.listPriceCents;
+                    const discountCents =
+                      listPriceCents != null && listPriceCents > item.priceCents
+                        ? listPriceCents - item.priceCents
+                        : 0;
+                    return (
+                      <tr
+                        key={item.id}
+                        className="border-b border-zinc-50 last:border-0"
+                      >
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-zinc-900">
+                            {item.name}
                           </p>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 text-right text-zinc-600">
-                        {formatMoney(item.priceCents, item.currency, {
-                          convert: false,
-                        })}
-                      </td>
-                      <td className="px-5 py-3 text-center text-zinc-600">
-                        {item.quantity}
-                      </td>
-                      <td className="px-5 py-3 text-right font-medium text-zinc-900">
-                        {formatMoney(
-                          item.priceCents * item.quantity,
-                          item.currency,
-                          { convert: false },
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          {(item.optionValue || item.sku) && (
+                            <p className="mt-0.5 text-xs text-zinc-400">
+                              {[item.optionValue, item.sku]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                          {discountCents > 0 &&
+                            item.discountTitle != null && (
+                              <p className="mt-0.5 text-xs text-zinc-400">
+                                Discount ({item.discountTitle}): −
+                                {formatMoney(discountCents, item.currency, {
+                                  convert: false,
+                                })}{" "}
+                                each
+                              </p>
+                            )}
+                        </td>
+                        <td className="px-5 py-3 text-right text-zinc-600">
+                          {discountCents > 0 && listPriceCents != null && (
+                            <span className="text-zinc-400 line-through">
+                              {formatMoney(listPriceCents, item.currency, {
+                                convert: false,
+                              })}{" "}
+                            </span>
+                          )}
+                          {formatMoney(item.priceCents, item.currency, {
+                            convert: false,
+                          })}
+                        </td>
+                        <td className="px-5 py-3 text-center text-zinc-600">
+                          {item.quantity}
+                        </td>
+                        <td className="px-5 py-3 text-right font-medium text-zinc-900">
+                          {formatMoney(
+                            item.priceCents * item.quantity,
+                            item.currency,
+                            { convert: false },
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -324,6 +355,11 @@ export default async function AdminOrderDetailPage({
                 </dd>
               </div>
             </dl>
+            {order.totalCents === 0 && (
+              <p className="px-5 pb-4 text-sm text-muted-foreground">
+                No payment required — total ₹0 after discounts.
+              </p>
+            )}
           </section>
 
           {/* Invoice */}
