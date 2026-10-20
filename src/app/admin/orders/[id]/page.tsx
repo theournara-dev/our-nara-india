@@ -356,7 +356,7 @@ export default async function AdminOrderDetailPage({
               </div>
             </dl>
             {order.totalCents === 0 && (
-              <p className="px-5 pb-4 text-sm text-muted-foreground">
+              <p className="px-5 pb-4 text-sm text-zinc-500">
                 No payment required — total ₹0 after discounts.
               </p>
             )}
