@@ -198,7 +198,7 @@ test(
 );
 
 test(
-  "price sorting uses the store price",
+  "price sorting uses the store's effective price",
   { skip: !process.env.DATABASE_URL },
   async () => {
     const listing = await getProductListing({
@@ -209,11 +209,55 @@ test(
       pageSize: 20,
       version: "local",
     });
-    const prices = listing.products.map((product) => product.priceCents);
+    const prices = listing.products.map(
+      (product) => product.effectivePriceCents,
+    );
     assert.deepEqual(
       prices,
       [...prices].sort((a, b) => a - b),
     );
     assert.equal(listing.pageSize, 20);
+  },
+);
+
+test(
+  "a price filter keeps the grid and brand counts on effective prices",
+  { skip: !process.env.DATABASE_URL },
+  async () => {
+    const base = await getProductListing({
+      categorySlug: "skin-care",
+      filters: EMPTY_CATEGORY_FILTERS,
+      sort: "lowest",
+      page: 1,
+      pageSize: 20,
+      version: "local",
+      includeFacets: false,
+    });
+    const cheapest = Math.round(
+      (base.products[0]?.effectivePriceCents ?? 0) / 100,
+    );
+    const listing = await getProductListing({
+      categorySlug: "skin-care",
+      filters: {
+        ...EMPTY_CATEGORY_FILTERS,
+        minRupees: cheapest,
+        maxRupees: cheapest + 500,
+      },
+      sort: "lowest",
+      page: 1,
+      pageSize: 20,
+      version: "local",
+    });
+
+    assert.ok(listing.products.length > 0);
+    for (const product of listing.products) {
+      const rupees = Math.round(product.effectivePriceCents / 100);
+      assert.ok(rupees >= cheapest && rupees <= cheapest + 500);
+    }
+    assert.equal(
+      listing.total,
+      listing.brandFacets.reduce((sum, facet) => sum + facet.count, 0),
+      "the brand counts must add up to the same filtered total",
+    );
   },
 );
