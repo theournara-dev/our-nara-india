@@ -128,10 +128,9 @@ export function VersionSwitcher({
                     ? "International store — K-Drop"
                     : `${label} store`
                 }
-                className={`relative flex h-7 items-center justify-center gap-1 px-3 text-[10px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 max-[1200px]:px-2.5 max-[1200px]:text-[9px] ${
-                  // The second half always laps over the first; which one is on
-                  // top is decided by the active state, so the coloured pill
-                  // covers the grey one in both directions.
+                className={`relative flex h-8 items-center justify-center gap-1 px-5 text-[11.5px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 ${
+                  // The second half laps 12px over the first. Its padding covers
+                  // that, so neither label slides under the active pill.
                   index > 0 ? "-ml-3" : ""
                 } ${
                   active

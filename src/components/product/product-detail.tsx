@@ -3,7 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
+import {
+  MdKeyboardArrowLeft,
+  MdKeyboardArrowRight,
+  MdOutlineShoppingCart,
+} from "react-icons/md";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { MAX_LINE_QTY } from "@/lib/checkout-rules";
@@ -195,10 +199,12 @@ export function ProductDetail({
   // store), not the storefront the visitor is browsing.
   const availableGlobally = visibleForVersion(product, "global");
 
-  function handleBuyNow() {
-    // The chosen option's label travels with the line so the cart can show it.
-    // The line stores BOTH stores' charged prices, so switching store re-prices
-    // it to that store's discount.
+  /**
+   * The chosen option's label travels with the line so the cart can show it.
+   * The line stores BOTH stores' charged prices, so switching store re-prices
+   * it to that store's discount.
+   */
+  function buildLine() {
     addProductToCart(
       {
         ...product,
@@ -211,6 +217,16 @@ export function ProductDetail({
         ? `${selectedVariant.optionLabel ? `${selectedVariant.optionLabel}: ` : ""}${selectedVariant.optionValue || product.name}`
         : undefined,
     );
+  }
+
+  /** Add and stay on the page; the cart merges, so a second click adds again. */
+  function handleAddToCart() {
+    buildLine();
+    notifyAddedToCart(product.name, qty);
+  }
+
+  function handleBuyNow() {
+    buildLine();
     notifyAddedToCart(product.name, qty);
     openQuickPurchase();
   }
@@ -528,8 +544,22 @@ export function ProductDetail({
             )}
           </div>
 
-          {/* Primary action — one solid button, as on the client's reference */}
+          {/* Primary actions — a buy-now product offers both: add to cart
+              (stays on the page) beside Buy Now. Pre-order and unavailable
+              products keep their single button. */}
           <div className="mt-4 flex gap-2">
+            {showBuyNow && config.paymentsEnabled && (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={needsOption}
+                title={needsOption ? "Select an option first" : undefined}
+                className="flex h-14 flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-point-500 bg-white px-3 text-[14px] font-bold text-point-500 transition-colors hover:bg-point-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:text-[15px]"
+              >
+                <MdOutlineShoppingCart className="h-5 w-5" aria-hidden />
+                ADD TO CART
+              </button>
+            )}
             {showPreOrder && (
               <button
                 type="button"
