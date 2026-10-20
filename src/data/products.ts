@@ -1,5 +1,13 @@
 import { db } from "@/lib/db";
 import type { ProductCardView } from "@/data/catalog";
+import {
+  discountBadge,
+  discountTargetFor,
+  resolvePrice,
+  type DiscountRecord,
+  type DiscountTarget,
+} from "@/lib/discounts";
+import { getLiveDiscounts } from "@/lib/discount-store";
 import type { SiteVersion } from "@/lib/site-version";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CategoryFilters } from "@/lib/category-filters";
@@ -41,6 +49,10 @@ export interface ProductBlockView {
 export interface ProductDetail extends ProductCardView {
   description?: string;
   stock: number | null;
+  /** Live discounts that could apply to this product (both stores). */
+  discounts: DiscountRecord[];
+  /** What those discounts are matched against. */
+  discountTarget: DiscountTarget;
   seoTitle?: string;
   seoDescription?: string;
   /** Per-product INFO override; empty means "use the global template". */
@@ -99,12 +111,14 @@ type ProductRow = {
   buyNowEnabled: boolean;
   globalBuyNowEnabled: boolean;
   brand: {
+    id: string;
     slug: string;
     name: string;
     buyNowEnabled: boolean;
   };
+  category: { id: string; parentId: string | null };
   subcategories: {
-    category: { slug: string; parentId: string | null };
+    category: { id: string; slug: string; parentId: string | null };
   }[];
   variants?: {
     id: string;
@@ -131,12 +145,15 @@ type ProductRow = {
 /** Shared relation set for card/list queries (no variants). */
 const cardInclude = {
   brand: {
-    select: { slug: true, name: true, buyNowEnabled: true },
+    select: { id: true, slug: true, name: true, buyNowEnabled: true },
   },
+  category: { select: { id: true, parentId: true } },
   // Mid-level category assignments; the slug is what the listing chips filter
   // by, `parentId` distinguishes them from a root assignment.
   subcategories: {
-    select: { category: { select: { slug: true, parentId: true } } },
+    select: {
+      category: { select: { id: true, slug: true, parentId: true } },
+    },
   },
 } as const;
 
@@ -156,7 +173,30 @@ const detailInclude = {
 const listInclude = cardInclude;
 const include = listInclude;
 
-function toCard(p: ProductRow): ProductCard {
+/** Everything a live discount can match this product by. */
+function targetFor(p: ProductRow): DiscountTarget {
+  return discountTargetFor({
+    productId: p.id,
+    brandId: p.brand.id,
+    categoryId: p.category.id,
+    categoryParentId: p.category.parentId,
+    subcategories: p.subcategories,
+  });
+}
+
+function toCard(
+  p: ProductRow,
+  discounts: DiscountRecord[] = [],
+): ProductCard {
+  const target = targetFor(p);
+  const local = resolvePrice(p.priceCents, target, discounts, "local");
+  const global = resolvePrice(
+    p.globalPriceCents ?? p.priceCents,
+    target,
+    discounts,
+    "global",
+  );
+
   return {
     id: p.id,
     slug: p.slug,
@@ -165,6 +205,12 @@ function toCard(p: ProductRow): ProductCard {
     shortTags: p.shortTags,
     priceCents: p.priceCents,
     globalPriceCents: p.globalPriceCents ?? undefined,
+    effectivePriceCents: local.chargedCents,
+    effectiveGlobalPriceCents: global.chargedCents,
+    discountsByStore: {
+      local: discountBadge(local),
+      global: discountBadge(global),
+    },
     currency: p.currency,
     isActive: p.isActive,
     isPreOrder: p.isPreOrder,
@@ -182,9 +228,14 @@ function toCard(p: ProductRow): ProductCard {
   };
 }
 
-function toDetail(p: ProductRow): ProductDetail {
+function toDetail(
+  p: ProductRow,
+  discounts: DiscountRecord[] = [],
+): ProductDetail {
   return {
-    ...toCard(p),
+    ...toCard(p, discounts),
+    discounts,
+    discountTarget: targetFor(p),
     description: p.description ?? undefined,
     stock: p.stock,
     seoTitle: p.seoTitle ?? undefined,
@@ -279,7 +330,8 @@ export async function getFeaturedProducts(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** Products this store sells immediately (its own buy-now flag). */
@@ -293,7 +345,8 @@ export async function getAvailableNow(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** Products this store sells as a pre-order (its own pre-order flag). */
@@ -307,7 +360,8 @@ export async function getPreOrderProducts(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 export async function getProductsByCategorySlug(
@@ -330,7 +384,8 @@ export async function getProductsByCategorySlug(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 export async function getProductsByBrandSlug(
@@ -344,7 +399,8 @@ export async function getProductsByBrandSlug(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** This store's pre-order bucket; buy-now wins when a product has both flags. */
@@ -623,8 +679,9 @@ export async function getProductListing({
     ]);
   }
 
+  const discounts = await getLiveDiscounts();
   return {
-    products: rows.map(toCard),
+    products: rows.map((row) => toCard(row, discounts)),
     total,
     page: effectivePage,
     pageSize: size,
@@ -650,10 +707,11 @@ export async function getProductsBySlugs(
     include,
   })) as ProductRow[];
   const bySlug = new Map(rows.map((p) => [p.slug, p]));
+  const discounts = await getLiveDiscounts();
   return slugs
     .map((s) => bySlug.get(s))
     .filter((p): p is ProductRow => Boolean(p))
-    .map(toCard);
+    .map((p) => toCard(p, discounts));
 }
 
 /**
@@ -670,10 +728,11 @@ export async function getProductsByIds(
     include,
   })) as ProductRow[];
   const byId = new Map(rows.map((p) => [p.id, p]));
+  const discounts = await getLiveDiscounts();
   return ids
     .map((id) => byId.get(id))
     .filter((p): p is ProductRow => Boolean(p))
-    .map(toCard);
+    .map((p) => toCard(p, discounts));
 }
 
 /**
@@ -704,5 +763,7 @@ export async function getProductBySlug(
     where: { slug },
     include: detailInclude,
   })) as ProductRow | null;
-  return row ? toDetail(row) : null;
+  if (!row) return null;
+  const discounts = await getLiveDiscounts();
+  return toDetail(row, discounts);
 }

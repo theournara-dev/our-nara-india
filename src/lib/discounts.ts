@@ -7,6 +7,7 @@
  * No I/O and no Prisma imports — callers pass the candidate rows in.
  */
 
+import { formatMoney } from "@/lib/money";
 import type { SiteVersion } from "@/lib/site-version";
 
 export type DiscountType = "PERCENT" | "FIXED";
@@ -52,6 +53,13 @@ export interface ResolvedPrice {
   applied: DiscountRecord | null;
   amountCents: number;
   options: DiscountOption[];
+}
+
+/** What a product card shows when a discount applies to its store. */
+export interface DiscountBadge {
+  title: string;
+  amountCents: number;
+  percentOff: number | null;
 }
 
 const SCOPE_RANK: Record<DiscountScope, number> = {
@@ -166,4 +174,22 @@ export function discountTargetFor(input: {
   }
 
   return { productId: input.productId, brandId: input.brandId, categoryIds };
+}
+
+/** The card badge for a resolved price, or null when nothing applied. */
+export function discountBadge(resolved: ResolvedPrice): DiscountBadge | null {
+  const applied = resolved.applied;
+  return applied
+    ? {
+        title: applied.title,
+        amountCents: resolved.amountCents,
+        percentOff: applied.type === "PERCENT" ? applied.value : null,
+      }
+    : null;
+}
+
+export function discountBadgeLabel(badge: DiscountBadge, currency: string): string {
+  return badge.percentOff != null
+    ? `−${badge.percentOff}%`
+    : `−${formatMoney(badge.amountCents, currency)}`;
 }

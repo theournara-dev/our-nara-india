@@ -1,4 +1,5 @@
 import { PRODUCT_IMAGES } from "@/data/product-images";
+import type { DiscountBadge } from "@/lib/discounts";
 
 /**
  * Static catalog mirroring the live OUR:NARA store.
@@ -57,6 +58,12 @@ export interface ProductCardView {
    * global store charges this amount; unset falls back to the local price.
    */
   globalPriceCents?: number;
+  /** Price after discounts for the local store (equals `priceCents` without one). */
+  effectivePriceCents: number;
+  /** Price after discounts for the global store (falls back to the local list). */
+  effectiveGlobalPriceCents: number;
+  /** The applied discount per store, if any; cards render these as badges. */
+  discountsByStore: { local: DiscountBadge | null; global: DiscountBadge | null };
   currency: string;
   /**
    * Per-store sale state (see src/lib/product-flags.ts). The plain fields are
@@ -696,6 +703,11 @@ export function toCardView(p: StaticProduct): ProductCardView {
     summary: p.summary,
     shortTags: p.shortTags,
     priceCents: p.priceCents,
+    // The static catalogue has no discounts: effective prices are the raw ones
+    // and neither store shows a badge.
+    effectivePriceCents: p.priceCents,
+    effectiveGlobalPriceCents: p.priceCents,
+    discountsByStore: { local: null, global: null },
     currency: p.currency,
     isActive: true,
     isPreOrder: p.isPreOrder,

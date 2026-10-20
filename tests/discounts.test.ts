@@ -242,3 +242,20 @@ test("discountTargetFor dedupes primary, parent, subcategory and subcategory par
   assert.equal(result.brandId, "b1");
   assert.deepEqual(result.categoryIds, ["c1", "parent", "s1", "s2", "s3"]);
 });
+
+test("discountTargetFor dedupes when the primary category is its own parent", () => {
+  const result = discountTargetFor({
+    productId: "p1",
+    brandId: "b1",
+    categoryId: "c1",
+    categoryParentId: "c1",
+    subcategories: [{ category: { id: "c1", parentId: "c1" } }],
+  });
+
+  assert.deepEqual(result.categoryIds, ["c1"]);
+  assert.equal(
+    new Set(result.categoryIds).size,
+    result.categoryIds.length,
+    "no duplicate category ids",
+  );
+});
