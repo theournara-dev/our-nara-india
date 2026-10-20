@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createRazorpayOrder, razorpayAccountFor } from "@/lib/razorpay";
@@ -59,6 +60,15 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
+  }
+
+  // A zero-total order is completed through /api/orders/free; Razorpay can't
+  // charge 0 and the free route's side effects must be the only ones that run.
+  if (order.totalCents <= 0) {
+    return NextResponse.json(
+      { error: "This order requires no payment." },
+      { status: 409 },
+    );
   }
 
   // FAILED orders are retryable: a failed attempt (bank timeout, dropped

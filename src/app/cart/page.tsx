@@ -99,7 +99,7 @@ export default function CartPage() {
     setPlacing(true);
     const id = notify.loading("Placing order…");
     try {
-      const { orderNumber } = await checkoutWithRazorpay({
+      const { orderNumber, free } = await checkoutWithRazorpay({
         items: items.map((i) => ({
           productId: i.productId,
           variantId: i.option,
@@ -125,7 +125,7 @@ export default function CartPage() {
       setAppliedCoupon(null);
       notify.success(
         id,
-        "Payment successful!",
+        free ? "Order confirmed — no payment was needed" : "Payment successful!",
         isGlobal
           ? `Order ${orderNumber} is placed. We received your photo ID and our team will review it before shipping.`
           : `Order ${orderNumber} is confirmed.`,
