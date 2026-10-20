@@ -21,6 +21,7 @@ const nav: NavItem[] = [
   { label: "Invoices", href: "/admin/invoices" },
   { label: "Feedback", href: "/admin/feedback" },
   { label: "Coupons", href: "/admin/coupons" },
+  { label: "Discounts", href: "/admin/discounts" },
   { label: "Ambassadors", href: "/admin/ambassadors" },
   { label: "Pages", href: "/admin/pages" },
   { label: "Banners & Popups", href: "/admin/banners" },

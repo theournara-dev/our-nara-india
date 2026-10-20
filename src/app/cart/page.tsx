@@ -16,9 +16,11 @@ import {
   clearCart,
   itemPriceForVersion,
   removeCartItem,
+  setCart,
   updateCartItemQty,
   useCart,
 } from "@/lib/cart";
+import { applyQuote, CartChangedError } from "@/lib/cart-quote";
 import { formatMoney } from "@/lib/money";
 import { MAX_LINE_QTY } from "@/lib/checkout-rules";
 import { checkoutWithRazorpay } from "@/lib/razorpay-client";
@@ -31,6 +33,17 @@ import { computeShippingCents, FREE_SHIPPING } from "@/lib/shipping";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
+
+/** Identifies the cart a server-quoted shipping figure was computed for. */
+function cartKey(
+  items: { productId: string; option?: string; qty: number }[],
+  couponCode: string | null | undefined,
+  version: string,
+) {
+  return `${version}|${couponCode ?? ""}|${items
+    .map((i) => `${i.productId}|${i.option ?? ""}|${i.qty}`)
+    .join(",")}`;
+}
 
 export default function CartPage() {
   const { version, config, shipping } = useSiteVersion();
@@ -47,6 +60,12 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
     null,
   );
+  // The server's shipping figure after a CART_CHANGED quote. It outranks the
+  // page-load settings until the cart, coupon or store changes again.
+  const [quotedShipping, setQuotedShipping] = useState<{
+    cents: number;
+    key: string;
+  } | null>(null);
 
   const subtotalCents = items.reduce(
     (s, i) => s + itemPriceForVersion(i, version) * i.qty,
@@ -57,9 +76,13 @@ export default function CartPage() {
   // The fee is measured on what the customer pays for goods (after the coupon),
   // and a shipping coupon waives it outright. Same arithmetic as createOrder.
   const payableSubtotalCents = Math.max(0, subtotalCents - discountCents);
-  const shippingCents = appliedCoupon?.freeShipping
-    ? 0
-    : computeShippingCents(payableSubtotalCents, shipping);
+  const currentKey = cartKey(items, appliedCoupon?.code, version);
+  const shippingCents =
+    quotedShipping?.key === currentKey
+      ? quotedShipping.cents
+      : appliedCoupon?.freeShipping
+        ? 0
+        : computeShippingCents(payableSubtotalCents, shipping);
   const totalCents = payableSubtotalCents + shippingCents;
 
   async function placeOrder(documentUrlOverride?: string) {
@@ -97,7 +120,7 @@ export default function CartPage() {
     setPlacing(true);
     const id = notify.loading("Placing order…");
     try {
-      const { orderNumber } = await checkoutWithRazorpay({
+      const { orderNumber, free } = await checkoutWithRazorpay({
         items: items.map((i) => ({
           productId: i.productId,
           variantId: i.option,
@@ -112,9 +135,9 @@ export default function CartPage() {
         state: userInfo.state,
         postal: userInfo.postal,
         country: userInfo.country,
-        // The server recomputes prices and refuses when they no longer match
-        // what the customer saw in the cart.
-        expectedSubtotalCents: subtotalCents,
+        // The server recomputes the whole total (discounts, coupon, shipping)
+        // and refuses when it no longer matches what the cart showed.
+        expectedTotalCents: totalCents,
         couponCode: appliedCoupon?.code,
         idDocumentUrl: idDocument ?? undefined,
       });
@@ -123,12 +146,44 @@ export default function CartPage() {
       setAppliedCoupon(null);
       notify.success(
         id,
-        "Payment successful!",
+        free ? "Order confirmed — no payment was needed" : "Payment successful!",
         isGlobal
           ? `Order ${orderNumber} is placed. We received your photo ID and our team will review it before shipping.`
           : `Order ${orderNumber} is confirmed.`,
       );
     } catch (err) {
+      // A stale total is not a failure: take the server's quote, re-price the
+      // cart and let the shopper review it. Never auto-retry.
+      if (err instanceof CartChangedError) {
+        const nextItems = applyQuote(items, err.quote);
+        const nextCoupon =
+          err.quote.coupon.valid && err.quote.coupon.code
+            ? {
+                code: err.quote.coupon.code,
+                discountCents: err.quote.coupon.discountCents,
+                freeShipping: err.quote.coupon.freeShipping,
+                title: err.quote.coupon.title,
+              }
+            : null;
+        setCart(nextItems);
+        setAppliedCoupon(nextCoupon);
+        setQuotedShipping({
+          cents: err.quote.shippingCents,
+          key: cartKey(nextItems, nextCoupon?.code, version),
+        });
+        const droppedCoupon =
+          !err.quote.coupon.valid && err.quote.coupon.code
+            ? `${err.quote.coupon.code} is no longer valid: ${
+                err.quote.coupon.reason ?? "the offer has ended"
+              }. `
+            : "";
+        notify.info(
+          id,
+          "Cart prices changed",
+          `${droppedCoupon}We updated your cart with the current prices and offers. Review the total, then place your order again.`,
+        );
+        return;
+      }
       const friendly = friendlyPaymentError(err);
       const trace =
         err instanceof Error

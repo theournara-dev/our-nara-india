@@ -8,7 +8,12 @@
 export class CheckoutError extends Error {
   readonly code: string;
 
-  constructor(code: string, message: string) {
+  constructor(
+    code: string,
+    message: string,
+    /** Extra structured payload for the failure result (e.g. a CartQuote). */
+    readonly details?: unknown,
+  ) {
     super(message);
     this.name = "CheckoutError";
     this.code = code;

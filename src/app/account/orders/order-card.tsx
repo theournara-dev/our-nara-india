@@ -23,6 +23,8 @@ export interface AccountOrderItem {
   optionValue: string | null;
   sku: string | null;
   priceCents: number;
+  listPriceCents: number | null;
+  discountTitle: string | null;
   quantity: number;
   currency: string;
 }
@@ -139,32 +141,56 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
               Items
             </h3>
             <ul className="space-y-2.5">
-              {order.items.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex items-start justify-between gap-4 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-zinc-900">{item.name}</p>
-                    <p className="mt-0.5 text-xs text-zinc-400">
-                      {[
-                        item.optionValue,
-                        item.sku,
-                        `${item.quantity} × ${formatMoney(item.priceCents, item.currency, { convert: false })}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  <span className="shrink-0 text-zinc-900">
-                    {formatMoney(
-                      item.priceCents * item.quantity,
-                      item.currency,
-                      { convert: false },
-                    )}
-                  </span>
-                </li>
-              ))}
+              {order.items.map((item) => {
+                const listPriceCents = item.listPriceCents;
+                const discountCents =
+                  listPriceCents != null && listPriceCents > item.priceCents
+                    ? listPriceCents - item.priceCents
+                    : 0;
+                return (
+                  <li
+                    key={item.id}
+                    className="flex items-start justify-between gap-4 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-zinc-900">{item.name}</p>
+                      <p className="mt-0.5 text-xs text-zinc-400">
+                        {[item.optionValue, item.sku]
+                          .filter(Boolean)
+                          .join(" · ")}
+                        {(item.optionValue || item.sku) && " · "}
+                        {item.quantity} ×{" "}
+                        {discountCents > 0 && listPriceCents != null && (
+                          <span className="line-through">
+                            {formatMoney(listPriceCents, item.currency, {
+                              convert: false,
+                            })}{" "}
+                          </span>
+                        )}
+                        {formatMoney(item.priceCents, item.currency, {
+                          convert: false,
+                        })}
+                      </p>
+                      {discountCents > 0 && item.discountTitle != null && (
+                        <p className="mt-0.5 text-xs text-zinc-400">
+                          Discount ({item.discountTitle}): −
+                          {formatMoney(discountCents, item.currency, {
+                            convert: false,
+                          })}{" "}
+                          each
+                        </p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-zinc-900">
+                      {formatMoney(
+                        item.priceCents * item.quantity,
+                        item.currency,
+                        { convert: false },
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -200,10 +226,17 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
             )}
             <div className="flex justify-between gap-4 pt-1 font-semibold">
               <dt className="text-zinc-900">Total</dt>
-              <dd className="text-zinc-900">
+              <dd className="flex items-center gap-2 text-zinc-900">
                 {formatMoney(order.totalCents, order.currency, {
                   convert: false,
                 })}
+                {order.totalCents === 0 && (
+                  <span
+                    className={`${badgeClass} bg-emerald-100 text-emerald-700`}
+                  >
+                    Free order
+                  </span>
+                )}
               </dd>
             </div>
           </dl>

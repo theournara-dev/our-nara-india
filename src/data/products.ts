@@ -1,5 +1,15 @@
 import { db } from "@/lib/db";
 import type { ProductCardView } from "@/data/catalog";
+import {
+  discountBadge,
+  discountTargetFor,
+  resolvePrice,
+  type DiscountRecord,
+  type DiscountTarget,
+} from "@/lib/discounts";
+import { getLiveDiscounts } from "@/lib/discount-store";
+import { priceForVersion } from "@/lib/money";
+import { saleStateForVersion } from "@/lib/product-flags";
 import type { SiteVersion } from "@/lib/site-version";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CategoryFilters } from "@/lib/category-filters";
@@ -41,6 +51,10 @@ export interface ProductBlockView {
 export interface ProductDetail extends ProductCardView {
   description?: string;
   stock: number | null;
+  /** Live discounts that could apply to this product (both stores). */
+  discounts: DiscountRecord[];
+  /** What those discounts are matched against. */
+  discountTarget: DiscountTarget;
   seoTitle?: string;
   seoDescription?: string;
   /** Per-product INFO override; empty means "use the global template". */
@@ -84,9 +98,7 @@ type ProductRow = {
   description: string | null;
   stock: number | null;
   priceCents: number;
-  compareAtCents: number | null;
   globalPriceCents: number | null;
-  globalCompareAtCents: number | null;
   currency: string;
   isPreOrder: boolean;
   globalIsPreOrder: boolean;
@@ -101,12 +113,14 @@ type ProductRow = {
   buyNowEnabled: boolean;
   globalBuyNowEnabled: boolean;
   brand: {
+    id: string;
     slug: string;
     name: string;
     buyNowEnabled: boolean;
   };
+  category: { id: string; parentId: string | null };
   subcategories: {
-    category: { slug: string; parentId: string | null };
+    category: { id: string; slug: string; parentId: string | null };
   }[];
   variants?: {
     id: string;
@@ -133,12 +147,15 @@ type ProductRow = {
 /** Shared relation set for card/list queries (no variants). */
 const cardInclude = {
   brand: {
-    select: { slug: true, name: true, buyNowEnabled: true },
+    select: { id: true, slug: true, name: true, buyNowEnabled: true },
   },
+  category: { select: { id: true, parentId: true } },
   // Mid-level category assignments; the slug is what the listing chips filter
   // by, `parentId` distinguishes them from a root assignment.
   subcategories: {
-    select: { category: { select: { slug: true, parentId: true } } },
+    select: {
+      category: { select: { id: true, slug: true, parentId: true } },
+    },
   },
 } as const;
 
@@ -158,7 +175,30 @@ const detailInclude = {
 const listInclude = cardInclude;
 const include = listInclude;
 
-function toCard(p: ProductRow): ProductCard {
+/** Everything a live discount can match this product by. */
+function targetFor(p: ProductRow): DiscountTarget {
+  return discountTargetFor({
+    productId: p.id,
+    brandId: p.brand.id,
+    categoryId: p.category.id,
+    categoryParentId: p.category.parentId,
+    subcategories: p.subcategories,
+  });
+}
+
+function toCard(
+  p: ProductRow,
+  discounts: DiscountRecord[] = [],
+): ProductCard {
+  const target = targetFor(p);
+  const local = resolvePrice(p.priceCents, target, discounts, "local");
+  const global = resolvePrice(
+    p.globalPriceCents ?? p.priceCents,
+    target,
+    discounts,
+    "global",
+  );
+
   return {
     id: p.id,
     slug: p.slug,
@@ -166,9 +206,13 @@ function toCard(p: ProductRow): ProductCard {
     summary: p.summary ?? undefined,
     shortTags: p.shortTags,
     priceCents: p.priceCents,
-    compareAtCents: p.compareAtCents ?? undefined,
     globalPriceCents: p.globalPriceCents ?? undefined,
-    globalCompareAtCents: p.globalCompareAtCents ?? undefined,
+    effectivePriceCents: local.chargedCents,
+    effectiveGlobalPriceCents: global.chargedCents,
+    discountsByStore: {
+      local: discountBadge(local),
+      global: discountBadge(global),
+    },
     currency: p.currency,
     isActive: p.isActive,
     isPreOrder: p.isPreOrder,
@@ -186,9 +230,14 @@ function toCard(p: ProductRow): ProductCard {
   };
 }
 
-function toDetail(p: ProductRow): ProductDetail {
+function toDetail(
+  p: ProductRow,
+  discounts: DiscountRecord[] = [],
+): ProductDetail {
   return {
-    ...toCard(p),
+    ...toCard(p, discounts),
+    discounts,
+    discountTarget: targetFor(p),
     description: p.description ?? undefined,
     stock: p.stock,
     seoTitle: p.seoTitle ?? undefined,
@@ -283,7 +332,8 @@ export async function getFeaturedProducts(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** Products this store sells immediately (its own buy-now flag). */
@@ -297,7 +347,8 @@ export async function getAvailableNow(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** Products this store sells as a pre-order (its own pre-order flag). */
@@ -311,7 +362,8 @@ export async function getPreOrderProducts(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 export async function getProductsByCategorySlug(
@@ -334,7 +386,8 @@ export async function getProductsByCategorySlug(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 export async function getProductsByBrandSlug(
@@ -348,7 +401,8 @@ export async function getProductsByBrandSlug(
     orderBy: { createdAt: "desc" },
     include,
   })) as ProductRow[];
-  return rows.map(toCard);
+  const discounts = await getLiveDiscounts();
+  return rows.map((row) => toCard(row, discounts));
 }
 
 /** This store's pre-order bucket; buy-now wins when a product has both flags. */
@@ -362,29 +416,30 @@ function listingPreOrderWhere(version: SiteVersion): Prisma.ProductWhereInput {
 }
 
 /**
- * The price facet in whole rupees, matching the storefront's `Math.round`
- * comparison. For the global store the effective price is the global override
- * when it exists, otherwise the local price.
+ * The effective (discounted) price of a card for one store, in minor units.
  */
-function listingPriceWhere(
+function effectivePriceCents(
+  card: ProductCardView,
+  version: SiteVersion,
+): number {
+  return priceForVersion(
+    card.effectivePriceCents,
+    card.effectiveGlobalPriceCents,
+    version,
+  );
+}
+
+/** Whether the card's effective price falls inside the rupee price facet. */
+function inPriceRange(
+  card: ProductCardView,
   filters: CategoryFilters,
   version: SiteVersion,
-): Prisma.ProductWhereInput | null {
-  const min = filters.minRupees;
-  const max = filters.maxRupees;
-  if (min == null && max == null) return null;
-
-  const cents = {
-    ...(min != null ? { gte: min * 100 - 50 } : {}),
-    ...(max != null ? { lte: max * 100 + 49 } : {}),
-  };
-  if (version === "local") return { priceCents: cents };
-  return {
-    OR: [
-      { globalPriceCents: cents },
-      { globalPriceCents: null, priceCents: cents },
-    ],
-  };
+): boolean {
+  const rupees = Math.round(effectivePriceCents(card, version) / 100);
+  return (
+    (filters.minRupees == null || rupees >= filters.minRupees) &&
+    (filters.maxRupees == null || rupees <= filters.maxRupees)
+  );
 }
 
 interface ListingWhereOptions {
@@ -439,9 +494,6 @@ function listingWhere({
   if (includeBrandFilter && filters.brands.length > 0) {
     and.push({ brand: { slug: { in: filters.brands } } });
   }
-
-  const price = listingPriceWhere(filters, version);
-  if (price) and.push(price);
 
   if (includeAvailability && filters.availability.length > 0) {
     const buckets: Prisma.ProductWhereInput[] = [];
@@ -547,6 +599,11 @@ export async function getProductListing({
 }: ProductListingOptions): Promise<ProductListingPage> {
   const size = Math.min(96, Math.max(1, Math.floor(pageSize) || 48));
   const requestedPage = Math.max(1, Math.floor(page) || 1);
+  const discounts = await getLiveDiscounts();
+  const hasPriceFilter =
+    filters.minRupees != null || filters.maxRupees != null;
+  const pricePath =
+    hasPriceFilter || sort === "lowest" || sort === "highest";
   const where = listingWhere({
     categorySlug,
     brandSlug,
@@ -555,51 +612,55 @@ export async function getProductListing({
     version,
   });
 
-  const total = await db.product.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const effectivePage = Math.min(requestedPage, totalPages);
-  const skip = (effectivePage - 1) * size;
+  let cards: ProductCardView[];
+  let total: number;
+  let totalPages: number;
+  let effectivePage: number;
 
-  let rows: ProductRow[];
-  if (sort === "lowest" || sort === "highest") {
-    // Prisma cannot order by COALESCE(global_price_cents, price_cents), so
-    // order the matching ids first and then load just this page's cards.
-    const priceRows = await db.product.findMany({
+  if (pricePath) {
+    // The price facet and price order use the discounted amount, which only
+    // exists after `toCard`, so the SQL predicate cannot express them.
+    // shortcut: price filter/sort loads every matching product; move it into SQL if the catalog passes a few thousand rows.
+    const rows = (await db.product.findMany({
       where,
-      select: { id: true, priceCents: true, globalPriceCents: true },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    });
-    const priceOf = (row: {
-      priceCents: number;
-      globalPriceCents: number | null;
-    }) =>
-      version === "global"
-        ? (row.globalPriceCents ?? row.priceCents)
-        : row.priceCents;
-    priceRows.sort((a, b) =>
-      sort === "lowest" ? priceOf(a) - priceOf(b) : priceOf(b) - priceOf(a),
-    );
-    const pageIds = priceRows.slice(skip, skip + size).map((row) => row.id);
-    if (pageIds.length === 0) {
-      rows = [];
-    } else {
-      const pageRows = (await db.product.findMany({
-        where: { id: { in: pageIds } },
-        include: cardInclude,
-      })) as ProductRow[];
-      const byId = new Map(pageRows.map((row) => [row.id, row]));
-      rows = pageIds
-        .map((id) => byId.get(id))
-        .filter((row): row is ProductRow => Boolean(row));
+      // Keeps the requested name/brand order when only the price filter sent
+      // us down this path; price sorts override it below.
+      orderBy: listingOrderBy(sort),
+      include: cardInclude,
+    })) as ProductRow[];
+    cards = rows.map((row) => toCard(row, discounts));
+    if (hasPriceFilter) {
+      cards = cards.filter((card) => inPriceRange(card, filters, version));
     }
+    if (sort === "lowest" || sort === "highest") {
+      const direction = sort === "lowest" ? 1 : -1;
+      cards.sort(
+        (a, b) =>
+          direction *
+            (effectivePriceCents(a, version) -
+              effectivePriceCents(b, version)) ||
+          (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+      );
+    }
+    total = cards.length;
+    totalPages = Math.max(1, Math.ceil(total / size));
+    effectivePage = Math.min(requestedPage, totalPages);
+    cards = cards.slice(
+      (effectivePage - 1) * size,
+      effectivePage * size,
+    );
   } else {
-    rows = (await db.product.findMany({
+    total = await db.product.count({ where });
+    totalPages = Math.max(1, Math.ceil(total / size));
+    effectivePage = Math.min(requestedPage, totalPages);
+    const rows = (await db.product.findMany({
       where,
       orderBy: listingOrderBy(sort),
-      skip,
+      skip: (effectivePage - 1) * size,
       take: size,
       include: cardInclude,
     })) as ProductRow[];
+    cards = rows.map((row) => toCard(row, discounts));
   }
 
   let brandFacets: BrandFacet[] = [];
@@ -621,14 +682,55 @@ export async function getProductListing({
       version,
       includeAvailability: false,
     });
-    [brandFacets, availabilityFacets] = await Promise.all([
-      listingBrandFacets(withoutBrand),
-      listingAvailabilityFacets(withoutAvailability, version),
-    ]);
+    if (hasPriceFilter) {
+      // Facets must agree with the visible grid, so they are counted from the
+      // same effective-price filter rather than the (price-free) SQL predicate.
+      const [brandRows, availabilityRows] = await Promise.all([
+        db.product.findMany({ where: withoutBrand, include: cardInclude }),
+        db.product.findMany({
+          where: withoutAvailability,
+          include: cardInclude,
+        }),
+      ]);
+      const brandCards = (brandRows as ProductRow[])
+        .map((row) => toCard(row, discounts))
+        .filter((card) => inPriceRange(card, filters, version));
+      const availabilityCards = (availabilityRows as ProductRow[])
+        .map((row) => toCard(row, discounts))
+        .filter((card) => inPriceRange(card, filters, version));
+
+      const brandCounts = new Map<string, BrandFacet>();
+      for (const card of brandCards) {
+        const facet = brandCounts.get(card.brand.slug);
+        if (facet) {
+          facet.count += 1;
+        } else {
+          brandCounts.set(card.brand.slug, {
+            slug: card.brand.slug,
+            name: card.brand.name,
+            count: 1,
+          });
+        }
+      }
+      brandFacets = [...brandCounts.values()].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      for (const card of availabilityCards) {
+        const state = saleStateForVersion(card, version);
+        if (state === "buynow") availabilityFacets.ready += 1;
+        else if (state === "preorder") availabilityFacets.preorder += 1;
+      }
+    } else {
+      [brandFacets, availabilityFacets] = await Promise.all([
+        listingBrandFacets(withoutBrand),
+        listingAvailabilityFacets(withoutAvailability, version),
+      ]);
+    }
   }
 
   return {
-    products: rows.map(toCard),
+    products: cards,
     total,
     page: effectivePage,
     pageSize: size,
@@ -654,10 +756,11 @@ export async function getProductsBySlugs(
     include,
   })) as ProductRow[];
   const bySlug = new Map(rows.map((p) => [p.slug, p]));
+  const discounts = await getLiveDiscounts();
   return slugs
     .map((s) => bySlug.get(s))
     .filter((p): p is ProductRow => Boolean(p))
-    .map(toCard);
+    .map((p) => toCard(p, discounts));
 }
 
 /**
@@ -674,10 +777,11 @@ export async function getProductsByIds(
     include,
   })) as ProductRow[];
   const byId = new Map(rows.map((p) => [p.id, p]));
+  const discounts = await getLiveDiscounts();
   return ids
     .map((id) => byId.get(id))
     .filter((p): p is ProductRow => Boolean(p))
-    .map(toCard);
+    .map((p) => toCard(p, discounts));
 }
 
 /**
@@ -708,5 +812,7 @@ export async function getProductBySlug(
     where: { slug },
     include: detailInclude,
   })) as ProductRow | null;
-  return row ? toDetail(row) : null;
+  if (!row) return null;
+  const discounts = await getLiveDiscounts();
+  return toDetail(row, discounts);
 }

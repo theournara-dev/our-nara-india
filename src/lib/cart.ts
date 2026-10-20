@@ -132,6 +132,10 @@ export function itemPriceForVersion(
  * the line with the same `priceForVersion` chain and must see the same numbers.
  * The currency is the active store's; both stores price in INR. The product's
  * global-store visibility rides along too, so the K-Drop mark stays correct.
+ *
+ * Callers that know the discounted price pass `effectivePriceCents` /
+ * `effectiveGlobalPriceCents`; the line then stores what the shopper is
+ * actually charged rather than the list price.
  */
 export function addProductToCart(
   product: {
@@ -141,6 +145,10 @@ export function addProductToCart(
     images: string[];
     priceCents: number;
     globalPriceCents?: number | null;
+    /** Charged price after discounts for the local store; defaults to `priceCents`. */
+    effectivePriceCents?: number;
+    /** Charged price after discounts for the global store; defaults to `globalPriceCents`. */
+    effectiveGlobalPriceCents?: number;
     globalIsActive?: boolean | null;
     currency: string;
   },
@@ -153,8 +161,11 @@ export function addProductToCart(
     slug: product.slug,
     name: product.name,
     image: product.images[0] ?? "",
-    priceCents: product.priceCents,
-    globalPriceCents: product.globalPriceCents ?? undefined,
+    priceCents: product.effectivePriceCents ?? product.priceCents,
+    globalPriceCents:
+      product.effectiveGlobalPriceCents ??
+      product.globalPriceCents ??
+      undefined,
     globalIsActive: product.globalIsActive ?? undefined,
     currency: getVersionConfig(getActiveVersion()).currency,
     qty,

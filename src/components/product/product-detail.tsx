@@ -7,7 +7,12 @@ import { MdKeyboardArrowLeft, MdKeyboardArrowRight } from "react-icons/md";
 import type { ProductDetail, InfoRow } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { MAX_LINE_QTY } from "@/lib/checkout-rules";
-import { formatMoney, priceForVersion } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
+import {
+  discountBadge,
+  discountBadgeLabel,
+  resolvePrice,
+} from "@/lib/discounts";
 import { notifyAddedToCart } from "@/lib/toast";
 import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
 import { computeShippingCents } from "@/lib/shipping";
@@ -110,24 +115,38 @@ export function ProductDetail({
       });
     }
   }, [activeImage]);
-  // A variant price overrides the product price (and re-bases the discount).
+  // A variant price overrides the product price.
   // The override only engages when the variant has its own local price —
   // createOrder resolves the same way, so the displayed price and the amount
   // charged cannot drift apart. The global amount chains variant → product and
-  // falls back to the local chain when unset (see priceForVersion).
+  // falls back to the local list when unset. Discounts are resolved per store,
+  // so each storefront shows the discount that applies to it.
   const variantOverride =
     selectedVariant?.priceCents != null ? selectedVariant : undefined;
-  const localPrice = variantOverride?.priceCents ?? product.priceCents;
-  const globalPrice = variantOverride
-    ? (variantOverride.globalPriceCents ?? product.globalPriceCents)
-    : product.globalPriceCents;
-  const displayPrice = priceForVersion(localPrice, globalPrice, version);
-  const compareAt =
-    version === "global"
-      ? (product.globalCompareAtCents ?? product.compareAtCents)
-      : product.compareAtCents;
-  const compareAtCents =
-    compareAt != null && compareAt > displayPrice ? compareAt : undefined;
+  const localListCents = variantOverride?.priceCents ?? product.priceCents;
+  const globalListCents = variantOverride
+    ? (variantOverride.globalPriceCents ??
+      product.globalPriceCents ??
+      localListCents)
+    : (product.globalPriceCents ?? product.priceCents);
+  const localResolved = resolvePrice(
+    localListCents,
+    product.discountTarget,
+    product.discounts,
+    "local",
+  );
+  const globalResolved = resolvePrice(
+    globalListCents,
+    product.discountTarget,
+    product.discounts,
+    "global",
+  );
+  const activeResolved = version === "global" ? globalResolved : localResolved;
+  const localPrice = localResolved.chargedCents;
+  const globalPrice = globalResolved.chargedCents;
+  const displayPrice = activeResolved.chargedCents;
+  const listPrice = activeResolved.listCents;
+  const appliedBadge = discountBadge(activeResolved);
   const needsOption = product.variants.length > 0 && !option;
 
   // Coupons whose scope covers this product — a hint, since the real discount
@@ -178,9 +197,14 @@ export function ProductDetail({
 
   function handleBuyNow() {
     // The chosen option's label travels with the line so the cart can show it.
-    // The line stores BOTH stores' prices, so switching store re-prices it.
+    // The line stores BOTH stores' charged prices, so switching store re-prices
+    // it to that store's discount.
     addProductToCart(
-      { ...product, priceCents: localPrice, globalPriceCents: globalPrice },
+      {
+        ...product,
+        effectivePriceCents: localPrice,
+        effectiveGlobalPriceCents: globalPrice,
+      },
       qty,
       option || undefined,
       selectedVariant
@@ -333,17 +357,49 @@ export function ProductDetail({
           )}
 
           {/* Price — the client's slide 1: the amount sits on the right of the
-              row, with the compare-at (original) price beside it. */}
+              row. A discount shows the struck-through list price and the
+              badge that produced the charged amount. */}
           <div className="mt-4 flex items-baseline justify-end gap-2">
-            {compareAtCents != null && (
-              <span className="text-lg text-zinc-400 line-through">
-                {formatMoney(compareAtCents, product.currency)}
+            {listPrice > displayPrice && (
+              <span className="text-sm text-zinc-400 line-through">
+                {formatMoney(listPrice, product.currency)}
               </span>
             )}
             <span className="text-2xl font-semibold text-point-500">
               {formatMoney(displayPrice, product.currency)}
             </span>
+            {appliedBadge && (
+              <span
+                title={appliedBadge.title}
+                className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white"
+              >
+                {discountBadgeLabel(appliedBadge, product.currency)}
+              </span>
+            )}
           </div>
+
+          {/* Every discount this store could apply, worst-last. The one in
+              force is plain; the rest are struck through so the shopper sees
+              the choice that was made. */}
+          {activeResolved.options.length > 1 && (
+            <ul className="mt-2 space-y-0.5 text-right text-xs text-[#666]">
+              {activeResolved.options.map((choice) => (
+                <li
+                  key={choice.discount.id}
+                  className={
+                    choice.discount.id === activeResolved.applied?.id
+                      ? undefined
+                      : "line-through text-zinc-400"
+                  }
+                >
+                  {choice.discount.title} ·{" "}
+                  {choice.discount.type === "PERCENT"
+                    ? `${choice.discount.value}% off`
+                    : `${formatMoney(choice.amountCents, product.currency)} off`}
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* Options — round image swatches, as on the reference. The client's
               slide 1 puts this block straight under the price, before the

@@ -91,6 +91,8 @@ export default async function AccountOrdersPage() {
       optionValue: i.optionValue,
       sku: i.sku,
       priceCents: i.priceCents,
+      listPriceCents: i.listPriceCents,
+      discountTitle: i.discountTitle,
       quantity: i.quantity,
       currency: i.currency,
     })),

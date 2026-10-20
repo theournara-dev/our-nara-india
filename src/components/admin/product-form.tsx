@@ -64,9 +64,7 @@ type Props = {
     shortTags: string[];
     description: string | null;
     priceCents: number;
-    compareAtCents: number | null;
     globalPriceCents: number | null;
-    globalCompareAtCents: number | null;
     /** Product-level stock for variantless products; null = untracked. */
     stock: number | null;
     currency: string;
@@ -201,12 +199,8 @@ function ProductFormInner({
   );
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(toRupees(product?.priceCents));
-  const [compareAt, setCompareAt] = useState(toRupees(product?.compareAtCents));
   const [globalPrice, setGlobalPrice] = useState(
     toRupees(product?.globalPriceCents),
-  );
-  const [globalCompareAt, setGlobalCompareAt] = useState(
-    toRupees(product?.globalCompareAtCents),
   );
   // Empty string = untracked (null). Only used by products without variants.
   const [stock, setStock] = useState(
@@ -424,14 +418,8 @@ function ProductFormInner({
         .filter(Boolean),
       description: description.trim() || undefined,
       priceCents: Math.round((parseFloat(price) || 0) * 100),
-      compareAtCents: compareAt
-        ? Math.round((parseFloat(compareAt) || 0) * 100)
-        : undefined,
       globalPriceCents: globalPrice
         ? Math.round((parseFloat(globalPrice) || 0) * 100)
-        : undefined,
-      globalCompareAtCents: globalCompareAt
-        ? Math.round((parseFloat(globalCompareAt) || 0) * 100)
         : undefined,
       stock:
         stock.trim() === ""
@@ -910,19 +898,6 @@ function ProductFormInner({
               </label>
               <label className="block">
                 <span className={labelCls}>
-                  Compare-at price ({CURRENCY_SYMBOL}, India, optional)
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={compareAt}
-                  onChange={(e) => setCompareAt(e.target.value)}
-                  className={inputCls}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>
                   Price ({CURRENCY_SYMBOL}, International)
                 </span>
                 <input
@@ -937,19 +912,6 @@ function ProductFormInner({
                   Charged on the international store (KDrop). Leave empty to
                   charge the India price.
                 </span>
-              </label>
-              <label className="block">
-                <span className={labelCls}>
-                  Compare-at price ({CURRENCY_SYMBOL}, International, optional)
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={globalCompareAt}
-                  onChange={(e) => setGlobalCompareAt(e.target.value)}
-                  className={inputCls}
-                />
               </label>
               <label className="block">
                 <span className={labelCls}>Stock (optional)</span>

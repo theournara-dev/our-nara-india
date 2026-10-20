@@ -1,6 +1,7 @@
 "use client";
 
 import { createOrder, type CreateOrderInput } from "@/app/actions/orders";
+import { CartChangedError } from "@/lib/cart-quote";
 import { SITE } from "@/lib/constants";
 import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
 
@@ -105,7 +106,7 @@ function cartToken(input: CreateOrderInput): string {
 
 export async function checkoutWithRazorpay(
   input: CreateOrderInput,
-): Promise<{ orderId: string; orderNumber: string }> {
+): Promise<{ orderId: string; orderNumber: string; free: boolean }> {
   // Payments are disabled on this version (e.g. global) — refuse the checkout
   // up front so neither the internal order nor the Razorpay modal is created.
   if (!getVersionConfig(getActiveVersion()).paymentsEnabled) {
@@ -120,9 +121,33 @@ export async function checkoutWithRazorpay(
   // arrive as `ok: false` with a user-safe message.
   const result = await createOrder({ ...input, cartToken: cartToken(input) });
   if (!result.ok) {
+    // A stale cart is not a payment failure: the caller needs the quote to
+    // re-price the cart and let the shopper review it.
+    if (result.code === "CART_CHANGED" && result.quote) {
+      throw new CartChangedError(result.quote);
+    }
     throw new Error(result.message);
   }
   const order = result;
+
+  // A coupon can cover the whole order. Razorpay cannot charge 0, so complete
+  // it server-side instead of opening the payment modal.
+  if (result.totalCents <= 0) {
+    const response = await fetch("/api/orders/free", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: result.orderId }),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.error ?? "Could not complete the free order.");
+    }
+    return {
+      orderId: result.orderId,
+      orderNumber: result.orderNumber,
+      free: true,
+    };
+  }
 
   // 2. Create the Razorpay order.
   const res = await fetch("/api/razorpay/order", {
@@ -203,7 +228,11 @@ export async function checkoutWithRazorpay(
           // the webhook will still reconcile it.
         }
         settled = true;
-        resolve({ orderId: order.orderId, orderNumber: order.orderNumber });
+        resolve({
+          orderId: order.orderId,
+          orderNumber: order.orderNumber,
+          free: false,
+        });
       },
       modal: {
         ondismiss: () => {

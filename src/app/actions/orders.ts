@@ -10,14 +10,19 @@ import {
   validateCheckoutDetails,
 } from "@/lib/checkout-rules";
 import { CheckoutError } from "@/lib/checkout-errors";
-import { resolveCouponForCart } from "@/lib/coupon-store";
+import type { CartQuote, CartQuoteLine } from "@/lib/cart-quote";
+import {
+  resolveCouponForCart,
+  type CouponApplication,
+} from "@/lib/coupon-store";
 import {
   couponCodeFromBilling,
   normalizeCouponCode,
   type CouponCartLine,
 } from "@/lib/coupons";
 import { db } from "@/lib/db";
-import { priceForVersion } from "@/lib/money";
+import { discountTargetFor, resolvePrice } from "@/lib/discounts";
+import { getLiveDiscounts } from "@/lib/discount-store";
 import { computeShippingCents } from "@/lib/shipping";
 import { loadSiteConfig } from "@/lib/site-config";
 import {
@@ -82,11 +87,11 @@ const createOrderInput = z.object({
   postal: requiredText("Postal code is required", 20),
   country: requiredText("Country is required", 120),
   /**
-   * Subtotal the client showed in the cart (from its stored prices). The
-   * server recomputes prices from the DB and refuses when they differ, so the
-   * customer is never charged an amount they didn't see.
+   * The total the cart showed the customer (goods after discounts, coupon and
+   * shipping). The server recomputes prices from the DB and refuses when they
+   * differ, returning a CartQuote so the cart can re-price itself.
    */
-  expectedSubtotalCents: z.coerce.number().int().min(0).optional(),
+  expectedTotalCents: z.coerce.number().int().min(0).optional(),
   /**
    * Client-generated idempotency token (stable per cart contents + details).
    * A retry or double-submit with the same token returns the existing open
@@ -110,8 +115,8 @@ const createOrderInput = z.object({
 export type CreateOrderInput = z.infer<typeof createOrderInput>;
 
 export type CreateOrderResult =
-  | { ok: true; orderId: string; orderNumber: string }
-  | { ok: false; code: string; message: string };
+  | { ok: true; orderId: string; orderNumber: string; totalCents: number }
+  | { ok: false; code: string; message: string; quote?: CartQuote };
 
 export async function createOrder(
   input: CreateOrderInput,
@@ -128,7 +133,13 @@ export async function createOrder(
       };
     }
     if (err instanceof CheckoutError) {
-      return { ok: false, code: err.code, message: err.message };
+      const quote = (err.details as { quote?: CartQuote } | undefined)?.quote;
+      return {
+        ok: false,
+        code: err.code,
+        message: err.message,
+        ...(quote ? { quote } : {}),
+      };
     }
     console.error("createOrder failed:", err);
     return {
@@ -248,6 +259,11 @@ async function createOrderImpl(
       // Scope matching for coupons (brand / category targeted codes).
       brandId: true,
       categoryId: true,
+      // Category ancestry, so category-targeted discounts reach subcategories.
+      category: { select: { id: true, parentId: true } },
+      subcategories: {
+        select: { category: { select: { id: true, parentId: true } } },
+      },
       variants: {
         select: {
           id: true,
@@ -261,6 +277,7 @@ async function createOrderImpl(
     },
   });
   const productById = new Map(products.map((p) => [p.id, p]));
+  const discounts = await getLiveDiscounts();
 
   // Aggregate quantities across cart lines — two lines of the same variant (or
   // variantless product) must be checked against stock COMBINED, not per-line.
@@ -287,6 +304,8 @@ async function createOrderImpl(
     optionValue: string | null;
     sku: string | null;
     priceCents: number;
+    listPriceCents: number | null;
+    discountTitle: string | null;
     quantity: number;
     currency: string;
     hsnCode: string | null;
@@ -299,6 +318,8 @@ async function createOrderImpl(
   }[] = [];
   // The same lines, shaped for the coupon rules (unit price + scope ids).
   const couponLines: CouponCartLine[] = [];
+  // What the cart needs to re-price itself when the expected total is stale.
+  const quoteLines: CartQuoteLine[] = [];
   let subtotalCents = 0;
   let isPreOrder = false;
 
@@ -320,15 +341,11 @@ async function createOrderImpl(
       );
     }
 
-    // Effective unit price: variant price overrides the product base price
+    // List unit price per store: variant price overrides the product base price
     // when the admin set one (see ProductVariant.priceCents). Both stores price
-    // in INR, so `priceForVersion` resolves to the same stored price (the legacy
-    // global USD price is ignored).
-    let unitPriceCents = priceForVersion(
-      product.priceCents,
-      product.globalPriceCents,
-      requestVersion,
-    );
+    // in INR; the legacy global USD column is ignored.
+    let localListCents = product.priceCents;
+    let globalListCents = product.globalPriceCents ?? product.priceCents;
     let optionValue: string | null = null;
     let sku: string | null = null;
     if (item.variantId) {
@@ -353,11 +370,11 @@ async function createOrderImpl(
       optionValue = variant.optionValue;
       sku = variant.sku;
       if (variant.priceCents != null) {
-        unitPriceCents = priceForVersion(
-          variant.priceCents,
-          variant.globalPriceCents ?? product.globalPriceCents,
-          requestVersion,
-        );
+        localListCents = variant.priceCents;
+        globalListCents =
+          variant.globalPriceCents ??
+          product.globalPriceCents ??
+          variant.priceCents;
       }
     } else if (product.stock != null) {
       // Product-level stock (variantless products only; null = untracked).
@@ -369,6 +386,32 @@ async function createOrderImpl(
         );
       }
     }
+
+    // One discount per unit, resolved exactly as the storefront resolved it.
+    // The order charges the request store's price; the quote resolves both
+    // stores so a stale cart can be re-priced whichever store it is viewed in.
+    const target = discountTargetFor({
+      productId: product.id,
+      brandId: product.brandId,
+      categoryId: product.category.id,
+      categoryParentId: product.category.parentId,
+      subcategories: product.subcategories,
+    });
+    const localResolved = resolvePrice(
+      localListCents,
+      target,
+      discounts,
+      "local",
+    );
+    const globalResolved = resolvePrice(
+      globalListCents,
+      target,
+      discounts,
+      "global",
+    );
+    const resolved =
+      requestVersion === "global" ? globalResolved : localResolved;
+    const unitPriceCents = resolved.chargedCents;
 
     subtotalCents += unitPriceCents * item.quantity;
     if (product.isPreOrder) isPreOrder = true;
@@ -382,6 +425,16 @@ async function createOrderImpl(
       isPreOrder: product.isPreOrder,
     });
 
+    quoteLines.push({
+      productId: product.id,
+      variantId: item.variantId ?? null,
+      listPriceCents: localResolved.listCents,
+      chargedPriceCents: localResolved.chargedCents,
+      globalListPriceCents: globalResolved.listCents,
+      globalChargedPriceCents: globalResolved.chargedCents,
+      discountTitle: resolved.applied?.title ?? null,
+    });
+
     orderItems.push({
       productId: product.id,
       variantId: item.variantId ?? null,
@@ -389,6 +442,10 @@ async function createOrderImpl(
       optionValue,
       sku,
       priceCents: unitPriceCents,
+      // Snapshot only when a discount applied: null keeps old orders honest
+      // about never having had one.
+      listPriceCents: resolved.applied ? resolved.listCents : null,
+      discountTitle: resolved.applied?.title ?? null,
       quantity: item.quantity,
       currency: requestConfig.currency,
       hsnCode: product.hsnCode ?? null,
@@ -428,8 +485,12 @@ async function createOrderImpl(
   }
 
   // Coupon: re-validate the code against this cart and the shopper's history.
-  // An ineligible code stops the checkout — quietly dropping it would charge a
-  // different total than the customer approved.
+  // The lines carry the charged (discounted) unit price, so a minimum-order
+  // rule is measured on the discounted subtotal. When the cart sent an expected
+  // total, a code that no longer qualifies is dropped and the quote says why —
+  // the total guard below then asks the shopper to review. Without an expected
+  // total, keep the refusal: quietly dropping it would charge a total the
+  // customer never approved.
   const couponResult = await resolveCouponForCart({
     code: data.couponCode,
     lines: couponLines,
@@ -437,10 +498,39 @@ async function createOrderImpl(
     email: data.email,
     userId,
   });
-  if (!couponResult.ok) {
+  let application: CouponApplication | null;
+  let couponQuote: CartQuote["coupon"];
+  if (couponResult.ok) {
+    application = couponResult.application;
+    couponQuote = application
+      ? {
+          code: normalizeCouponCode(application.coupon.code),
+          valid: true,
+          discountCents: application.evaluation.discountCents,
+          freeShipping: application.evaluation.freeShipping,
+          title: application.coupon.title,
+        }
+      : {
+          code: null,
+          valid: false,
+          discountCents: 0,
+          freeShipping: false,
+          title: null,
+        };
+  } else if (data.expectedTotalCents == null) {
     throw new CheckoutError("COUPON_INVALID", couponResult.reason);
+  } else {
+    // Treated as no coupon for the order: no billing code, no redemption.
+    application = null;
+    couponQuote = {
+      code: data.couponCode ? normalizeCouponCode(data.couponCode) : null,
+      valid: false,
+      reason: couponResult.reason,
+      discountCents: 0,
+      freeShipping: false,
+      title: null,
+    };
   }
-  const application = couponResult.application;
   const discountCents = application?.evaluation.discountCents ?? 0;
 
   // Delivery: the store's flat fee, waived at the free-shipping milestone. The
@@ -457,16 +547,24 @@ async function createOrderImpl(
         });
   const totalCents = payableSubtotalCents + shippingCents;
 
-  // Price guard: the cart displays add-time prices. When the DB no longer
-  // matches, stop BEFORE any payment so nobody is charged a different amount
-  // than the one they saw.
+  // Guard: the cart displays add-time and client-computed totals. When the DB
+  // no longer agrees, stop BEFORE any payment — no order row is written — and
+  // hand the cart the current prices and offer so it can re-price itself.
   if (
-    data.expectedSubtotalCents != null &&
-    data.expectedSubtotalCents !== subtotalCents
+    data.expectedTotalCents != null &&
+    data.expectedTotalCents !== totalCents
   ) {
+    const quote: CartQuote = {
+      lines: quoteLines,
+      subtotalCents,
+      coupon: couponQuote,
+      shippingCents,
+      totalCents,
+    };
     throw new CheckoutError(
-      "PRICE_CHANGED",
-      "Prices have changed since you added these items to your cart. Please review your cart and try again.",
+      "CART_CHANGED",
+      "Prices have changed. Review your updated cart and place the order again.",
+      { quote },
     );
   }
 
@@ -505,9 +603,11 @@ async function createOrderImpl(
 
       // Content re-check: only reuse when every requested item line matches the
       // stored order exactly (guards hash collisions AND stale tokens), and the
-      // stored total still matches today's prices.
+      // stored prices still match today's. A row priced before a discount or
+      // coupon change is abandoned (staff can still see it) rather than reused.
       const sameItems =
         existing &&
+        existing.subtotalCents === subtotalCents &&
         existing.totalCents === totalCents &&
         couponCodeFromBilling(existing.billing) === appliedCouponCode &&
         existing.items.length === data.items.length &&
@@ -595,5 +695,5 @@ async function createOrderImpl(
 
   // Admins are notified from the paid path (runPaidSideEffects) — never at
   // creation, so the support inbox only sees orders that actually paid.
-  return { ok: true, ...result };
+  return { ok: true, ...result, totalCents };
 }

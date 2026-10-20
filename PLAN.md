@@ -51,7 +51,7 @@ Address       id, userId, label, line1/2, city, state, postal, country, isDefaul
 Brand         id, slug, name, logoUrl, description, coverImage, active
 Category      id, slug, name, parentId?, sortOrder
 Product       id, brandId, categoryId, slug, name, summary, shortTags,
-              descriptionHtml, priceCents, compareAtCents, currency, isPreOrder,
+              descriptionHtml, priceCents, currency, isPreOrder,
               isAvailableNow, images[], active, seoTitle/Desc
 ProductOption id, productId, name ("Choose 1 of 6"), values[]  (e.g. shade)
 Stock         productId, optionValue?, quantity, sku, allocated

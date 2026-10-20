@@ -7,7 +7,8 @@ import { useState, useTransition } from "react";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
-import { formatMoney, priceForVersion } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
+import { discountBadgeLabel } from "@/lib/discounts";
 import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { notify, notifyAddedToCart } from "@/lib/toast";
@@ -38,6 +39,16 @@ export function ThemeProductCard({
   // The card answers per store: what this storefront sells (buy-now /
   // pre-order / not yet) and at what price.
   const saleState = saleStateForVersion(product, version);
+  // The card prices per store: the charged (post-discount) amount and the
+  // discount that produced it.
+  const displayPrice =
+    version === "global"
+      ? product.effectiveGlobalPriceCents
+      : product.effectivePriceCents;
+  const badge =
+    version === "global"
+      ? product.discountsByStore.global
+      : product.discountsByStore.local;
   const primaryImage = product.images[0];
   const hoverImage = product.hoverImage ?? primaryImage;
 
@@ -199,11 +210,18 @@ export function ThemeProductCard({
             {product.shortTags.join(" · ")}
           </span>
         )}
-        <span className="block text-[14px] font-bold leading-[19.6px] text-black md:text-[18px] md:leading-[25.2px]">
-          {formatMoney(
-            priceForVersion(product.priceCents, product.globalPriceCents),
-            product.currency,
-          )}
+        <span className="mt-1 flex items-center justify-center gap-1.5">
+          <span className="text-[14px] font-bold leading-[19.6px] text-black md:text-[18px] md:leading-[25.2px]">
+            {formatMoney(displayPrice, product.currency)}
+          </span>
+          {badge ? (
+            <span
+              title={badge.title}
+              className="rounded bg-point-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
+            >
+              {discountBadgeLabel(badge, product.currency)}
+            </span>
+          ) : null}
         </span>
       </div>
     </>

@@ -168,6 +168,7 @@ model Brand {
   // "brand-section" banners: the promo row shown above this brand's home row
   // (client slides 5–6).
   banners  Banner[]
+  discounts Discount[]
 
   @@map("brands")
 }
@@ -196,6 +197,7 @@ model Category {
   products         Product[]
   subcategoryLinks ProductSubcategory[]
   banners          Banner[]
+  discounts        Discount[]
 
   @@index([parentId])
   @@map("categories")
@@ -233,8 +235,6 @@ model Product {
   // global store only. Nullable until admins set it; the global store then
   // falls back to the local price (see src/lib/money.ts priceForVersion).
   globalPriceCents Int?   @map("global_price_cents")
-  compareAtCents Int?     @map("compare_at_cents")
-  globalCompareAtCents Int? @map("global_compare_at_cents")
   currency       String   @default("INR")
   // ── Per-store sale state ──────────────────────────────────────────
   // Every product answers the same four questions per store — price, show,
@@ -293,6 +293,7 @@ model Product {
   preorders   Preorder[]
   wishlist    WishlistItem[]
   recentViews RecentView[]
+  discounts   Discount[]
 
   @@index([brandId])
   @@index([categoryId])
@@ -485,6 +486,11 @@ model OrderItem {
   cgstCents         Int? @map("cgst_cents")
   sgstCents         Int? @map("sgst_cents")
   igstCents         Int? @map("igst_cents")
+  // Price before the discount and the discount's customer-facing title, frozen
+  // at checkout. No FK: an order keeps the offer it was charged even after the
+  // discount row is edited or softly deleted.
+  listPriceCents    Int? @map("list_price_cents")
+  discountTitle     String? @map("discount_title")
 
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
@@ -660,6 +666,18 @@ enum CouponScope {
   PRODUCT
 }
 
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
+enum DiscountScope {
+  ALL
+  BRAND
+  CATEGORY
+  PRODUCT
+}
+
 model Coupon {
   id            String     @id @default(cuid())
   code          String     @unique
@@ -715,6 +733,39 @@ model CouponRedemption {
   @@index([userId])
   @@index([email])
   @@map("coupon_redemptions")
+}
+
+// An admin-run discount on one product, one brand's products, one category's
+// products, or the whole catalog. Unlike a coupon it needs no code: the store
+// resolves and applies it automatically. Deleted softly (deletedAt) so order
+// history and old admin links keep working.
+model Discount {
+  id          String        @id @default(cuid())
+  title       String
+  adminNote   String?       @map("admin_note")
+  type        DiscountType
+  value       Int // percent (0-100) or amount in paise
+  scope       DiscountScope @default(ALL)
+  brandId     String?       @map("brand_id")
+  categoryId  String?       @map("category_id")
+  productId   String?       @map("product_id")
+  siteVersion String        @default("all") @map("site_version")
+  startsAt    DateTime?     @map("starts_at")
+  endsAt      DateTime?     @map("ends_at")
+  isActive    Boolean       @default(true) @map("is_active")
+  deletedAt   DateTime?     @map("deleted_at")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  brand    Brand?    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  product  Product?  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([siteVersion, deletedAt])
+  @@index([productId])
+  @@index([brandId])
+  @@index([categoryId])
+  @@map("discounts")
 }
 
 // Append-only ledger so a user's running balance can always be reconstructed

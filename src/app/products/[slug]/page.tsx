@@ -103,8 +103,8 @@ export default async function ProductPage({
   // The JSON-LD must describe what THIS store sells: the store's own price,
   // pre-order state and buy-now state.
   const priceCents = priceForVersion(
-    product.priceCents,
-    product.globalPriceCents,
+    product.effectivePriceCents,
+    product.effectiveGlobalPriceCents,
     version,
   );
   const isInStock = product.variants.length
