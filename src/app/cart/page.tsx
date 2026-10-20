@@ -34,6 +34,17 @@ import { useSiteVersion } from "@/components/site-version-provider";
 import { visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 
+/** Identifies the cart a server-quoted shipping figure was computed for. */
+function cartKey(
+  items: { productId: string; option?: string; qty: number }[],
+  couponCode: string | null | undefined,
+  version: string,
+) {
+  return `${version}|${couponCode ?? ""}|${items
+    .map((i) => `${i.productId}|${i.option ?? ""}|${i.qty}`)
+    .join(",")}`;
+}
+
 export default function CartPage() {
   const { version, config, shipping } = useSiteVersion();
   const { paymentsEnabled } = config;
@@ -49,6 +60,12 @@ export default function CartPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(
     null,
   );
+  // The server's shipping figure after a CART_CHANGED quote. It outranks the
+  // page-load settings until the cart, coupon or store changes again.
+  const [quotedShipping, setQuotedShipping] = useState<{
+    cents: number;
+    key: string;
+  } | null>(null);
 
   const subtotalCents = items.reduce(
     (s, i) => s + itemPriceForVersion(i, version) * i.qty,
@@ -59,9 +76,13 @@ export default function CartPage() {
   // The fee is measured on what the customer pays for goods (after the coupon),
   // and a shipping coupon waives it outright. Same arithmetic as createOrder.
   const payableSubtotalCents = Math.max(0, subtotalCents - discountCents);
-  const shippingCents = appliedCoupon?.freeShipping
-    ? 0
-    : computeShippingCents(payableSubtotalCents, shipping);
+  const currentKey = cartKey(items, appliedCoupon?.code, version);
+  const shippingCents =
+    quotedShipping?.key === currentKey
+      ? quotedShipping.cents
+      : appliedCoupon?.freeShipping
+        ? 0
+        : computeShippingCents(payableSubtotalCents, shipping);
   const totalCents = payableSubtotalCents + shippingCents;
 
   async function placeOrder(documentUrlOverride?: string) {
@@ -134,8 +155,8 @@ export default function CartPage() {
       // A stale total is not a failure: take the server's quote, re-price the
       // cart and let the shopper review it. Never auto-retry.
       if (err instanceof CartChangedError) {
-        setCart(applyQuote(items, err.quote));
-        setAppliedCoupon(
+        const nextItems = applyQuote(items, err.quote);
+        const nextCoupon =
           err.quote.coupon.valid && err.quote.coupon.code
             ? {
                 code: err.quote.coupon.code,
@@ -143,12 +164,23 @@ export default function CartPage() {
                 freeShipping: err.quote.coupon.freeShipping,
                 title: err.quote.coupon.title,
               }
-            : null,
-        );
+            : null;
+        setCart(nextItems);
+        setAppliedCoupon(nextCoupon);
+        setQuotedShipping({
+          cents: err.quote.shippingCents,
+          key: cartKey(nextItems, nextCoupon?.code, version),
+        });
+        const droppedCoupon =
+          !err.quote.coupon.valid && err.quote.coupon.code
+            ? `${err.quote.coupon.code} is no longer valid: ${
+                err.quote.coupon.reason ?? "the offer has ended"
+              }. `
+            : "";
         notify.info(
           id,
           "Cart prices changed",
-          "We updated your cart with the current prices and offers. Review the total, then place your order again.",
+          `${droppedCoupon}We updated your cart with the current prices and offers. Review the total, then place your order again.`,
         );
         return;
       }

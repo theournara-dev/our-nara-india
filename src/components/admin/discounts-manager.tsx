@@ -229,12 +229,17 @@ export function DiscountsManager({
 
   function onToggle(row: AdminDiscountRow) {
     startTransition(async () => {
+      const toastId = notify.loading("Updating discount…");
       const res = await setDiscountActive(row.id, !row.isActive);
       if (!res.ok) {
-        notify.error("Update failed", res.message);
+        notify.error(toastId, "Update failed", res.message);
         return;
       }
-      notify.success(row.isActive ? "Discount paused" : "Discount resumed", row.title);
+      notify.success(
+        toastId,
+        row.isActive ? "Discount paused" : "Discount resumed",
+        row.title,
+      );
       router.refresh();
     });
   }
