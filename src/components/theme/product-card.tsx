@@ -210,7 +210,7 @@ export function ThemeProductCard({
             {product.shortTags.join(" · ")}
           </span>
         )}
-        <span className="mt-1 flex items-center justify-center gap-1.5">
+        <span className="mt-1 flex items-center gap-1.5">
           <span className="text-[14px] font-bold leading-[19.6px] text-black md:text-[18px] md:leading-[25.2px]">
             {formatMoney(displayPrice, product.currency)}
           </span>
