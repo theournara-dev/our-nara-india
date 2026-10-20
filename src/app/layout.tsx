@@ -14,6 +14,7 @@ import { SiteVersionProvider } from "@/components/site-version-provider";
 import { getCategoryNav } from "@/data/categories";
 import { SITE } from "@/lib/constants";
 import { getSiteConfig } from "@/lib/site-config";
+import { discountBadgeVars } from "@/lib/discount-badge-style";
 import { topBannerBackgroundCss } from "@/lib/site-content";
 import { getSiteUrl, resolveRequestSiteVersion } from "@/lib/site-version";
 import "./globals.css";
@@ -116,7 +117,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       {/* The fixed mobile tab bar sits over the page, so the body keeps a
           matching bottom padding on phones or it would cover the footer. */}
-      <body className="flex min-h-full flex-col overflow-x-clip max-md:pb-[calc(58px+env(safe-area-inset-bottom))]">
+      <body
+        style={discountBadgeVars(siteContent.discountBadge)}
+        className="flex min-h-full flex-col overflow-x-clip max-md:pb-[calc(58px+env(safe-area-inset-bottom))]"
+      >
         <SiteVersionProvider
           initialVersion={initialVersion}
           shippingByVersion={shippingByVersion}

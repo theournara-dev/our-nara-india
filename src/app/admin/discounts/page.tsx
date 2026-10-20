@@ -5,12 +5,13 @@ import {
 } from "@/components/admin/discounts-manager";
 import { db } from "@/lib/db";
 import { discountStatus } from "@/lib/discounts";
+import { getSiteConfig } from "@/lib/site-config";
 
 export const dynamic = "force-dynamic";
 
 /** Discount management: the list, the editor, and every target to pick from. */
 export default async function AdminDiscountsPage() {
-  const [discounts, brands, categories, products] = await Promise.all([
+  const [discounts, brands, categories, products, site] = await Promise.all([
     db.discount.findMany({ orderBy: [{ createdAt: "desc" }] }),
     db.brand.findMany({
       orderBy: { name: "asc" },
@@ -24,6 +25,8 @@ export default async function AdminDiscountsPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    // The badge look is shared by both stores, so either row carries it.
+    getSiteConfig("local"),
   ]);
 
   const brandNames = new Map(brands.map((brand) => [brand.id, brand.name]));
@@ -75,6 +78,7 @@ export default async function AdminDiscountsPage() {
       brands={brandOptions}
       categories={categoryOptions}
       products={productOptions}
+      badgeStyle={site.discountBadge}
     />
   );
 }

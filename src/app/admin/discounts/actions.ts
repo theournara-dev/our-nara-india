@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { normalizeDiscountBadgeStyle } from "@/lib/discount-badge-style";
 import type { DiscountScope } from "@/lib/discounts";
 import { parseInput, safeMultiline, safeText } from "@/lib/validation";
 
@@ -162,6 +164,36 @@ export async function saveDiscount(
     console.error("[discounts] save failed:", err);
     return { ok: false, message: "Could not save this discount." };
   }
+}
+
+/**
+ * Save the discount badge's look. It is storefront furniture shared by both
+ * stores, so it is written to every version's row (like the store picker).
+ * The normalizer clamps each value, so a hand-rolled payload can't store a
+ * size the price row can't hold.
+ */
+export async function saveDiscountBadgeStyle(
+  input: unknown,
+): Promise<DiscountActionResult> {
+  await requireAdmin();
+  const style = normalizeDiscountBadgeStyle(input) as Prisma.InputJsonValue;
+  try {
+    // One transaction: the stores must never end up with different badges.
+    await db.$transaction(
+      (["local", "global"] as const).map((version) =>
+        db.siteConfig.upsert({
+          where: { version },
+          create: { version, discountBadgeStyle: style },
+          update: { discountBadgeStyle: style },
+        }),
+      ),
+    );
+  } catch (err) {
+    console.error("[discounts] badge style save failed:", err);
+    return { ok: false, message: "Could not save the badge style." };
+  }
+  revalidateDiscountPages();
+  return { ok: true, id: "discount-badge" };
 }
 
 /** Pause or resume a live discount without losing its configuration. */

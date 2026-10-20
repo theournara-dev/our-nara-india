@@ -1110,6 +1110,9 @@ model SiteConfig {
   menuIcons Json? @map("menu_icons")
   // The store-picker popup: heading, note and one block per store.
   switcher  Json?
+  // The discount badge's look (colours, size, weight, radius, padding), edited
+  // from /admin/discounts. Written to both rows so the two stores match.
+  discountBadgeStyle Json? @map("discount_badge_style")
   // /brands: the directory's own blocks (client's slide 6): the preview grid's
   // tile height, columns and rows, the long banner above the group tabs (one
   // banner per column, up to three — the same strip the category pages use) and

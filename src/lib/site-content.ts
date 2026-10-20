@@ -1,4 +1,9 @@
 import type { SiteVersion } from "@/lib/site-version";
+import {
+  DEFAULT_DISCOUNT_BADGE_STYLE,
+  normalizeDiscountBadgeStyle,
+  type DiscountBadgeStyle,
+} from "@/lib/discount-badge-style";
 import { DEFAULT_GST_BPS, clampBps } from "@/lib/tax";
 
 /**
@@ -177,6 +182,8 @@ export type SiteContent = {
    * Each row is an icon key or `{ icon?, image? }`; see `menu-icons.ts`.
    */
   menuIcons: MenuIconRecord;
+  /** The sale badge's look, shared by both stores (edited on /admin/discounts). */
+  discountBadge: DiscountBadgeStyle;
 };
 
 /** One menu row's stored icon: the first round's flat value, or `{ icon, image }`. */
@@ -292,6 +299,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
     menuIcons: {},
+    discountBadge: DEFAULT_DISCOUNT_BADGE_STYLE,
     taxRates: DEFAULT_TAX_RATES,
   },
   global: {
@@ -315,6 +323,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     switcher: DEFAULT_SWITCHER,
     brandsPage: DEFAULT_BRANDS_PAGE,
     menuIcons: {},
+    discountBadge: DEFAULT_DISCOUNT_BADGE_STYLE,
     taxRates: DEFAULT_TAX_RATES,
   },
 };
@@ -542,6 +551,7 @@ export function siteContentFromRow(
     topBanner: unknown;
     switcher: unknown;
     menuIcons: unknown;
+    discountBadgeStyle?: unknown;
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
@@ -580,6 +590,8 @@ export function siteContentFromRow(
         : normalizeTopBanner(row.topBanner, []),
     switcher: normalizeSwitcher(row.switcher, base.switcher),
     menuIcons: normalizeMenuIcons(row.menuIcons),
+    // One badge look for both stores; an unset row keeps the original style.
+    discountBadge: normalizeDiscountBadgeStyle(row.discountBadgeStyle),
     // The /brands preview grid, clamped to sane ranges; anything missing falls
     // back to the defaults (100px tiles, 4 columns × 2 rows).
     brandsPage: {

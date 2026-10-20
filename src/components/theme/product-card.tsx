@@ -215,10 +215,7 @@ export function ThemeProductCard({
             {formatMoney(displayPrice, product.currency)}
           </span>
           {badge ? (
-            <span
-              title={badge.title}
-              className="rounded bg-point-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
-            >
+            <span title={badge.title} className="discount-badge">
               {discountBadgeLabel(badge, product.currency)}
             </span>
           ) : null}

@@ -369,10 +369,7 @@ export function ProductDetail({
               {formatMoney(displayPrice, product.currency)}
             </span>
             {appliedBadge && (
-              <span
-                title={appliedBadge.title}
-                className="rounded bg-point-500 px-2 py-0.5 text-[11px] font-semibold text-white"
-              >
+              <span title={appliedBadge.title} className="discount-badge">
                 {discountBadgeLabel(appliedBadge, product.currency)}
               </span>
             )}

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import { DiscountBadgeStyleEditor } from "@/components/admin/discount-badge-style";
 import {
   hardDeleteDiscount,
   saveDiscount,
@@ -10,6 +11,7 @@ import {
   softDeleteDiscount,
 } from "@/app/admin/discounts/actions";
 import { formatDateTime, toDatetimeLocal } from "@/lib/datetime";
+import type { DiscountBadgeStyle } from "@/lib/discount-badge-style";
 import type {
   DiscountScope,
   DiscountStatus,
@@ -180,14 +182,18 @@ export function DiscountsManager({
   brands,
   categories,
   products,
+  badgeStyle,
 }: {
   discounts: AdminDiscountRow[];
   brands: TargetOption[];
   categories: TargetOption[];
   products: TargetOption[];
+  /** The badge's saved look, edited in the panel above the list. */
+  badgeStyle: DiscountBadgeStyle;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<FormState | null>(null);
+  const [badgeOpen, setBadgeOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [confirm, setConfirm] = useState<ConfirmTarget | null>(null);
 
@@ -290,15 +296,32 @@ export function DiscountsManager({
             at checkout — the best one for each item wins.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setForm(EMPTY_FORM)}
-          disabled={pending}
-          className={saveBtnCls}
-        >
-          New discount
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setBadgeOpen((open) => !open)}
+            disabled={pending}
+            className="h-9 rounded border border-zinc-200 px-4 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:opacity-60"
+          >
+            {badgeOpen ? "Hide badge style" : "Badge style"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setForm(EMPTY_FORM)}
+            disabled={pending}
+            className={saveBtnCls}
+          >
+            New discount
+          </button>
+        </div>
       </div>
+
+      {badgeOpen && (
+        <DiscountBadgeStyleEditor
+          initial={badgeStyle}
+          onClose={() => setBadgeOpen(false)}
+        />
+      )}
 
       {form && (
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">

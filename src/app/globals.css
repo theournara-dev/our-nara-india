@@ -93,6 +93,21 @@ body {
 }
 
 /*
+ * Sale badge on product cards and product pages. The look is edited at
+ * /admin/discounts; the root layout sets these variables on <body>, the admin
+ * preview sets the same ones, so both render the identical rule.
+ */
+.discount-badge {
+  background: var(--discount-badge-bg, #6f2dbd);
+  color: var(--discount-badge-color, #ffffff);
+  font-size: var(--discount-badge-font-size, 11px);
+  font-weight: var(--discount-badge-font-weight, 600);
+  border-radius: var(--discount-badge-radius, 4px);
+  padding: var(--discount-badge-pad-y, 2px) var(--discount-badge-pad-x, 6px);
+  line-height: 1;
+}
+
+/*
  * Slider progress bars (hero + product carousels).
  * Swiper's default fill is blue; the original theme uses a dark track with a
  * black fill. These unlayered rules override Swiper's defaults.
