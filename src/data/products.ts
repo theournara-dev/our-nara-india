@@ -84,9 +84,7 @@ type ProductRow = {
   description: string | null;
   stock: number | null;
   priceCents: number;
-  compareAtCents: number | null;
   globalPriceCents: number | null;
-  globalCompareAtCents: number | null;
   currency: string;
   isPreOrder: boolean;
   globalIsPreOrder: boolean;
@@ -166,9 +164,7 @@ function toCard(p: ProductRow): ProductCard {
     summary: p.summary ?? undefined,
     shortTags: p.shortTags,
     priceCents: p.priceCents,
-    compareAtCents: p.compareAtCents ?? undefined,
     globalPriceCents: p.globalPriceCents ?? undefined,
-    globalCompareAtCents: p.globalCompareAtCents ?? undefined,
     currency: p.currency,
     isActive: p.isActive,
     isPreOrder: p.isPreOrder,

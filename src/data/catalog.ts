@@ -33,10 +33,8 @@ export interface StaticProduct {
   shortTags: string[];
   description?: string;
   priceCents: number;
-  compareAtCents?: number;
   /** International-store price in minor units (INR). Unset falls back to the local price. */
   globalPriceCents?: number;
-  globalCompareAtCents?: number;
   currency: string;
   isPreOrder: boolean;
   preOrderNotice?: string;
@@ -54,13 +52,11 @@ export interface ProductCardView {
   summary?: string;
   shortTags: string[];
   priceCents: number;
-  compareAtCents?: number;
   /**
    * International-store price in minor units (INR, like `priceCents`). The
    * global store charges this amount; unset falls back to the local price.
    */
   globalPriceCents?: number;
-  globalCompareAtCents?: number;
   currency: string;
   /**
    * Per-store sale state (see src/lib/product-flags.ts). The plain fields are
@@ -700,7 +696,6 @@ export function toCardView(p: StaticProduct): ProductCardView {
     summary: p.summary,
     shortTags: p.shortTags,
     priceCents: p.priceCents,
-    compareAtCents: p.compareAtCents,
     currency: p.currency,
     isActive: true,
     isPreOrder: p.isPreOrder,

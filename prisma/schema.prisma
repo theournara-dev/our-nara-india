@@ -233,8 +233,6 @@ model Product {
   // global store only. Nullable until admins set it; the global store then
   // falls back to the local price (see src/lib/money.ts priceForVersion).
   globalPriceCents Int?   @map("global_price_cents")
-  compareAtCents Int?     @map("compare_at_cents")
-  globalCompareAtCents Int? @map("global_compare_at_cents")
   currency       String   @default("INR")
   // ── Per-store sale state ──────────────────────────────────────────
   // Every product answers the same four questions per store — price, show,

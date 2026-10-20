@@ -110,7 +110,7 @@ export function ProductDetail({
       });
     }
   }, [activeImage]);
-  // A variant price overrides the product price (and re-bases the discount).
+  // A variant price overrides the product price.
   // The override only engages when the variant has its own local price —
   // createOrder resolves the same way, so the displayed price and the amount
   // charged cannot drift apart. The global amount chains variant → product and
@@ -122,12 +122,6 @@ export function ProductDetail({
     ? (variantOverride.globalPriceCents ?? product.globalPriceCents)
     : product.globalPriceCents;
   const displayPrice = priceForVersion(localPrice, globalPrice, version);
-  const compareAt =
-    version === "global"
-      ? (product.globalCompareAtCents ?? product.compareAtCents)
-      : product.compareAtCents;
-  const compareAtCents =
-    compareAt != null && compareAt > displayPrice ? compareAt : undefined;
   const needsOption = product.variants.length > 0 && !option;
 
   // Coupons whose scope covers this product — a hint, since the real discount
@@ -333,13 +327,8 @@ export function ProductDetail({
           )}
 
           {/* Price — the client's slide 1: the amount sits on the right of the
-              row, with the compare-at (original) price beside it. */}
+              row. */}
           <div className="mt-4 flex items-baseline justify-end gap-2">
-            {compareAtCents != null && (
-              <span className="text-lg text-zinc-400 line-through">
-                {formatMoney(compareAtCents, product.currency)}
-              </span>
-            )}
             <span className="text-2xl font-semibold text-point-500">
               {formatMoney(displayPrice, product.currency)}
             </span>
