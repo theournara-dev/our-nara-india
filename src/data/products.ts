@@ -8,6 +8,8 @@ import {
   type DiscountTarget,
 } from "@/lib/discounts";
 import { getLiveDiscounts } from "@/lib/discount-store";
+import { priceForVersion } from "@/lib/money";
+import { saleStateForVersion } from "@/lib/product-flags";
 import type { SiteVersion } from "@/lib/site-version";
 import type { Prisma } from "@/generated/prisma/client";
 import type { CategoryFilters } from "@/lib/category-filters";
@@ -414,29 +416,30 @@ function listingPreOrderWhere(version: SiteVersion): Prisma.ProductWhereInput {
 }
 
 /**
- * The price facet in whole rupees, matching the storefront's `Math.round`
- * comparison. For the global store the effective price is the global override
- * when it exists, otherwise the local price.
+ * The effective (discounted) price of a card for one store, in minor units.
  */
-function listingPriceWhere(
+function effectivePriceCents(
+  card: ProductCardView,
+  version: SiteVersion,
+): number {
+  return priceForVersion(
+    card.effectivePriceCents,
+    card.effectiveGlobalPriceCents,
+    version,
+  );
+}
+
+/** Whether the card's effective price falls inside the rupee price facet. */
+function inPriceRange(
+  card: ProductCardView,
   filters: CategoryFilters,
   version: SiteVersion,
-): Prisma.ProductWhereInput | null {
-  const min = filters.minRupees;
-  const max = filters.maxRupees;
-  if (min == null && max == null) return null;
-
-  const cents = {
-    ...(min != null ? { gte: min * 100 - 50 } : {}),
-    ...(max != null ? { lte: max * 100 + 49 } : {}),
-  };
-  if (version === "local") return { priceCents: cents };
-  return {
-    OR: [
-      { globalPriceCents: cents },
-      { globalPriceCents: null, priceCents: cents },
-    ],
-  };
+): boolean {
+  const rupees = Math.round(effectivePriceCents(card, version) / 100);
+  return (
+    (filters.minRupees == null || rupees >= filters.minRupees) &&
+    (filters.maxRupees == null || rupees <= filters.maxRupees)
+  );
 }
 
 interface ListingWhereOptions {
@@ -491,9 +494,6 @@ function listingWhere({
   if (includeBrandFilter && filters.brands.length > 0) {
     and.push({ brand: { slug: { in: filters.brands } } });
   }
-
-  const price = listingPriceWhere(filters, version);
-  if (price) and.push(price);
 
   if (includeAvailability && filters.availability.length > 0) {
     const buckets: Prisma.ProductWhereInput[] = [];
@@ -599,6 +599,11 @@ export async function getProductListing({
 }: ProductListingOptions): Promise<ProductListingPage> {
   const size = Math.min(96, Math.max(1, Math.floor(pageSize) || 48));
   const requestedPage = Math.max(1, Math.floor(page) || 1);
+  const discounts = await getLiveDiscounts();
+  const hasPriceFilter =
+    filters.minRupees != null || filters.maxRupees != null;
+  const pricePath =
+    hasPriceFilter || sort === "lowest" || sort === "highest";
   const where = listingWhere({
     categorySlug,
     brandSlug,
@@ -607,51 +612,55 @@ export async function getProductListing({
     version,
   });
 
-  const total = await db.product.count({ where });
-  const totalPages = Math.max(1, Math.ceil(total / size));
-  const effectivePage = Math.min(requestedPage, totalPages);
-  const skip = (effectivePage - 1) * size;
+  let cards: ProductCardView[];
+  let total: number;
+  let totalPages: number;
+  let effectivePage: number;
 
-  let rows: ProductRow[];
-  if (sort === "lowest" || sort === "highest") {
-    // Prisma cannot order by COALESCE(global_price_cents, price_cents), so
-    // order the matching ids first and then load just this page's cards.
-    const priceRows = await db.product.findMany({
+  if (pricePath) {
+    // The price facet and price order use the discounted amount, which only
+    // exists after `toCard`, so the SQL predicate cannot express them.
+    // shortcut: price filter/sort loads every matching product; move it into SQL if the catalog passes a few thousand rows.
+    const rows = (await db.product.findMany({
       where,
-      select: { id: true, priceCents: true, globalPriceCents: true },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-    });
-    const priceOf = (row: {
-      priceCents: number;
-      globalPriceCents: number | null;
-    }) =>
-      version === "global"
-        ? (row.globalPriceCents ?? row.priceCents)
-        : row.priceCents;
-    priceRows.sort((a, b) =>
-      sort === "lowest" ? priceOf(a) - priceOf(b) : priceOf(b) - priceOf(a),
-    );
-    const pageIds = priceRows.slice(skip, skip + size).map((row) => row.id);
-    if (pageIds.length === 0) {
-      rows = [];
-    } else {
-      const pageRows = (await db.product.findMany({
-        where: { id: { in: pageIds } },
-        include: cardInclude,
-      })) as ProductRow[];
-      const byId = new Map(pageRows.map((row) => [row.id, row]));
-      rows = pageIds
-        .map((id) => byId.get(id))
-        .filter((row): row is ProductRow => Boolean(row));
+      // Keeps the requested name/brand order when only the price filter sent
+      // us down this path; price sorts override it below.
+      orderBy: listingOrderBy(sort),
+      include: cardInclude,
+    })) as ProductRow[];
+    cards = rows.map((row) => toCard(row, discounts));
+    if (hasPriceFilter) {
+      cards = cards.filter((card) => inPriceRange(card, filters, version));
     }
+    if (sort === "lowest" || sort === "highest") {
+      const direction = sort === "lowest" ? 1 : -1;
+      cards.sort(
+        (a, b) =>
+          direction *
+            (effectivePriceCents(a, version) -
+              effectivePriceCents(b, version)) ||
+          (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+      );
+    }
+    total = cards.length;
+    totalPages = Math.max(1, Math.ceil(total / size));
+    effectivePage = Math.min(requestedPage, totalPages);
+    cards = cards.slice(
+      (effectivePage - 1) * size,
+      effectivePage * size,
+    );
   } else {
-    rows = (await db.product.findMany({
+    total = await db.product.count({ where });
+    totalPages = Math.max(1, Math.ceil(total / size));
+    effectivePage = Math.min(requestedPage, totalPages);
+    const rows = (await db.product.findMany({
       where,
       orderBy: listingOrderBy(sort),
-      skip,
+      skip: (effectivePage - 1) * size,
       take: size,
       include: cardInclude,
     })) as ProductRow[];
+    cards = rows.map((row) => toCard(row, discounts));
   }
 
   let brandFacets: BrandFacet[] = [];
@@ -673,15 +682,55 @@ export async function getProductListing({
       version,
       includeAvailability: false,
     });
-    [brandFacets, availabilityFacets] = await Promise.all([
-      listingBrandFacets(withoutBrand),
-      listingAvailabilityFacets(withoutAvailability, version),
-    ]);
+    if (hasPriceFilter) {
+      // Facets must agree with the visible grid, so they are counted from the
+      // same effective-price filter rather than the (price-free) SQL predicate.
+      const [brandRows, availabilityRows] = await Promise.all([
+        db.product.findMany({ where: withoutBrand, include: cardInclude }),
+        db.product.findMany({
+          where: withoutAvailability,
+          include: cardInclude,
+        }),
+      ]);
+      const brandCards = (brandRows as ProductRow[])
+        .map((row) => toCard(row, discounts))
+        .filter((card) => inPriceRange(card, filters, version));
+      const availabilityCards = (availabilityRows as ProductRow[])
+        .map((row) => toCard(row, discounts))
+        .filter((card) => inPriceRange(card, filters, version));
+
+      const brandCounts = new Map<string, BrandFacet>();
+      for (const card of brandCards) {
+        const facet = brandCounts.get(card.brand.slug);
+        if (facet) {
+          facet.count += 1;
+        } else {
+          brandCounts.set(card.brand.slug, {
+            slug: card.brand.slug,
+            name: card.brand.name,
+            count: 1,
+          });
+        }
+      }
+      brandFacets = [...brandCounts.values()].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      for (const card of availabilityCards) {
+        const state = saleStateForVersion(card, version);
+        if (state === "buynow") availabilityFacets.ready += 1;
+        else if (state === "preorder") availabilityFacets.preorder += 1;
+      }
+    } else {
+      [brandFacets, availabilityFacets] = await Promise.all([
+        listingBrandFacets(withoutBrand),
+        listingAvailabilityFacets(withoutAvailability, version),
+      ]);
+    }
   }
 
-  const discounts = await getLiveDiscounts();
   return {
-    products: rows.map((row) => toCard(row, discounts)),
+    products: cards,
     total,
     page: effectivePage,
     pageSize: size,
