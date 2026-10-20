@@ -88,8 +88,8 @@ export default async function AccountWishlistPage() {
                 <span className="mt-2 text-sm font-bold text-black">
                   {formatMoney(
                     priceForVersion(
-                      product.priceCents,
-                      product.globalPriceCents,
+                      product.effectivePriceCents,
+                      product.effectiveGlobalPriceCents,
                     ),
                     product.currency,
                   )}

@@ -150,7 +150,10 @@ function TripleBannerProduct({ product }: { product: ProductCardType }) {
         )}
         <span className="price">
           {formatMoney(
-            priceForVersion(product.priceCents, product.globalPriceCents),
+            priceForVersion(
+              product.effectivePriceCents,
+              product.effectiveGlobalPriceCents,
+            ),
             product.currency,
           )}
         </span>
