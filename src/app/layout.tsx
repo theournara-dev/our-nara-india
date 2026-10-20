@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_KR, Playfair_Display, Poppins } from "next/font/google";
 import { headers } from "next/headers";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/next";
 import { Footer } from "@/components/layout/footer";
 import { FloatingButtons } from "@/components/layout/floating-buttons";
 import { Header } from "@/components/layout/header";
@@ -145,6 +146,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         </SiteVersionProvider>
         <Toaster richColors position="top-center" />
         <ContactDialogHost />
+        <Analytics
+          beforeSend={(event) =>
+            event.url.includes("/admin") ? null : event
+          }
+        />
       </body>
     </html>
   );
