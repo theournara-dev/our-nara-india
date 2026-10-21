@@ -19,7 +19,10 @@ import { getActiveVersion, getVersionConfig } from "@/lib/site-version";
 
 declare global {
   interface Window {
-    Razorpay?: new (options: RazorpayCheckoutOptions) => { open: () => void };
+    Razorpay?: new (options: RazorpayCheckoutOptions) => {
+      open: () => void;
+      close: () => void;
+    };
   }
 }
 
@@ -185,6 +188,7 @@ export async function checkoutWithRazorpay(
 
   return new Promise((resolve, reject) => {
     let settled = false;
+    let checkout: { open: () => void; close: () => void } | null = null;
     const options: RazorpayCheckoutOptions = {
       key: data.keyId!,
       amount: data.amountMinor!,
@@ -201,6 +205,16 @@ export async function checkoutWithRazorpay(
       theme: { color: "#6F2DBD" },
       handler: async (response) => {
         if (settled) return;
+        // The handler only fires after a successful payment, so the purchase is
+        // final now. Mark it settled and dismiss the gateway immediately — it
+        // must not stay on screen while (or if) verification is slow, and a
+        // user closing it during that wait must not cancel a paid order.
+        settled = true;
+        try {
+          checkout?.close();
+        } catch {
+          // Already closed by the gateway — nothing to do.
+        }
         // Verify the handler signature server-side before declaring success.
         // This doesn't gate the webhook (still authoritative), but stops the
         // UI from showing "successful" for an unverifiable payment.
@@ -214,7 +228,6 @@ export async function checkoutWithRazorpay(
             const data = (await res.json().catch(() => ({}))) as {
               error?: string;
             };
-            settled = true;
             reject(
               new Error(
                 data.error ??
@@ -227,7 +240,6 @@ export async function checkoutWithRazorpay(
           // Network hiccup during verification: don't hard-fail the purchase —
           // the webhook will still reconcile it.
         }
-        settled = true;
         resolve({
           orderId: order.orderId,
           orderNumber: order.orderNumber,
@@ -242,6 +254,7 @@ export async function checkoutWithRazorpay(
         },
       },
     };
-    new RazorpayCtor(options).open();
+    checkout = new RazorpayCtor(options);
+    checkout.open();
   });
 }

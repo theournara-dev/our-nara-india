@@ -449,6 +449,11 @@ export function QuickPurchaseSheet({
                 />
               </section>
 
+              <ShippingProgressBar
+                subtotalCents={payableSubtotalCents}
+                settings={appliedCoupon?.freeShipping ? FREE_SHIPPING : shipping}
+                currency={currency}
+              />
               {/* Coupons last: the offers a shopper can use belong at the end of
                   the checkout, right before the order is placed. */}
               <CouponBox
@@ -506,12 +511,6 @@ export function QuickPurchaseSheet({
                 </dd>
               </div>
             </dl>
-            <ShippingProgressBar
-              subtotalCents={payableSubtotalCents}
-              settings={appliedCoupon?.freeShipping ? FREE_SHIPPING : shipping}
-              currency={currency}
-              className="mt-3"
-            />
             <button
               type="button"
               onClick={() => placeOrder()}

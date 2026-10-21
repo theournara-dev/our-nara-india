@@ -221,7 +221,7 @@ export default function CartPage() {
             />
           </div>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Left: items + user details */}
             <div className="space-y-6 lg:col-span-2">
               <section className="rounded-2xl border border-zinc-100 bg-white">
@@ -232,7 +232,7 @@ export default function CartPage() {
                   {items.map((item) => (
                     <li
                       key={`${item.productId}-${item.option ?? ""}`}
-                      className="flex items-center gap-4 p-4"
+                      className="flex flex-wrap items-center gap-4 p-4"
                     >
                       {/* The thumbnail opens the product, like the name below
                           (the client's link audit). */}
@@ -280,53 +280,55 @@ export default function CartPage() {
                           )}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateCartItemQty(
-                              item.productId,
-                              item.option,
-                              item.qty - 1,
-                            )
-                          }
-                          className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                        >
-                          −
-                        </button>
-                        <span className="w-8 text-center text-sm font-semibold text-zinc-900">
-                          {item.qty}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateCartItemQty(
-                              item.productId,
-                              item.option,
-                              Math.min(MAX_LINE_QTY, item.qty + 1),
-                            )
-                          }
-                          className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <div className="w-20 text-right">
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {formatMoney(
-                            itemPriceForVersion(item, version) * item.qty,
-                            item.currency,
-                          )}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeCartItem(item.productId, item.option)
-                          }
-                          className="text-xs text-zinc-400 hover:text-rose-600"
-                        >
-                          Remove
-                        </button>
+                      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end sm:gap-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCartItemQty(
+                                item.productId,
+                                item.option,
+                                item.qty - 1,
+                              )
+                            }
+                            className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center text-sm font-semibold text-zinc-900">
+                            {item.qty}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCartItemQty(
+                                item.productId,
+                                item.option,
+                                Math.min(MAX_LINE_QTY, item.qty + 1),
+                              )
+                            }
+                            className="h-8 w-8 rounded border border-zinc-200 text-zinc-600 hover:bg-zinc-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="w-20 text-right">
+                          <p className="text-sm font-semibold text-zinc-900">
+                            {formatMoney(
+                              itemPriceForVersion(item, version) * item.qty,
+                              item.currency,
+                            )}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeCartItem(item.productId, item.option)
+                            }
+                            className="text-xs text-zinc-400 hover:text-rose-600"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </div>
                     </li>
                   ))}
