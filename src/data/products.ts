@@ -8,6 +8,7 @@ import {
   type DiscountTarget,
 } from "@/lib/discounts";
 import { getLiveDiscounts } from "@/lib/discount-store";
+import { INFO_TEMPLATE_KEY, type InfoRow } from "@/lib/info-rows";
 import { priceForVersion } from "@/lib/money";
 import { saleStateForVersion } from "@/lib/product-flags";
 import type { SiteVersion } from "@/lib/site-version";
@@ -29,15 +30,7 @@ import type {
 export type ProductCard = ProductCardView;
 
 /** A single row of the INFO ("MORE INFORMATION") tab. */
-export interface InfoRow {
-  heading: string;
-  body: string;
-  /**
-   * Whether this row shows on the storefront. Global-template rows are always
-   * visible; per-product overrides can hide individual rows.
-   */
-  visible?: boolean;
-}
+export type { InfoRow } from "@/lib/info-rows";
 
 /** A DETAIL-tab content block, as stored in `ProductBlock`. */
 export interface ProductBlockView {
@@ -59,6 +52,11 @@ export interface ProductDetail extends ProductCardView {
   seoDescription?: string;
   /** Per-product INFO override; empty means "use the global template". */
   infoRows: InfoRow[];
+  /**
+   * The International-store override of the INFO tab. Empty means "use the
+   * International (K-Drop) storewide default".
+   */
+  infoRowsGlobal: InfoRow[];
   /**
    * Rows of the "Product Info" card under Buy Now (label | value). Edited per
    * product and independent of the INFO tab; empty hides the card.
@@ -109,6 +107,7 @@ type ProductRow = {
   seoTitle: string | null;
   seoDescription: string | null;
   infoRows: unknown;
+  infoRowsGlobal: unknown;
   buyInfoRows: unknown;
   buyNowEnabled: boolean;
   globalBuyNowEnabled: boolean;
@@ -243,6 +242,7 @@ function toDetail(
     seoTitle: p.seoTitle ?? undefined,
     seoDescription: p.seoDescription ?? undefined,
     infoRows: parseInfoRows(p.infoRows),
+    infoRowsGlobal: parseInfoRows(p.infoRowsGlobal),
     buyInfoRows: parseInfoRows(p.buyInfoRows),
     blocks: (p.blocks ?? []).map((b) => ({
       id: b.id,
@@ -289,15 +289,22 @@ export function parseInfoRows(value: unknown): InfoRow[] {
 }
 
 /**
- * Storewide INFO blocks (payment / shipping / returns / inquiry). Products
- * without their own `infoRows` fall back to these.
+ * Storewide INFO blocks (payment / shipping / returns / inquiry) for one store.
+ * Products without their own rows fall back to these.
  */
-export async function getProductInfoTemplate(): Promise<InfoRow[]> {
-  const row = await db.productInfoTemplate.findUnique({
-    where: { key: "default" },
-    select: { blocks: true },
+export async function getProductInfoTemplate(
+  version: SiteVersion = "local",
+): Promise<InfoRow[]> {
+  // Reading both rows keeps a missing `global` row (a deployment before the
+  // migration) showing the India default instead of nothing.
+  const rows = await db.productInfoTemplate.findMany({
+    where: { key: { in: [INFO_TEMPLATE_KEY[version], "default"] } },
+    select: { key: true, blocks: true },
   });
-  return parseInfoRows(row?.blocks);
+  const byKey = new Map(rows.map((r) => [r.key, r.blocks]));
+  return parseInfoRows(
+    byKey.get(INFO_TEMPLATE_KEY[version]) ?? byKey.get("default"),
+  );
 }
 
 /**

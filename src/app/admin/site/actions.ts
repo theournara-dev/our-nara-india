@@ -43,6 +43,8 @@ const contentInput = z.object({
     .nullable()
     .optional(),
   dispatchCutoffHour: z.coerce.number().int().min(0).max(23).optional(),
+  /** Delivery window quoted by this store, e.g. "7–15 business days". */
+  deliveryEstimate: safeText(60).optional(),
   // ── India GST defaults ────────────────────────────────────────────────
   taxRates: z
     .object({
@@ -103,6 +105,9 @@ export async function saveSiteContent(input: z.infer<typeof contentInput>) {
       : {}),
     ...(data.dispatchCutoffHour !== undefined
       ? { dispatchCutoffHour: data.dispatchCutoffHour }
+      : {}),
+    ...(data.deliveryEstimate !== undefined
+      ? { deliveryEstimate: data.deliveryEstimate.trim() || null }
       : {}),
     ...(data.invoice
       ? {

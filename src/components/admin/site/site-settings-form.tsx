@@ -174,6 +174,7 @@ function SiteSettingsInner({
         shippingCents: current.shippingCents,
         freeShippingOverCents: current.freeShippingOverCents,
         dispatchCutoffHour: current.dispatchCutoffHour,
+        deliveryEstimate: current.deliveryEstimate,
         invoice: current.invoice,
       }),
     );
@@ -331,6 +332,19 @@ function SiteSettingsInner({
             <span className="mt-1 block text-[11px] text-zinc-400">
               Orders placed after this hour join the next dispatch day. Shown in
               the cart as “Today&apos;s shipment closes at …”.
+            </span>
+          </label>
+          <label className="block sm:col-span-2">
+            <span className={labelCls}>Delivery estimate</span>
+            <input
+              value={current.deliveryEstimate}
+              onChange={(e) => patch({ deliveryEstimate: e.target.value })}
+              placeholder="e.g. 3–7 days"
+              className={inputCls}
+            />
+            <span className="mt-1 block text-[11px] text-zinc-400">
+              Shown under the dispatch notice in the cart, the quick-buy sheet
+              and on product pages. Leave empty to hide it.
             </span>
           </label>
         </div>

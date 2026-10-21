@@ -1,15 +1,20 @@
-import { db } from "@/lib/db";
-import { parseInfoRows } from "@/data/products";
+import { getProductInfoTemplate } from "@/data/products";
 import { InfoTemplateEditor } from "@/components/admin/info-template-editor";
 import { ProductsTabs } from "@/components/admin/products-tabs";
 
 export const dynamic = "force-dynamic";
 
 export default async function InfoTemplatePage() {
-  const row = await db.productInfoTemplate.findUnique({
-    where: { key: "default" },
-    select: { blocks: true },
-  });
+  const [local, global] = await Promise.all([
+    getProductInfoTemplate("local"),
+    getProductInfoTemplate("global"),
+  ]);
+  const toDrafts = (rows: Awaited<ReturnType<typeof getProductInfoTemplate>>) =>
+    rows.map((r) => ({
+      heading: r.heading,
+      body: r.body,
+      visible: true,
+    }));
 
   return (
     <div>
@@ -20,17 +25,11 @@ export default async function InfoTemplatePage() {
         </h1>
         <p className="text-sm text-zinc-500">
           The storewide &ldquo;MORE INFORMATION&rdquo; content shown in every
-          product&apos;s INFO tab. A product can override it from its own edit
-          page.
+          product&apos;s INFO tab, one default per store. A product can override
+          either store from its own edit page.
         </p>
       </div>
-      <InfoTemplateEditor
-        initial={parseInfoRows(row?.blocks).map((r) => ({
-          heading: r.heading,
-          body: r.body,
-          visible: true,
-        }))}
-      />
+      <InfoTemplateEditor initial={{ local: toDrafts(local), global: toDrafts(global) }} />
     </div>
   );
 }

@@ -26,7 +26,7 @@ export default async function EditProductPage({
   const [{ id }, listParams] = await Promise.all([params, searchParams]);
   const backHref = buildBackHref(listParams);
 
-  const [product, brands, categories, globalInfoRows, reviewRows] =
+  const [product, brands, categories, localInfoRows, globalInfoRows, reviewRows] =
     await Promise.all([
       db.product.findUnique({
         where: { id },
@@ -44,7 +44,8 @@ export default async function EditProductPage({
         orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
         select: { id: true, name: true, parentId: true },
       }),
-      getProductInfoTemplate(),
+      getProductInfoTemplate("local"),
+      getProductInfoTemplate("global"),
       db.review.findMany({
         where: { productId: id },
         orderBy: { createdAt: "desc" },
@@ -84,11 +85,18 @@ export default async function EditProductPage({
         brands={brands}
         categories={categories}
         backHref={backHref}
-        globalInfoRows={globalInfoRows.map((r) => ({
-          heading: r.heading,
-          body: r.body,
-          visible: true,
-        }))}
+        globalInfoRows={{
+          local: localInfoRows.map((r) => ({
+            heading: r.heading,
+            body: r.body,
+            visible: true,
+          })),
+          global: globalInfoRows.map((r) => ({
+            heading: r.heading,
+            body: r.body,
+            visible: true,
+          })),
+        }}
         reviews={reviews}
       />
     </div>

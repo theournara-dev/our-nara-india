@@ -15,6 +15,8 @@ export type ShippingSettings = {
   freeShippingOverCents: number | null;
   /** Hour (0–23) after which an order joins tomorrow's dispatch; default 3 PM. */
   dispatchCutoffHour?: number;
+  /** Delivery window this store quotes ("7–15 business days"); empty hides it. */
+  deliveryEstimate?: string;
 };
 
 /** A store with no shipping configuration at all: free delivery, no milestone. */

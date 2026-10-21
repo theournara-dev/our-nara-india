@@ -158,6 +158,8 @@ export type SiteContent = {
   freeShippingOverCents: number | null;
   /** Hour (0–23) after which an order joins tomorrow's dispatch; default 3 PM. */
   dispatchCutoffHour: number;
+  /** Delivery window this store quotes ("3–7 days"); empty hides the line. */
+  deliveryEstimate: string;
   /** "From" block printed on this store's invoices. */
   invoice: {
     legalName: string;
@@ -286,6 +288,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     shippingCents: 0,
     freeShippingOverCents: null,
     dispatchCutoffHour: 15,
+    deliveryEstimate: "3–7 days",
     invoice: {
       legalName: "Seoulveda Trading LLP",
       address:
@@ -310,6 +313,7 @@ export const DEFAULT_SITE_CONTENT: Record<SiteVersion, SiteContent> = {
     shippingCents: 0,
     freeShippingOverCents: null,
     dispatchCutoffHour: 15,
+    deliveryEstimate: "7–15 business days",
     invoice: {
       legalName: "The Firstteam Corp",
       address:
@@ -542,6 +546,7 @@ export function siteContentFromRow(
     shippingCents: number | null;
     freeShippingOverCents: number | null;
     dispatchCutoffHour: number | null;
+    deliveryEstimate: string | null;
     invoiceLegalName: string | null;
     invoiceAddress: string | null;
     invoiceEmail: string | null;
@@ -574,6 +579,7 @@ export function siteContentFromRow(
     shippingCents: row.shippingCents ?? base.shippingCents,
     freeShippingOverCents: row.freeShippingOverCents ?? null,
     dispatchCutoffHour: row.dispatchCutoffHour ?? base.dispatchCutoffHour,
+    deliveryEstimate: row.deliveryEstimate?.trim() ?? base.deliveryEstimate,
     invoice: {
       legalName: row.invoiceLegalName?.trim() || base.invoice.legalName,
       address: row.invoiceAddress?.trim() || base.invoice.address,

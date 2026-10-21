@@ -10,6 +10,7 @@ import {
   getProductInfoTemplate,
   getProductsByBrandSlug,
 } from "@/data/products";
+import { selectInfoRows } from "@/lib/info-rows";
 import { getReviewSummary, getVisibleProductReviews } from "@/data/reviews";
 import { getPublishedProductQA } from "@/data/qa";
 import { priceForVersion } from "@/lib/money";
@@ -92,7 +93,7 @@ export default async function ProductPage({
   const [related, infoTemplate, user, reviews, reviewSummary, questions] =
     await Promise.all([
       getProductsByBrandSlug(product.brand.slug, 8, version),
-      getProductInfoTemplate(),
+      getProductInfoTemplate(version),
       getCurrentUser(),
       getVisibleProductReviews(product.id),
       getReviewSummary(product.id),
@@ -147,13 +148,14 @@ export default async function ProductPage({
     },
   };
 
-  // When a product has its own INFO rows, show only the visible ones (this set
-  // is seeded from the global template, so "global" sections are included by
-  // default and can be hidden per product). Otherwise fall back to the
-  // storewide template.
-  const infoRows = product.infoRows.length
-    ? product.infoRows.filter((r) => r.visible !== false)
-    : infoTemplate;
+  // Each store shows its own INFO content: the product's rows for that store
+  // when it has any, otherwise that store's storewide default.
+  const infoRows = selectInfoRows(
+    product.infoRows,
+    product.infoRowsGlobal,
+    infoTemplate,
+    version,
+  );
 
   return (
     <>

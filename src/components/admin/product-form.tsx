@@ -21,6 +21,8 @@ import {
   InfoRowsEditor,
   type InfoRowDraft,
 } from "@/components/admin/info-rows-editor";
+import { ConfirmDialog } from "@/components/admin/confirm-dialog";
+import type { SiteVersion } from "@/lib/site-version";
 import {
   ProductReviewsManager,
   type AdminReviewRow,
@@ -105,13 +107,15 @@ type Props = {
     }[];
     /** Per-product INFO override (JSON); empty = use the global template. */
     infoRows: unknown;
+    /** International-store INFO override (JSON); empty = the International default. */
+    infoRowsGlobal: unknown;
     /** Rows of the "Product Info" card under Buy Now (JSON). */
     buyInfoRows: unknown;
   } | null;
   brands: BrandOption[];
   categories: CategoryOption[];
   /** Storewide INFO rows, seeded into a product's INFO list on first edit. */
-  globalInfoRows: InfoRowDraft[];
+  globalInfoRows: Record<SiteVersion, InfoRowDraft[]>;
   /** Reviews for this product (edit mode only). */
   reviews?: AdminReviewRow[];
 };
@@ -272,13 +276,21 @@ function ProductFormInner({
   const [formTab, setFormTab] = useState<
     "product" | "content" | "info" | "reviews"
   >("product");
-  // Seed the INFO list from the storewide template when the product has no
-  // override yet, so the global sections show by default and can be hidden.
+  // Seed each store's INFO list from that store's storewide default when the
+  // product has no override yet, so its sections show by default and can be
+  // hidden or edited. Leaving the list empty still falls back to the default.
   const [infoRows, setInfoRows] = useState<InfoRowDraft[]>(() => {
     const own = parseInfoRowDrafts(product?.infoRows);
     if (own.length) return own;
-    return globalInfoRows.map((r) => ({ ...r, visible: true }));
+    return globalInfoRows.local.map((r) => ({ ...r, visible: true }));
   });
+  const [infoRowsGlobal, setInfoRowsGlobal] = useState<InfoRowDraft[]>(() => {
+    const own = parseInfoRowDrafts(product?.infoRowsGlobal);
+    if (own.length) return own;
+    return globalInfoRows.global.map((r) => ({ ...r, visible: true }));
+  });
+  const [infoTab, setInfoTab] = useState<SiteVersion>("local");
+  const [confirmInfoCopy, setConfirmInfoCopy] = useState(false);
   // The "Product Info" card under Buy Now is its own list, so it never starts
   // from the storewide INFO template.
   const [buyInfoRows, setBuyInfoRows] = useState<InfoRowDraft[]>(() =>
@@ -467,6 +479,11 @@ function ProductFormInner({
         body: r.body,
         visible: r.visible,
       })),
+      infoRowsGlobal: infoRowsGlobal.map((r) => ({
+        heading: r.heading,
+        body: r.body,
+        visible: r.visible,
+      })),
       buyInfoRows: buyInfoRows.map((r) => ({
         heading: r.heading,
         body: r.body,
@@ -513,7 +530,11 @@ function ProductFormInner({
       title: b.title,
       config: b.config,
     }));
-  const visibleInfoRows = infoRows.filter((r) => r.visible);
+  const infoRowsForTab = infoTab === "local" ? infoRows : infoRowsGlobal;
+  const setInfoRowsForTab =
+    infoTab === "local" ? setInfoRows : setInfoRowsGlobal;
+  const otherInfoRows = infoTab === "local" ? infoRowsGlobal : infoRows;
+  const visibleInfoRows = infoRowsForTab.filter((r) => r.visible);
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -1284,16 +1305,51 @@ function ProductFormInner({
                 INFO tab
               </h2>
               <p className="mb-4 text-xs text-zinc-500">
-                These sections start from the storewide INFO content. Uncheck
-                one to hide it on this product, or add your own. Leaving the
-                list empty falls back to the storewide content.
+                Each store has its own INFO content. These sections start from
+                that store&apos;s storewide INFO content. Uncheck one to hide it
+                on this product, or edit/add your own. Leaving the list empty
+                falls back to the storewide content.
               </p>
+              <div className="mb-4 inline-flex items-center gap-1 rounded-lg bg-zinc-100 p-1">
+                {(["local", "global"] as const).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setInfoTab(key)}
+                    className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                      infoTab === key
+                        ? "bg-white text-point-600 shadow-sm"
+                        : "text-zinc-600 hover:text-zinc-900"
+                    }`}
+                  >
+                    {key === "local"
+                      ? "India (our-nara.com)"
+                      : "International (our-nara.co.kr)"}
+                  </button>
+                ))}
+              </div>
               <InfoRowsEditor
-                rows={infoRows}
-                onChange={setInfoRows}
+                key={infoTab}
+                rows={infoRowsForTab}
+                onChange={setInfoRowsForTab}
                 showVisibility
-                emptyHint="No sections yet — add one, or leave empty to use the storewide content."
+                emptyHint="No sections yet — add one, or leave empty to use that store's storewide content."
               />
+              <button
+                type="button"
+                onClick={() => {
+                  if (otherInfoRows.length === 0) return;
+                  if (infoRowsForTab.length) {
+                    setConfirmInfoCopy(true);
+                    return;
+                  }
+                  setInfoRowsForTab(otherInfoRows.map((r) => ({ ...r })));
+                }}
+                disabled={otherInfoRows.length === 0}
+                className="mt-3 h-8 rounded border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-40"
+              >
+                Copy from {infoTab === "local" ? "International" : "India"}
+              </button>
             </section>
             <section className="rounded-2xl border border-zinc-100 bg-white p-5">
               <h2 className="mb-1 text-sm font-semibold text-zinc-900">
@@ -1316,7 +1372,7 @@ function ProductFormInner({
           </div>
           <section className="lg:sticky lg:top-6 lg:self-start">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-              Preview
+              Preview — {infoTab === "local" ? "India" : "International"}
             </p>
             <div className="rounded-2xl border border-zinc-100 bg-white p-5">
               {visibleInfoRows.length > 0 ? (
@@ -1373,6 +1429,22 @@ function ProductFormInner({
           </section>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmInfoCopy}
+        title="Replace this store's INFO content?"
+        message={`Every section in the ${
+          infoTab === "local" ? "India" : "International"
+        } list will be replaced by a copy of the ${
+          infoTab === "local" ? "International" : "India"
+        } list for this product. Save to keep the change.`}
+        confirmLabel="Replace"
+        onConfirm={() => {
+          setInfoRowsForTab(otherInfoRows.map((r) => ({ ...r })));
+          setConfirmInfoCopy(false);
+        }}
+        onCancel={() => setConfirmInfoCopy(false)}
+      />
 
       {formTab === "reviews" && (
         <section className="rounded-2xl border border-zinc-100 bg-white p-5">

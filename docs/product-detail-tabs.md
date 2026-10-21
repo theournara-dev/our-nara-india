@@ -118,26 +118,32 @@ Shared style schema: `align`, `widthPct`, `maxWidth`, `paddingY`, `textSize`, `t
 
 Per the original, INFO = PAYMENT / SHIPPING / RETURNS & EXCHANGES / PRODUCT INQUIRY.
 
-### Model: global default + per-product override (confirmed)
+### Model: one default per store + per-store product override
 
 ```prisma
-model ProductInfoTemplate {   // global default
+model ProductInfoTemplate {   // storewide default, one row per store
   id        String   @id @default(cuid())
-  key       String   @unique  @default("default")
+  key       String   @unique  @default("default") // "default" = India, "global" = International
   blocks    Json              // free repeater: ordered [{ heading, body }]
   updatedAt DateTime @updatedAt @map("updated_at")
   @@map("product_info_templates")
 }
 ```
 
-Plus `Product.infoRows Json?` for the **optional per-product override** of the default.
+Plus `Product.infoRows Json?` (India) and `Product.infoRowsGlobal Json?`
+(International) for the **optional per-product override** of each store's
+default.
 
-- **Free repeater (confirmed):** `{ heading, body }` rows — nothing hardcoded. A
-  **new template is seeded with the four original headings** (PAYMENT, SHIPPING,
-  RETURNS & EXCHANGES, PRODUCT INQUIRY) as a starting point.
-- **Admin:** one editor for the global INFO content, plus an optional per-product
-  override in the product form.
-- **Storefront:** render the product override if present, else the global default.
+- **Free repeater (confirmed):** `{ heading, body }` rows — nothing hardcoded.
+  A **new template is seeded with the four original headings** (PAYMENT, SHIPPING,
+  RETURNS & EXCHANGES, PRODUCT INQUIRY) as a starting point. Sections can be
+  added, removed and reordered, so each store's default carries only the
+  sections it needs (the K-Drop default has no RETURNS section).
+- **Admin:** `/admin/products/info` edits both defaults behind the same India /
+  International switch as Site settings, with a "Copy from …" button. The
+  product form's INFO panel has the same switch and button, one list per store.
+- **Storefront:** each store renders that product's rows for the store if it has
+  any (visible rows only), else that store's storewide default.
 - Content is admin-authored HTML/sections → sanitized the same way as DETAIL.
 
 ---

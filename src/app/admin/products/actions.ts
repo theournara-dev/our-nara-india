@@ -104,6 +104,16 @@ const productInput = z.object({
       }),
     )
     .default([]),
+  /** International-store override of the INFO tab (same shape as infoRows). */
+  infoRowsGlobal: z
+    .array(
+      z.object({
+        heading: safeText(120).optional(),
+        body: safeMultiline(4000).optional(),
+        visible: z.boolean().default(true),
+      }),
+    )
+    .default([]),
   /** Rows of the "Product Info" card under Buy Now (label | value). */
   buyInfoRows: z
     .array(
@@ -262,6 +272,7 @@ export async function createProduct(input: ProductInput) {
       taxRateMhBps: data.taxRateMhBps ?? null,
       taxRateOtherBps: data.taxRateOtherBps ?? null,
       infoRows: data.infoRows as Prisma.InputJsonValue,
+      infoRowsGlobal: data.infoRowsGlobal as Prisma.InputJsonValue,
       buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
       subcategories: {
         create: subcategoryIds.map((categoryId) => ({ categoryId })),
@@ -363,6 +374,7 @@ export async function updateProduct(id: string, input: ProductInput) {
           taxRateMhBps: data.taxRateMhBps ?? null,
           taxRateOtherBps: data.taxRateOtherBps ?? null,
           infoRows: data.infoRows as Prisma.InputJsonValue,
+          infoRowsGlobal: data.infoRowsGlobal as Prisma.InputJsonValue,
           buyInfoRows: data.buyInfoRows as Prisma.InputJsonValue,
         },
       }),

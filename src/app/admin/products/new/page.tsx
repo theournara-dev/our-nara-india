@@ -21,7 +21,7 @@ export default async function NewProductPage({
   const params = await searchParams;
   const backHref = buildBackHref(params);
 
-  const [brands, categories, globalInfoRows] = await Promise.all([
+  const [brands, categories, localInfoRows, globalInfoRows] = await Promise.all([
     db.brand.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
@@ -30,7 +30,8 @@ export default async function NewProductPage({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, parentId: true },
     }),
-    getProductInfoTemplate(),
+    getProductInfoTemplate("local"),
+    getProductInfoTemplate("global"),
   ]);
 
   return (
@@ -41,11 +42,18 @@ export default async function NewProductPage({
         brands={brands}
         categories={categories}
         backHref={backHref}
-        globalInfoRows={globalInfoRows.map((r) => ({
-          heading: r.heading,
-          body: r.body,
-          visible: true,
-        }))}
+        globalInfoRows={{
+          local: localInfoRows.map((r) => ({
+            heading: r.heading,
+            body: r.body,
+            visible: true,
+          })),
+          global: globalInfoRows.map((r) => ({
+            heading: r.heading,
+            body: r.body,
+            visible: true,
+          })),
+        }}
       />
     </div>
   );

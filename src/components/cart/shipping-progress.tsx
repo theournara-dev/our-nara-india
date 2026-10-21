@@ -86,6 +86,11 @@ export function ShippingProgressBar({
               </p>
             </>
           )}
+          {settings.deliveryEstimate && (
+            <p className="text-[#666]">
+              Estimated delivery: {settings.deliveryEstimate}
+            </p>
+          )}
         </div>
       </div>
 

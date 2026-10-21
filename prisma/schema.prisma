@@ -274,8 +274,10 @@ model Product {
   taxRateMhBps    Int?    @map("tax_rate_mh_bps")
   taxRateOtherBps Int?    @map("tax_rate_other_bps")
   // INFO tab: optional per-product override of the storewide
-  // ProductInfoTemplate blocks. Null = use the global default.
+  // ProductInfoTemplate blocks, one column per store. Empty = use that store's
+  // storewide default (`info_rows` is the India / legacy column).
   infoRows       Json?    @map("info_rows")
+  infoRowsGlobal Json?    @map("info_rows_global")
   // "Product Info" card under Buy Now: an independent two-column list of
   // { heading, body } rows, edited per product. Empty = the card is hidden.
   buyInfoRows    Json?    @map("buy_info_rows")
@@ -355,7 +357,9 @@ model ProductBlock {
 
 // Storewide INFO ("MORE INFORMATION": payment / shipping / returns / inquiry)
 // content, shown on every product page unless a product overrides it with its
-// own `Product.infoRows`. `blocks` is an ordered list of { heading, body }.
+// own rows. One row per store: `default` is the India default (legacy key kept
+// to avoid renaming live data) and `global` is the International default.
+// `blocks` is an ordered list of { heading, body }.
 model ProductInfoTemplate {
   id        String   @id @default(cuid())
   key       String   @unique @default("default")
@@ -1085,8 +1089,11 @@ model SiteConfig {
   // bar towards the milestone while it is set.
   shippingCents         Int  @default(0) @map("shipping_cents")
   freeShippingOverCents Int? @map("free_shipping_over_cents")
-  // Hour (0–23) after which an order joins tomorrow's dispatch; 3 PM when unset.
+  // Hour (0-23) after which an order joins tomorrow's dispatch; 3 PM when unset.
   dispatchCutoffHour Int? @map("dispatch_cutoff_hour")
+  // Delivery window this store quotes, e.g. "3-7 business days". Shown under
+  // the dispatch notice in the cart, quick-buy sheet and product page.
+  deliveryEstimate String? @map("delivery_estimate")
 
   // ── Invoice "from" block ───────────────────────────────────────────
   // Printed on this store's invoices; the legal entity differs per store, so

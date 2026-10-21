@@ -89,11 +89,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       shippingCents: localSite.shippingCents,
       freeShippingOverCents: localSite.freeShippingOverCents,
       dispatchCutoffHour: localSite.dispatchCutoffHour,
+      deliveryEstimate: localSite.deliveryEstimate,
     },
     global: {
       shippingCents: globalSite.shippingCents,
       freeShippingOverCents: globalSite.freeShippingOverCents,
       dispatchCutoffHour: globalSite.dispatchCutoffHour,
+      deliveryEstimate: globalSite.deliveryEstimate,
     },
   };
   // The store selector's two halves wear each store's top-banner background
