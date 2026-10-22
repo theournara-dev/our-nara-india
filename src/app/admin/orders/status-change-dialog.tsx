@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   ORDER_STATUS_LABELS,
   type OrderStatusValue,
@@ -44,8 +45,15 @@ export function StatusChangeDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [busy, onCancel]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  // The dialog only opens from a click, so the server never renders it; the
+  // guard keeps a stray SSR render from touching `document`.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    // Portal to <body>: the dialog can be triggered from the orders table,
+    // whose right-aligned cells would otherwise leak into the text alignment
+    // and a transformed ancestor would anchor the fixed overlay to the cell.
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 text-left">
       <div
         className="absolute inset-0 bg-zinc-900/50 backdrop-blur-sm"
         onClick={() => !busy && onCancel()}
@@ -55,7 +63,7 @@ export function StatusChangeDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="status-change-title"
-        className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl"
+        className="relative w-full max-w-lg rounded-2xl bg-white p-6 text-left shadow-2xl"
       >
         <h2
           id="status-change-title"
@@ -122,7 +130,8 @@ export function StatusChangeDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -152,9 +161,11 @@ function Toggle({
         disabled={disabled}
         className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-point-500"
       />
-      <span>
-        <span className="block text-sm font-medium text-zinc-800">{title}</span>
-        <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
+      <span className="min-w-0 flex-1">
+        <span className="block text-left text-sm font-medium text-zinc-800">
+          {title}
+        </span>
+        <span className="mt-0.5 block text-left text-xs leading-5 text-zinc-500">
           {description}
         </span>
       </span>
