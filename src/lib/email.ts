@@ -136,7 +136,7 @@ export async function sendPasswordResetLink(
 export async function sendMemberIdLink(
   to: string,
   name: string | null | undefined,
-  username: string,
+  username: string | null,
   url: string,
   version?: SiteVersion,
 ) {

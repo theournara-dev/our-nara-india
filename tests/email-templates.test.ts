@@ -35,6 +35,15 @@ test("member ID email names the ID and links to sign in", () => {
   assert.ok(mail.html.includes("asha99"));
 });
 
+test("member ID email explains Google accounts have no ID", () => {
+  const mail = memberIdEmail({ name: "Asha", username: null, url });
+  assert.match(mail.subject, /sign in/i);
+  assert.match(mail.text, /created with Google/);
+  assert.match(mail.html, /Continue with Google/);
+  assert.ok(!mail.text.includes("Your member ID is"));
+  assert.ok(mail.text.includes(url));
+});
+
 test("names are escaped before they reach the HTML", () => {
   const mail = verificationEmail({
     name: '<img src=x onerror="alert(1)">',

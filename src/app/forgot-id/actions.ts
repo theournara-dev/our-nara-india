@@ -60,10 +60,10 @@ export async function requestMemberId(inputValue: unknown): Promise<MemberIdResu
 
   try {
     const user = await db.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
       select: { name: true, username: true },
     });
-    if (user?.username && !(await throttled(`member-id-${email}`, EMAIL_COOLDOWN_MS))) {
+    if (user && !(await throttled(`member-id-${email}`, EMAIL_COOLDOWN_MS))) {
       const host = h.get("x-forwarded-host") ?? h.get("host") ?? "our-nara.com";
       const origin =
         host.startsWith("localhost") ||
@@ -71,6 +71,8 @@ export async function requestMemberId(inputValue: unknown): Promise<MemberIdResu
         host.startsWith("[::1]")
           ? `http://${host}`
           : `https://${host}`;
+      // Google sign-ups have no username; the template explains how to sign
+      // in instead, so the sender never waits for an email that never comes.
       await sendMemberIdLink(email, user.name, user.username, `${origin}/login`);
       await mark(`member-id-${email}`);
     }

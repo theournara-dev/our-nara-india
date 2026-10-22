@@ -19,6 +19,7 @@ export default async function ProfilePage() {
     where: { id: session.user.id },
     select: {
       email: true,
+      username: true,
       firstName: true,
       lastName: true,
       country: true,
@@ -62,6 +63,12 @@ export default async function ProfilePage() {
         <div>
           <p className="text-zinc-500">Email</p>
           <p className="font-medium text-zinc-900">{user.email}</p>
+        </div>
+        <div>
+          <p className="text-zinc-500">Member ID</p>
+          <p className="font-medium text-zinc-900">
+            {user.username ?? "Not set — sign in with Google"}
+          </p>
         </div>
       </div>
 

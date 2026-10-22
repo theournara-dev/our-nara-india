@@ -37,7 +37,7 @@ export default function ForgotIdPage() {
           Forgot ID
         </h1>
         <p className="mb-8 text-center text-sm text-[#888]">
-          We will email the member ID registered to your address.
+          We will email the sign-in details registered to your address.
         </p>
 
         {sent ? (
@@ -45,7 +45,7 @@ export default function ForgotIdPage() {
             <p className="text-sm leading-6 text-[#666]">
               If an account exists for{" "}
               <span className="font-semibold text-[#222]">{email}</span>, its
-              member ID is on its way. The email comes from OUR:NARA.
+              sign-in details are on their way. The email comes from OUR:NARA.
             </p>
             <Link
               href="/login"

@@ -163,9 +163,42 @@ export function memberIdEmail({
   url,
 }: {
   name?: string | null;
-  username: string;
+  username: string | null;
   url: string;
 }): EmailContent {
+  // Google sign-ups have no username, so there is no ID to remind them of.
+  // Silence would look like a broken form; explain how to sign in instead.
+  if (!username) {
+    return {
+      subject: "How to sign in to OUR:NARA",
+      text: `${plainGreeting(name)}
+
+You asked for your OUR:NARA member ID. This account was created with Google, so it does not have a member ID.
+
+${url}
+
+Choose "Continue with Google" on the login page. If you would rather sign in with a password, choose "Forgot password" to set one.
+
+If you didn't ask for your member ID, you can ignore this email.`,
+      html: layout({
+        preheader: "This account signs in with Google, not a member ID.",
+        heading: "How to sign in",
+        body:
+          paragraph(greeting(name)) +
+          paragraph(
+            "You asked for your OUR:NARA member ID. This account was created with Google, so it does not have a member ID.",
+          ) +
+          paragraph(
+            'Choose <strong style="color:#222222">Continue with Google</strong> on the login page. If you would rather sign in with a password, choose <strong style="color:#222222">Forgot password</strong> to set one.',
+          ) +
+          button("Go to login", url) +
+          fallback(url),
+        footer:
+          "If you didn't ask for your member ID, you can ignore this email.",
+      }),
+    };
+  }
+
   const heading = "Your OUR:NARA member ID";
   return {
     subject: "Your OUR:NARA member ID",
