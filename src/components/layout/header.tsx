@@ -73,7 +73,7 @@ const logStateLinks = [
 const loggedInLinks = [
   { label: "My page", href: "/account" },
   { label: "Order", href: "/account/orders" },
-  { label: "Wish", href: "/account/wishlist" },
+  { label: "Wishlist", href: "/account/wishlist" },
   { label: "Mileage", href: "/account/mileage" },
   { label: "Coupon", href: "/account/coupons" },
   { label: "Logout", href: "/api/auth/sign-out" },

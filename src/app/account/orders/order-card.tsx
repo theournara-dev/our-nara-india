@@ -79,8 +79,15 @@ const badgeClass =
   "rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap";
 
 /** One expandable order card in the customer's order history. */
-export function AccountOrderCard({ order }: { order: AccountOrder }) {
-  const [open, setOpen] = useState(false);
+export function AccountOrderCard({
+  order,
+  defaultOpen = false,
+}: {
+  order: AccountOrder;
+  /** The invoices tab deep-links to one order, so it arrives expanded. */
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
   const itemCount = order.items.reduce((sum, i) => sum + i.quantity, 0);
   const preview = order.items
@@ -94,7 +101,10 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
   );
 
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white">
+    <div
+      id={`order-${order.id}`}
+      className="rounded-2xl border border-zinc-100 bg-white"
+    >
       {/* Collapsed summary — the whole header toggles the card */}
       <button
         type="button"

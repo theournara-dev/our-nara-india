@@ -63,10 +63,6 @@ export default async function ProfilePage() {
           <p className="text-zinc-500">Email</p>
           <p className="font-medium text-zinc-900">{user.email}</p>
         </div>
-        <div>
-          <p className="text-zinc-500">Member ID</p>
-          <p className="font-medium text-zinc-900">{session.user.id}</p>
-        </div>
       </div>
 
       <ProfileForm initial={initial} />

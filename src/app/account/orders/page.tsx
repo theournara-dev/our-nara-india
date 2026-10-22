@@ -25,7 +25,12 @@ function formatDateTime(date: Date): string {
   }).format(date);
 }
 
-export default async function AccountOrdersPage() {
+export default async function AccountOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ order?: string }>;
+}) {
+  const params = await searchParams;
   // The layout already guards the session; re-check here so the page can't
   // render without one (same corrupt-cookie handling as the layout).
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
@@ -125,7 +130,11 @@ export default async function AccountOrdersPage() {
       ) : (
         <div className="space-y-4">
           {data.map((order) => (
-            <AccountOrderCard key={order.id} order={order} />
+            <AccountOrderCard
+              key={order.id}
+              order={order}
+              defaultOpen={order.id === params.order}
+            />
           ))}
         </div>
       )}

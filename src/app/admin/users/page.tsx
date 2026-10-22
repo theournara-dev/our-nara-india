@@ -152,12 +152,13 @@ export default async function AdminUsersPage({
               <th className="px-4 py-3 text-right font-medium">Orders</th>
               <th className="px-4 py-3 text-right font-medium">Wishlist</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-zinc-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-zinc-500">
                   No users match this search.
                 </td>
               </tr>
@@ -211,6 +212,14 @@ export default async function AdminUsersPage({
                           Active
                         </span>
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={`/admin/users/${u.id}`}
+                        className="inline-flex h-8 items-center rounded border border-zinc-200 bg-white px-3 text-xs font-medium text-zinc-700 transition-colors hover:border-point-500 hover:text-point-500"
+                      >
+                        View
+                      </Link>
                     </td>
                   </tr>
                 );

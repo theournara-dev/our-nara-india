@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { InvoicePreviewButton } from "@/components/admin/invoice-preview";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { orderAccountWhere } from "@/lib/order-ownership";
@@ -85,6 +86,7 @@ export default async function AdminUserDetailPage({
         totalCents: true,
         currency: true,
         isPreOrder: true,
+        invoice: { select: { number: true } },
       },
     }),
     db.order.aggregate({
@@ -186,14 +188,7 @@ export default async function AdminUserDetailPage({
         </section>
 
         <section>
-          <UserAccess
-            user={{
-              ...user,
-              // Prisma types the Json column as JsonValue; the editor reads it
-              // as resource → actions, which is what the admin plugin stores.
-              permissions: user.permissions as Record<string, string[]> | null,
-            }}
-          />
+          <UserAccess user={user} />
         </section>
       </div>
 
@@ -216,6 +211,7 @@ export default async function AdminUserDetailPage({
                     <th className="px-2 py-2 font-medium">Order</th>
                     <th className="px-2 py-2 font-medium">Date</th>
                     <th className="px-2 py-2 font-medium">Status</th>
+                    <th className="px-2 py-2 text-right font-medium">Invoice</th>
                     <th className="px-2 py-2 text-right font-medium">Total</th>
                   </tr>
                 </thead>
@@ -249,6 +245,16 @@ export default async function AdminUserDetailPage({
                         >
                           {ORDER_STATUS_LABELS[order.status as OrderStatusValue]}
                         </span>
+                      </td>
+                      <td className="px-2 py-2 text-right">
+                        {order.invoice ? (
+                          <InvoicePreviewButton
+                            orderId={order.id}
+                            orderNumber={order.orderNumber}
+                          />
+                        ) : (
+                          <span className="text-xs text-zinc-300">—</span>
+                        )}
                       </td>
                       <td className="px-2 py-2 text-right font-medium text-zinc-900">
                         {formatMoney(order.totalCents, order.currency, {

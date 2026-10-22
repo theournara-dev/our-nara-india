@@ -10,6 +10,10 @@ import { toggleWishlist } from "@/app/actions/wishlist";
 import { formatMoney } from "@/lib/money";
 import { discountBadgeLabel } from "@/lib/discounts";
 import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
+import {
+  MdFavorite,
+  MdFavoriteBorder,
+} from "react-icons/md";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { notify, notifyAddedToCart } from "@/lib/toast";
 import { useSiteVersion } from "@/components/site-version-provider";
@@ -138,20 +142,17 @@ export function ThemeProductCard({
               aria-pressed={saved}
               onClick={handleWishlist}
               disabled={savingWishlist}
-              className={`block cursor-pointer disabled:opacity-60 ${
-                saved ? "ring-1 ring-point-500" : ""
-              }`}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-white/60 disabled:opacity-60"
             >
-              <Image
-                src="/upload/icon_202508271427425900.png"
-                alt=""
-                width={30}
-                height={30}
-                unoptimized
-                className={`rounded p-1 ${
-                  saved ? "bg-point-100" : "bg-white/60"
-                }`}
-              />
+              {/* Saved shows a solid heart, not just an outlined button. */}
+              {saved ? (
+                <MdFavorite className="h-5 w-5 text-point-500" aria-hidden />
+              ) : (
+                <MdFavoriteBorder
+                  className="h-5 w-5 text-zinc-700"
+                  aria-hidden
+                />
+              )}
             </button>
             {saleState !== "unavailable" && (
               <button

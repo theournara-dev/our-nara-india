@@ -14,6 +14,7 @@ const accountLinks = [
   { label: "Overview", href: "/account" },
   { label: "Profile", href: "/account/profile" },
   { label: "Orders", href: "/account/orders" },
+  { label: "Invoices", href: "/account/invoices" },
   { label: "Wishlist", href: "/account/wishlist" },
   { label: "Mileage", href: "/account/mileage" },
   { label: "Coupons", href: "/account/coupons" },
