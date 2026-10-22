@@ -1,9 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { sendMemberIdLink } from "@/lib/email";
+import { resolveRequestSiteVersion } from "@/lib/site-version";
 import { parseInput, safeEmail } from "@/lib/validation";
 
 export type MemberIdResult = { ok: true } | { ok: false; message: string };
@@ -72,14 +74,25 @@ export async function requestMemberId(inputValue: unknown): Promise<MemberIdResu
           ? `http://${host}`
           : `https://${host}`;
       // Google sign-ups have no username; the template explains how to sign
-      // in instead, so the sender never waits for an email that never comes.
-      await sendMemberIdLink(email, user.name, user.username, `${origin}/login`);
+      // in instead. The send runs after the response so a known address does
+      // not answer slower than an unknown one.
       await mark(`member-id-${email}`);
+      after(() =>
+        sendMemberIdLink(
+          email,
+          user.name,
+          user.username,
+          `${origin}/login`,
+          resolveRequestSiteVersion(host),
+        ).catch((err) => {
+          console.error("[account.forgot-id] member ID email failed", err);
+        }),
+      );
     }
     await mark(`member-id-ip-${ip}`);
   } catch (err) {
     // Log for support; the visitor still gets the neutral confirmation.
-    console.error("[account.forgot-id] member ID email failed", err);
+    console.error("[account.forgot-id] request failed", err);
   }
 
   return { ok: true };

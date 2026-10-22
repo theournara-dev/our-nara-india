@@ -159,6 +159,13 @@ export default function LoginPage() {
                 )}
                 . Open it to finish signing in.
               </p>
+              <p className="text-xs text-[#888]">
+                Wrong address on the account?{" "}
+                <Link href="/help" className="font-medium text-point-500 underline">
+                  Contact us
+                </Link>{" "}
+                and we will fix it.
+              </p>
               {!verifyEmail && (
                 <label className="block text-left">
                   <span className="mb-1 block text-sm font-medium text-[#222]">

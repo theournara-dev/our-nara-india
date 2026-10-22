@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { notify } from "@/lib/toast";
+import { markEmailVerified } from "./actions";
 
 export type AdminUser = {
   id: string;
@@ -12,6 +13,7 @@ export type AdminUser = {
   role?: string | null;
   banned?: boolean | null;
   banReason?: string | null;
+  emailVerified?: boolean | null;
 };
 
 /**
@@ -20,6 +22,9 @@ export type AdminUser = {
  */
 export function UserAccess({ user }: { user: AdminUser }) {
   const [banned, setBanned] = useState<boolean>(user.banned ?? false);
+  const [verified, setVerified] = useState<boolean>(
+    user.emailVerified ?? false,
+  );
   const [banReason, setBanReason] = useState<string | null>(
     user.banReason ?? null,
   );
@@ -46,8 +51,20 @@ export function UserAccess({ user }: { user: AdminUser }) {
     }
   }
 
-  async function unblockUser() {
+  async function verifyEmail() {
     setPending(true);
+    const id = notify.loading("Verifying email…");
+    const res = await markEmailVerified(user.id);
+    setPending(false);
+    if (!res.ok) {
+      notify.error(id, "Verification failed", res.message);
+      return;
+    }
+    setVerified(true);
+    notify.success(id, "Email verified", "The customer can sign in now.");
+  }
+
+  async function unblockUser() {    setPending(true);
     const id = notify.loading("Unblocking user…");
     const res = await authClient.admin.unbanUser({ userId: user.id });
     setPending(false);
@@ -93,6 +110,21 @@ export function UserAccess({ user }: { user: AdminUser }) {
             className="h-9 rounded border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100"
           >
             Block user
+          </button>
+        )}
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+        <p className="text-sm text-zinc-600">
+          Email {verified ? "verified" : "not verified"}
+        </p>
+        {!verified && (
+          <button
+            type="button"
+            onClick={verifyEmail}
+            disabled={pending}
+            className="h-9 rounded border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-60"
+          >
+            {pending ? "…" : "Mark email verified"}
           </button>
         )}
       </div>

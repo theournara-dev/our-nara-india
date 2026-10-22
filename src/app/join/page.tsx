@@ -585,6 +585,20 @@ export default function JoinPage() {
                 The link expires in 1 hour. Check your spam folder if it
                 doesn&apos;t arrive.
               </p>
+              <p className="text-xs text-[#888]">
+                Already had an account? Nothing new was created —{" "}
+                <Link href="/login" className="font-medium text-point-500 underline">
+                  sign in
+                </Link>{" "}
+                or{" "}
+                <Link
+                  href="/forgot-password"
+                  className="font-medium text-point-500 underline"
+                >
+                  reset your password
+                </Link>
+                .
+              </p>
               <button
                 type="button"
                 onClick={handleResend}

@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { admin, username } from "better-auth/plugins";
@@ -7,6 +8,7 @@ import { db } from "@/lib/db";
 import { ac, roles } from "@/lib/permissions";
 import { EMAIL_VERIFICATION_ENABLED } from "@/lib/config";
 import { sendPasswordResetLink, sendVerificationLink } from "@/lib/email";
+import { resolveRequestSiteVersion } from "@/lib/site-version";
 
 /**
  * Base URL for auth callbacks and CSRF origin checks. Better Auth derives its
@@ -59,6 +61,13 @@ const trustedOrigins = [
   "http://127.0.0.1:*",
 ].filter((o): o is string => Boolean(o));
 
+/** The store the auth request came from, used for the sender's branding. */
+function requestVersion(request?: Request) {
+  return resolveRequestSiteVersion(
+    request?.headers.get("x-forwarded-host") ?? request?.headers.get("host"),
+  );
+}
+
 export const auth = betterAuth({
   baseURL,
   trustedOrigins,
@@ -69,22 +78,45 @@ export const auth = betterAuth({
     // Sign-in stays blocked until the address is verified.
     requireEmailVerification: EMAIL_VERIFICATION_ENABLED,
     // Link in the email points at /reset-password?token=… (see the client).
-    sendResetPassword: async ({ user, url }) => {
-      // Never await: the auth endpoint must not reveal whether the address
-      // exists through response timing.
-      void sendPasswordResetLink(user.email, user.name, url).catch((err) => {
-        console.error("[auth.email] password reset email failed", err);
-      });
+    sendResetPassword: async ({ user, url }, request) => {
+      // `after` keeps the auth response fast (no account-existence timing
+      // leak) while letting the send finish after the response — `void` alone
+      // can be frozen away on serverless.
+      after(() =>
+        sendPasswordResetLink(
+          user.email,
+          user.name,
+          url,
+          requestVersion(request),
+        ).catch((err) => {
+          console.error("[auth.email] password reset email failed", err);
+        }),
+      );
     },
     resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
     // A reset means the old sessions may be compromised.
     revokeSessionsOnPasswordReset: true,
+    // Opening the reset link proves mailbox control, so it also clears an
+    // unverified-address block (the reset mail may be the only one they got).
+    onPasswordReset: async ({ user }) => {
+      await db.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true },
+      });
+    },
   },
   emailVerification: {
-    sendVerificationEmail: async ({ user, url }) => {
-      void sendVerificationLink(user.email, user.name, url).catch((err) => {
-        console.error("[auth.email] verification email failed", err);
-      });
+    sendVerificationEmail: async ({ user, url }, request) => {
+      after(() =>
+        sendVerificationLink(
+          user.email,
+          user.name,
+          url,
+          requestVersion(request),
+        ).catch((err) => {
+          console.error("[auth.email] verification email failed", err);
+        }),
+      );
     },
     // Send the link at sign-up and re-send when an unverified user tries to
     // sign in.
