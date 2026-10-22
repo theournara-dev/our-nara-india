@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 
 const accountLinks = [
   { label: "Overview", href: "/account" },
+  { label: "Profile", href: "/account/profile" },
   { label: "Orders", href: "/account/orders" },
   { label: "Wishlist", href: "/account/wishlist" },
   { label: "Mileage", href: "/account/mileage" },

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -51,24 +52,34 @@ export default async function AccountOverviewPage() {
         <span className="font-medium text-zinc-900">{roleLabel}</span>
       </p>
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <Link
+          href="/account/orders"
+          className="rounded-2xl border border-zinc-100 bg-white p-5 transition-colors hover:border-zinc-200"
+        >
           <p className="text-sm text-zinc-500">Orders</p>
           <p className="mt-1 text-2xl font-semibold text-zinc-900">
             {orderCount}
           </p>
-        </div>
+        </Link>
         <div className="rounded-2xl border border-zinc-100 bg-white p-5">
           <p className="text-sm text-zinc-500">Mileage</p>
           <p className="mt-1 text-2xl font-semibold text-zinc-900">0P</p>
         </div>
-        <div className="rounded-2xl border border-zinc-100 bg-white p-5">
+        <Link
+          href="/account/wishlist"
+          className="rounded-2xl border border-zinc-100 bg-white p-5 transition-colors hover:border-zinc-200"
+        >
           <p className="text-sm text-zinc-500">Wishlist</p>
           <p className="mt-1 text-2xl font-semibold text-zinc-900">0</p>
-        </div>
+        </Link>
       </div>
       <p className="mt-8 text-sm text-zinc-500">
         Your orders are listed under the Orders tab, with full details for each
-        purchase. Wishlists will be available once wishlisting is enabled.
+        purchase. Update your contact and delivery details in{" "}
+        <Link href="/account/profile" className="text-point-600 underline">
+          Profile
+        </Link>
+        .
       </p>
     </div>
   );
