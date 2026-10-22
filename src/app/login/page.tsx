@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Container } from "@/components/ui/container";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/lib/auth-client";
 import { RATE_LIMIT_MESSAGE, isRateLimit, notifyRateLimit } from "@/lib/errors";
 import { notify } from "@/lib/toast";
@@ -225,8 +226,7 @@ export default function LoginPage() {
                 <span className="mb-1 block text-sm font-medium text-[#222]">
                   Password
                 </span>
-                <input
-                  type="password"
+                <PasswordInput
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"

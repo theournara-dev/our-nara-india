@@ -5,6 +5,7 @@ import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { isRateLimit, notifyRateLimit } from "@/lib/errors";
 import { notify } from "@/lib/toast";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const [password, setPassword] = useState("");
@@ -76,8 +77,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <span className="mb-1 block text-sm font-medium text-[#222]">
           New password
         </span>
-        <input
-          type="password"
+        <PasswordInput
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -93,8 +93,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         <span className="mb-1 block text-sm font-medium text-[#222]">
           Confirm new password
         </span>
-        <input
-          type="password"
+        <PasswordInput
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           autoComplete="new-password"

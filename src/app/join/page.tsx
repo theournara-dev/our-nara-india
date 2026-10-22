@@ -7,6 +7,7 @@ import { Container } from "@/components/ui/container";
 import { CountrySelect } from "@/components/ui/country-select";
 import { PhoneCodeSelect } from "@/components/ui/phone-code-select";
 import { StepIndicator } from "@/components/ui/step-indicator";
+import { PasswordInput } from "@/components/ui/password-input";
 import type { Country } from "@/data/countries";
 import { authClient } from "@/lib/auth-client";
 import { EMAIL_VERIFICATION_ENABLED } from "@/lib/config";
@@ -365,8 +366,7 @@ export default function JoinPage() {
                 <span className="mb-1 block text-sm font-medium text-[#222]">
                   Password
                 </span>
-                <input
-                  type="password"
+                <PasswordInput
                   value={form.password}
                   onChange={(e) => set("password", e.target.value)}
                   autoComplete="new-password"
