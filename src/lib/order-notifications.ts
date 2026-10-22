@@ -2,7 +2,10 @@ import { SITE } from "@/lib/constants";
 import { trackingUrl } from "@/lib/delhivery-client";
 import { getFromForVersion, sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/money";
-import type { OrderStatusValue } from "@/lib/order-status";
+import {
+  ORDER_STATUS_LABELS,
+  type OrderStatusValue,
+} from "@/lib/order-status";
 import { loadSiteConfig } from "@/lib/site-config";
 import {
   getSiteUrl,
@@ -338,6 +341,63 @@ export async function notifyAdminsNewOrder(
   } catch (err) {
     console.error(
       `[order-notifications] Failed to send new-order admin email for order ${order.orderNumber}:`,
+      err,
+    );
+    return { ok: false };
+  }
+}
+
+/**
+ * Tell the store's own inbox that an order moved to another status. Complements
+ * the customer status email with who made the change. Never throws.
+ */
+export async function notifyAdminsStatusChange(
+  order: Pick<
+    OrderForNotification,
+    "id" | "orderNumber" | "email" | "siteVersion"
+  >,
+  fromStatus: OrderStatusValue | null,
+  toStatus: OrderStatusValue,
+  actorEmail: string | null,
+): Promise<{ ok: boolean; dev?: boolean }> {
+  try {
+    const version = versionForOrder(order);
+    const site = await loadSiteConfig(version);
+    const adminLink = `${getSiteUrl(version)}/admin/orders/${order.id}`;
+    const from = fromStatus ? ORDER_STATUS_LABELS[fromStatus] : "—";
+    const to = ORDER_STATUS_LABELS[toStatus];
+    const actor = actorEmail ?? "System";
+
+    const subject = `Order ${order.orderNumber}: ${from} → ${to} — ${SITE.name}`;
+    const text = [
+      `Order ${order.orderNumber} was moved to ${to}.`,
+      "",
+      `From: ${from}`,
+      `To: ${to}`,
+      `Changed by: ${actor}`,
+      `Customer: ${order.email ?? "—"}`,
+      "",
+      `Admin: ${adminLink}`,
+    ].join("\n");
+
+    const html = wrapHtml(
+      "Order status changed",
+      `<p>Order <strong>${escapeHtml(order.orderNumber)}</strong> moved from ${escapeHtml(from)} to <strong>${escapeHtml(to)}</strong>.</p>
+       <p><strong>Changed by:</strong> ${escapeHtml(actor)}</p>
+       <p><strong>Customer:</strong> ${escapeHtml(order.email ?? "—")}</p>
+       <p><a href="${escapeHtml(adminLink)}" style="color:${BRAND_COLOR};font-weight:700">View order in admin →</a></p>`,
+    );
+
+    return await sendEmail({
+      to: site.email,
+      from: getFromForVersion(version),
+      subject,
+      text,
+      html,
+    });
+  } catch (err) {
+    console.error(
+      `[order-notifications] Failed to send status admin email for order ${order.orderNumber}:`,
       err,
     );
     return { ok: false };

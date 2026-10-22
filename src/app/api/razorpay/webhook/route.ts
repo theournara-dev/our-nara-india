@@ -3,7 +3,9 @@ import { SITE } from "@/lib/constants";
 import { sendEmail } from "@/lib/email";
 import { getRazorpay, verifyWebhookSignatureAnyVersion } from "@/lib/razorpay";
 import { versionForOrder } from "@/lib/site-version";
+import type { OrderStatusValue } from "@/lib/order-status";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { logOrderStatusChange } from "@/lib/order-status-log";
 import { runPaidSideEffects } from "@/lib/paid-side-effects";
 
 /**
@@ -172,6 +174,20 @@ async function handlePaymentCaptured(payment: RazorpayPaymentEntity) {
   // them. Kept outside the transaction — mail failure must not fail the
   // webhook (Razorpay would otherwise retry a paid event).
   await runPaidSideEffects(order.id, paymentRecord.id);
+
+  const nextStatus: OrderStatusValue = order.isPreOrder ? "PRE_ORDER" : "PAID";
+  if (
+    !PROTECTED_ORDER_STATUSES.has(order.status) &&
+    order.status !== nextStatus
+  ) {
+    await logOrderStatusChange({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      fromStatus: order.status,
+      toStatus: nextStatus,
+      actions: ["invoice", "email_customer", "email_admin"],
+    });
+  }
 }
 
 /** Best-effort internal alert email; never throws. */
@@ -217,6 +233,13 @@ async function handlePaymentFailed(payment: RazorpayPaymentEntity) {
     data: { status: "FAILED" },
   });
   await notifyOrderStatusChange(order, "FAILED");
+  await logOrderStatusChange({
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    fromStatus: order.status,
+    toStatus: "FAILED",
+    actions: ["email_customer"],
+  });
 }
 
 async function handleOrderPaid(order: RazorpayOrderEntity) {
@@ -292,6 +315,19 @@ async function handleOrderPaid(order: RazorpayOrderEntity) {
   // The captured event (which normally runs these) was missed — run the
   // same side-effects here.
   await runPaidSideEffects(internalOrder.id, paymentRecord.id);
+
+  const nextStatus: OrderStatusValue = internalOrder.isPreOrder
+    ? "PRE_ORDER"
+    : "PAID";
+  if (internalOrder.status !== nextStatus) {
+    await logOrderStatusChange({
+      orderId: internalOrder.id,
+      orderNumber: internalOrder.orderNumber,
+      fromStatus: internalOrder.status,
+      toStatus: nextStatus,
+      actions: ["invoice", "email_customer", "email_admin"],
+    });
+  }
 }
 
 /**
@@ -424,6 +460,15 @@ async function handleRefundCreated(refund: RazorpayRefundEntity) {
   // here; pre-orders keep the pre-order flow (status stays PRE_ORDER) but the
   // customer still gets the refund email via the REFUNDED template.
   await notifyOrderStatusChange(order, "REFUNDED");
+  if (!order.isPreOrder && order.status !== "REFUNDED") {
+    await logOrderStatusChange({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      fromStatus: order.status,
+      toStatus: "REFUNDED",
+      actions: ["email_customer"],
+    });
+  }
 }
 
 export async function POST(request: Request) {

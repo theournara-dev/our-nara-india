@@ -597,6 +597,27 @@ model OrderApprovalLog {
   @@map("order_approval_logs")
 }
 
+// Every order status transition, oldest first. Manual admin changes and
+// automatic transitions (payment capture, refund, shipment sync) append a row,
+// so staff can see how an order reached its current status. Standalone (like
+// OrderAuditLog) so the history survives an order deletion.
+model OrderStatusLog {
+  id          String       @id @default(cuid())
+  orderId     String       @map("order_id")
+  orderNumber String       @map("order_number")
+  // Null only for the implicit "placed" entry.
+  fromStatus  OrderStatus? @map("from_status")
+  toStatus    OrderStatus  @map("to_status")
+  // Null for system transitions (webhook, cron, shipment sync).
+  actorEmail  String?      @map("actor_email")
+  // Actions taken with the change: "invoice", "email_customer", "email_admin".
+  actions     String[]     @default([])
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@map("order_status_logs")
+}
+
 // ---------------------------------------------------------------------------
 // Fulfillment (Delhivery)
 // ---------------------------------------------------------------------------

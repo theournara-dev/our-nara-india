@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { runPaidSideEffects } from "@/lib/paid-side-effects";
+import { logOrderStatusChange } from "@/lib/order-status-log";
 
 /**
  * Completes a zero-total order without a payment. The checkout client calls
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
   }
 
   const alreadyDone = order.status === "PAID" || order.status === "PRE_ORDER";
+  let flipped = false;
   if (!alreadyDone) {
     if (order.status !== "PENDING" && order.status !== "FAILED") {
       return NextResponse.json(
@@ -90,12 +92,24 @@ export async function POST(request: Request) {
           { status: 409 },
         );
       }
+    } else {
+      flipped = true;
     }
   }
 
   // No Payment row: a free order was never charged. The side effects claim is
   // idempotent, so a retried request runs them at most once.
   await runPaidSideEffects(order.id);
+
+  if (flipped) {
+    await logOrderStatusChange({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      fromStatus: order.status,
+      toStatus: order.isPreOrder ? "PRE_ORDER" : "PAID",
+      actions: ["invoice", "email_customer", "email_admin"],
+    });
+  }
 
   return NextResponse.json({ ok: true, orderNumber: order.orderNumber });
 }

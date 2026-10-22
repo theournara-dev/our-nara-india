@@ -13,6 +13,7 @@ import {
 import type { ShipmentStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import { logOrderStatusChange } from "@/lib/order-status-log";
 import { runPaidSideEffects } from "@/lib/paid-side-effects";
 
 /**
@@ -172,6 +173,13 @@ export async function GET(request: Request) {
         if (paid) {
           summary.ordersPaid += 1;
           await runPaidSideEffects(order.id, paying.id);
+          await logOrderStatusChange({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            fromStatus: "PENDING",
+            toStatus: order.isPreOrder ? "PRE_ORDER" : "PAID",
+            actions: ["invoice", "email_customer", "email_admin"],
+          });
         }
       } catch (err) {
         summary.errors.push(
@@ -206,6 +214,13 @@ async function advanceOrder(
       data: { status: target },
     });
     await notifyOrderStatusChange(order, target, { waybill });
+    await logOrderStatusChange({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      fromStatus: order.status,
+      toStatus: target,
+      actions: ["email_customer"],
+    });
   }
 }
 

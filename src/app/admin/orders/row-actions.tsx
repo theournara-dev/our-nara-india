@@ -13,6 +13,7 @@ import {
   updateOrderStatus,
   type ShipmentActionResult,
 } from "./actions";
+import { StatusChangeDialog } from "./status-change-dialog";
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
@@ -68,10 +69,15 @@ export function OrderRowActions({
   const [pending, startTransition] = useTransition();
   const [importOpen, setImportOpen] = useState(false);
   const [waybillInput, setWaybillInput] = useState("");
+  const [pendingStatus, setPendingStatus] = useState<OrderStatusValue | null>(
+    null,
+  );
 
   function run(
     label: string,
-    fn: () => Promise<ShipmentActionResult | void>,
+    fn: () => Promise<
+      (ShipmentActionResult & { warnings?: string[] }) | void
+    >,
     toastId?: string,
   ) {
     startTransition(async () => {
@@ -87,7 +93,11 @@ export function OrderRowActions({
           });
           return;
         }
-        notify.success(id, `${label} done`);
+        notify.success(
+          id,
+          `${label} done`,
+          result?.warnings?.length ? result.warnings.join(" ") : undefined,
+        );
         setImportOpen(false);
         setWaybillInput("");
       } catch (err) {
@@ -103,9 +113,18 @@ export function OrderRowActions({
 
   function onChange(next: string) {
     if (next === status) return;
-    run("Updating status", async () => {
-      await updateOrderStatus(id, next);
-    });
+    setPendingStatus(next as OrderStatusValue);
+  }
+
+  function confirmStatusChange(opts: {
+    invoice: boolean;
+    emailCustomer: boolean;
+    emailAdmin: boolean;
+  }) {
+    const next = pendingStatus;
+    if (!next) return;
+    setPendingStatus(null);
+    run("Updating status", () => updateOrderStatus(id, next, opts));
   }
 
   // Shared button base so every action reads as part of one toolbar.
@@ -269,6 +288,17 @@ export function OrderRowActions({
             Attach
           </button>
         </div>
+      )}
+
+      {pendingStatus && (
+        <StatusChangeDialog
+          orderNumber={orderNumber}
+          from={status}
+          to={pendingStatus}
+          busy={pending}
+          onCancel={() => setPendingStatus(null)}
+          onConfirm={confirmStatusChange}
+        />
       )}
     </div>
   );

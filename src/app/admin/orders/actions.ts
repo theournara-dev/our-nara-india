@@ -13,7 +13,14 @@ import {
   advanceShipmentStatus,
 } from "./fulfillment";
 import { ORDER_STATUSES, type OrderStatusValue } from "@/lib/order-status";
-import { notifyOrderStatusChange } from "@/lib/order-notifications";
+import {
+  notifyAdminsStatusChange,
+  notifyOrderStatusChange,
+} from "@/lib/order-notifications";
+import {
+  logOrderStatusChange,
+  type OrderStatusAction,
+} from "@/lib/order-status-log";
 import { versionForOrder } from "@/lib/site-version";
 import { parseInput, safeText } from "@/lib/validation";
 import { z } from "zod";
@@ -38,8 +45,21 @@ export type ShipmentActionResult = ActionResult;
 const DELHIVERY_LOCAL_ONLY =
   "Delhivery fulfillment is only available for local (India) orders. Fulfil global orders manually.";
 
-export async function updateOrderStatus(id: string, status: string) {
-  await requireAdmin();
+export type StatusChangeOptions = {
+  /** Create the invoice when it does not exist yet. */
+  invoice?: boolean;
+  /** Send the standard status email to the customer. */
+  emailCustomer?: boolean;
+  /** Send a short status notice to the store's admin inbox. */
+  emailAdmin?: boolean;
+};
+
+export async function updateOrderStatus(
+  id: string,
+  status: string,
+  options: StatusChangeOptions = {},
+): Promise<ActionResult & { warnings?: string[] }> {
+  const session = await requireAdmin();
   if (!(ORDER_STATUSES as readonly string[]).includes(status)) {
     throw new Error("Invalid order status");
   }
@@ -51,29 +71,68 @@ export async function updateOrderStatus(id: string, status: string) {
   const nextStatus = status as OrderStatusValue;
   if (nextStatus === order.status) {
     revalidatePath("/admin/orders");
-    return;
+    return { ok: true };
   }
+
+  // Defaults match the confirmation dialog, so a caller that omits the options
+  // keeps the old behaviour (customer email) plus the new invoice/admin mail.
+  const invoice =
+    options.invoice ?? (nextStatus === "PAID" || nextStatus === "PRE_ORDER");
+  const emailCustomer = options.emailCustomer ?? nextStatus !== "PENDING";
+  const emailAdmin = options.emailAdmin ?? true;
+
   // Atomic: only flip when the row still has the status we read, so two
   // concurrent updates can't both win (and only the winner notifies).
   const res = await db.order.updateMany({
     where: { id, status: order.status },
     data: { status: nextStatus },
   });
-  if (res.count === 1) {
-    const NOTIFIABLE_STATUSES = new Set<OrderStatusValue>([
-      "PAID",
-      "PRE_ORDER",
-      "SHIPPED",
-      "DELIVERED",
-      "CANCELLED",
-      "REFUNDED",
-      "FAILED",
-    ]);
-    if (NOTIFIABLE_STATUSES.has(nextStatus)) {
-      await notifyOrderStatusChange(order, nextStatus);
-    }
+  if (res.count !== 1) {
+    return {
+      ok: false,
+      message:
+        "The order status changed while you were editing. Reload and try again.",
+    };
   }
+
+  const actorEmail = session.user.email ?? null;
+  const warnings: string[] = [];
+  const taken: OrderStatusAction[] = [];
+
+  if (invoice) {
+    const issued = await issueInvoiceForOrder(id);
+    if (issued) taken.push("invoice");
+    else warnings.push("The invoice could not be created.");
+  }
+
+  if (emailCustomer && nextStatus !== "PENDING") {
+    const sent = await notifyOrderStatusChange(order, nextStatus);
+    if (sent.ok) taken.push("email_customer");
+    else warnings.push("The customer email was not sent.");
+  }
+
+  if (emailAdmin) {
+    const sent = await notifyAdminsStatusChange(
+      order,
+      order.status,
+      nextStatus,
+      actorEmail,
+    );
+    if (sent.ok) taken.push("email_admin");
+    else warnings.push("The admin email was not sent.");
+  }
+
+  await logOrderStatusChange({
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    fromStatus: order.status,
+    toStatus: nextStatus,
+    actorEmail,
+    actions: taken,
+  });
+
   revalidatePath("/admin/orders");
+  return warnings.length > 0 ? { ok: true, warnings } : { ok: true };
 }
 
 /** Staff decisions on a global order's uploaded ID. */
@@ -457,7 +516,7 @@ export async function importShipment(
 export async function syncShipment(
   waybill: string,
 ): Promise<ShipmentActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   try {
     const shipment = await db.shipment.findUnique({
       where: { waybill },
@@ -514,6 +573,14 @@ export async function syncShipment(
         if (res.count === 1) {
           await notifyOrderStatusChange(order, target, {
             waybill: shipment.waybill,
+          });
+          await logOrderStatusChange({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            fromStatus: order.status,
+            toStatus: target,
+            actorEmail: session.user.email ?? null,
+            actions: ["email_customer"],
           });
         }
       }

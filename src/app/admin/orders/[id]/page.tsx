@@ -20,6 +20,7 @@ import { InvoicePreviewButton } from "@/components/admin/invoice-preview";
 import { OrderRowActions } from "../row-actions";
 import { ApprovalActions } from "../approval-actions";
 import { getApprovalHistory } from "../approval-data";
+import { getOrderStatusHistory } from "@/lib/order-status-log";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,12 @@ const cardClass = "rounded-2xl border border-zinc-100 bg-white";
 const cardHeaderClass =
   "border-b border-zinc-100 px-5 py-3.5 text-sm font-semibold text-zinc-900";
 
+const STATUS_ACTION_LABELS: Record<string, string> = {
+  invoice: "invoice created",
+  email_customer: "customer emailed",
+  email_admin: "admin emailed",
+};
+
 export default async function AdminOrderDetailPage({
   params,
 }: {
@@ -65,6 +72,7 @@ export default async function AdminOrderDetailPage({
   });
   if (!order) notFound();
   const approvalHistory = await getApprovalHistory(order.id);
+  const statusHistory = await getOrderStatusHistory(order.id);
 
   const shipping =
     (order.shipping as
@@ -308,6 +316,49 @@ export default async function AdminOrderDetailPage({
                 ))}
               </ul>
             )}
+          </section>
+
+          {/* Status history */}
+          <section className={cardClass}>
+            <h2 className={cardHeaderClass}>Status history</h2>
+            <ol className="divide-y divide-zinc-50">
+              {statusHistory.map((entry) => (
+                <li key={entry.id} className="px-5 py-3">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                    <span className="font-medium text-zinc-900">
+                      {ORDER_STATUS_LABELS[entry.toStatus]}
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      from{" "}
+                      {entry.fromStatus
+                        ? ORDER_STATUS_LABELS[entry.fromStatus]
+                        : "—"}
+                    </span>
+                    <span className="ml-auto text-xs text-zinc-400">
+                      {formatDateTime(entry.createdAt)}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {entry.actorEmail ?? "System"}
+                    {entry.actions.length > 0
+                      ? ` · ${entry.actions
+                          .map((a) => STATUS_ACTION_LABELS[a] ?? a)
+                          .join(", ")}`
+                      : ""}
+                  </p>
+                </li>
+              ))}
+              <li className="px-5 py-3">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                  <span className="font-medium text-zinc-900">Pending</span>
+                  <span className="text-xs text-zinc-400">order placed</span>
+                  <span className="ml-auto text-xs text-zinc-400">
+                    {formatDateTime(order.createdAt)}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-zinc-500">Customer</p>
+              </li>
+            </ol>
           </section>
         </div>
 
