@@ -12,5 +12,12 @@ export function orderBelongsToUser(
 }
 
 export function orderAccountWhere(user: { id: string; email: string }) {
-  return { OR: [{ userId: user.id }, { email: user.email.toLowerCase() }] };
+  // The email branch only covers guest orders. Without `userId: null` a
+  // signed-in order using this email (someone else's account) would leak here.
+  return {
+    OR: [
+      { userId: user.id },
+      { userId: null, email: user.email.toLowerCase() },
+    ],
+  };
 }

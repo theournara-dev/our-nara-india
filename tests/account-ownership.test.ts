@@ -13,6 +13,6 @@ test("an order belongs to its owner, or to the account matching a guest order's 
 
 test("the account where clause lowercases the email", () => {
   assert.deepEqual(orderAccountWhere({ id: "u2", email: "A@Example.com" }), {
-    OR: [{ userId: "u2" }, { email: "a@example.com" }],
+    OR: [{ userId: "u2" }, { userId: null, email: "a@example.com" }],
   });
 });

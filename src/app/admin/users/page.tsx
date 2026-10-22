@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { clampPage } from "@/lib/pagination";
 import { RoleBadge } from "./role-badge";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,6 @@ export default async function AdminUsersPage({
 }) {
   const params = await searchParams;
   const q = params.q?.trim() ?? "";
-  const page = Math.max(1, Number(params.page) || 1);
 
   const where = q
     ? {
@@ -43,24 +43,27 @@ export default async function AdminUsersPage({
       }
     : {};
 
-  const [users, total] = await Promise.all([
-    db.user.findMany({
-      where,
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        username: true,
-        role: true,
-        banned: true,
-        createdAt: true,
-      },
-    }),
-    db.user.count({ where }),
-  ]);
+  // Count first so ?page=999 lands on the last page instead of an empty table
+  // with impossible "showing" numbers; floats and junk fall back to page 1.
+  const total = await db.user.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const page = clampPage(params.page, totalPages);
+
+  const users = await db.user.findMany({
+    where,
+    skip: (page - 1) * PAGE_SIZE,
+    take: PAGE_SIZE,
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      username: true,
+      role: true,
+      banned: true,
+      createdAt: true,
+    },
+  });
 
   // Purchases: orders placed while signed in plus guest orders made with the
   // same email (same rule as the customer account pages).
@@ -92,8 +95,6 @@ export default async function AdminUsersPage({
   const wishlistCountByUser = new Map(
     wishlistsByUser.map((row) => [row.userId, row._count]),
   );
-
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   function href(overrides: Record<string, string | undefined>) {
     const sp = new URLSearchParams();

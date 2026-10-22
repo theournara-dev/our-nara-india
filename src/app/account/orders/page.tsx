@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { orderAccountWhere } from "@/lib/order-ownership";
 import { AccountOrderCard, type AccountOrder } from "./order-card";
 
 export const dynamic = "force-dynamic";
@@ -38,12 +39,7 @@ export default async function AccountOrdersPage() {
   // Orders placed while signed in carry the userId; guest checkouts made with
   // the same email (stored lowercased at creation) belong to the customer too.
   const orders = await db.order.findMany({
-    where: {
-      OR: [
-        { userId: session.user.id },
-        { email: session.user.email.toLowerCase() },
-      ],
-    },
+    where: orderAccountWhere(session.user),
     orderBy: { createdAt: "desc" },
     include: {
       items: { orderBy: { id: "asc" } },
