@@ -191,6 +191,13 @@ export type InstagramItem = z.infer<typeof instagramItemSchema>;
 export const sectionConfigSchemas = {
   hero: z.object({
     slides: z.array(heroSlideSchema).default([]),
+    // Admin-set card height in px on desktop. Smaller screens keep each
+    // artwork's proportions but are capped at this height. 0 keeps the
+    // artwork's own proportions.
+    height: z.number().int().min(0).max(900).default(0),
+    // Cards across on desktop (>= 1200px); tablet and phone keep the theme's
+    // 2.5 / 1.2 counts.
+    slidesPerView: z.number().min(1).max(6).default(3.7),
   }),
   // Unified product section: same heading + product cards, rendered as either
   // a wrapping grid or a scrolling carousel, with configurable columns.

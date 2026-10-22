@@ -80,8 +80,16 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   hero: {
     meta: SECTION_TYPE_META_BY_TYPE.hero,
     load: async (config) => {
-      const slides = (config as { slides?: HeroSlide[] })?.slides ?? [];
-      return { slides };
+      const c = config as {
+        slides?: HeroSlide[];
+        height?: number;
+        slidesPerView?: number;
+      };
+      return {
+        slides: c?.slides ?? [],
+        height: c?.height ?? 0,
+        slidesPerView: c?.slidesPerView ?? 3.7,
+      };
     },
     component: HeroCarousel,
   },

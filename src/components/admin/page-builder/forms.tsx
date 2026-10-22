@@ -4,6 +4,9 @@
 // loosely typed in the form layer.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { useLayoutEffect, useRef, useState } from "react";
+import { HeroCarousel } from "@/components/content/hero-carousel";
+
 import {
   AmbassadorImagesField,
   HeroSlidesField,
@@ -52,11 +55,102 @@ function NoSettings() {
 
 export function HeroForm({ config, onChange, options }: FormProps) {
   return (
-    <HeroSlidesField
-      value={config.slides ?? []}
-      onChange={(slides) => onChange({ ...config, slides })}
-      options={options}
-    />
+    <div className="space-y-4">
+      <div className="grid gap-3 [&>*]:min-w-0 sm:grid-cols-2">
+        <NumberField
+          label="Height (px)"
+          value={config.height ?? 0}
+          min={0}
+          max={900}
+          onChange={(height) => onChange({ ...config, height })}
+          hint="0 keeps the artwork's proportions. Smaller screens scale down and cap at this height."
+        />
+        <NumberField
+          label="Slides visible (desktop)"
+          value={config.slidesPerView ?? 3.7}
+          min={1}
+          max={6}
+          onChange={(slidesPerView) =>
+            onChange({ ...config, slidesPerView })
+          }
+          hint="At 1200px and wider. Tablet shows 2.5, phones 1.2."
+        />
+      </div>
+      <HeroSlidesField
+        value={config.slides ?? []}
+        onChange={(slides) => onChange({ ...config, slides })}
+        options={options}
+      />
+      <HeroPreview config={config} />
+    </div>
+  );
+}
+
+/**
+ * The section as it will render on desktop, using the real carousel so the
+ * preview cannot drift from the page. Rendered at 1440px and scaled down to
+ * the sheet.
+ */
+const PREVIEW_WIDTH = 1440;
+
+function HeroPreview({ config }: { config: any }) {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  const [boxHeight, setBoxHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    if (!outer || !inner) return;
+    const update = () => {
+      const nextScale = outer.clientWidth / PREVIEW_WIDTH;
+      setScale(nextScale);
+      setBoxHeight(inner.offsetHeight * nextScale);
+    };
+    update();
+    // Both sides matter: the sheet resizes with the window, and the carousel
+    // changes height when the height setting or the slide list changes.
+    const observer = new ResizeObserver(update);
+    observer.observe(outer);
+    observer.observe(inner);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+      <p className="mb-2 text-xs font-medium text-zinc-500">
+        Preview — desktop at {PREVIEW_WIDTH}px
+      </p>
+      <div
+        ref={outerRef}
+        className="relative w-full overflow-hidden"
+        style={{ height: boxHeight }}
+      >
+        <div
+          ref={innerRef}
+          className="absolute left-0 top-0"
+          style={{
+            width: PREVIEW_WIDTH,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+          }}
+        >
+          <HeroCarousel
+            // Swiper sizes its loop from the slide list, so added, removed or
+            // reordered slides need a fresh instance. Edits to a slide's own
+            // fields stay on the same node.
+            key={(config.slides ?? [])
+              .map((s: { id: string }) => s.id)
+              .join("|")}
+            slides={config.slides ?? []}
+            height={config.height ?? 0}
+            slidesPerView={config.slidesPerView ?? 3.7}
+            preview
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -146,6 +146,18 @@ body {
 }
 
 /*
+ * Admin-set hero card height (section editor). On desktop the card is exactly
+ * the chosen height; below the desktop breakpoint it keeps the artwork's
+ * proportions, capped at that height, so smaller screens scale down without a
+ * second setting.
+ */
+@media (min-width: 1200px) {
+  [data-hero-height] .hero-carousel .swiper-slide {
+    height: var(--hero-h);
+  }
+}
+
+/*
  * Shorts Picks — replica of the original theme's `shortsRoll` section.
  * Portrait video cards whose media box is widened past the card (116%, clipped
  * by the rounded corner overflow), only the active slide embeds a player, and
