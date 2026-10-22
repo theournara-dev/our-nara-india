@@ -42,6 +42,13 @@ const GROUP_LABELS: Record<BrandGroupKey, string> = {
 };
 
 /**
+ * Brand group tabs are disabled (client request, Oct 2026): /brands shows one
+ * all-brands list, so the admin no longer exposes the group column or field.
+ * Kept behind this flag — flipping it restores both surfaces.
+ */
+const BRAND_GROUPS_ENABLED = false;
+
+/**
  * Brand list for the admin: who is on the storefront, how many products each
  * one carries, its /brands page image and group tab, and a delete for the ones
  * nothing points at.
@@ -90,7 +97,9 @@ export function BrandsTable({ brands }: { brands: AdminBrandRow[] }) {
               <th className="px-4 py-3 font-medium">Brand</th>
               <th className="px-4 py-3 font-medium">Slug</th>
               <th className="px-4 py-3 font-medium">Products</th>
-              <th className="px-4 py-3 font-medium">Brands page</th>
+              {BRAND_GROUPS_ENABLED && (
+                <th className="px-4 py-3 font-medium">Brands page</th>
+              )}
               <th className="px-4 py-3 font-medium">On storefront</th>
               <th className="px-4 py-3" />
             </tr>
@@ -126,13 +135,15 @@ export function BrandsTable({ brands }: { brands: AdminBrandRow[] }) {
                 <td className="px-4 py-3 text-zinc-600">
                   {brand.productCount}
                 </td>
-                <td className="px-4 py-3 text-zinc-600">
-                  {brand.group ? (
-                    GROUP_LABELS[brand.group]
-                  ) : (
-                    <span className="text-zinc-400">All only</span>
-                  )}
-                </td>
+                {BRAND_GROUPS_ENABLED && (
+                  <td className="px-4 py-3 text-zinc-600">
+                    {brand.group ? (
+                      GROUP_LABELS[brand.group]
+                    ) : (
+                      <span className="text-zinc-400">All only</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <button
                     type="button"
@@ -287,20 +298,24 @@ function BrandEditDialog({
           </p>
 
           <div className="mt-4 space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-zinc-500">
-                Group tab
-              </span>
-              <select
-                value={group}
-                onChange={(e) => setGroup(e.target.value as "" | BrandGroupKey)}
-                className="h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500"
-              >
-                <option value="">No group (All tab only)</option>
-                <option value="ONLY_AT_OURNARA">Only At Ournara</option>
-                <option value="NEW_LAUNCH">New Launch</option>
-              </select>
-            </label>
+            {BRAND_GROUPS_ENABLED && (
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-zinc-500">
+                  Group tab
+                </span>
+                <select
+                  value={group}
+                  onChange={(e) =>
+                    setGroup(e.target.value as "" | BrandGroupKey)
+                  }
+                  className="h-9 w-full rounded border border-zinc-200 bg-white px-2 text-sm text-zinc-900 outline-none focus:border-point-500"
+                >
+                  <option value="">No group (All tab only)</option>
+                  <option value="ONLY_AT_OURNARA">Only At Ournara</option>
+                  <option value="NEW_LAUNCH">New Launch</option>
+                </select>
+              </label>
+            )}
 
             <ImageField
               label="Brand image (optional)"

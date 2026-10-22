@@ -11,6 +11,13 @@ import { groupBrandsByLetter } from "@/lib/brand-index";
 
 type TabKey = "all" | "ONLY_AT_OURNARA" | "NEW_LAUNCH";
 
+/**
+ * Group tabs are disabled (client request, Oct 2026): /brands shows one
+ * all-brands list. The tab code below is kept so the feature can be restored by
+ * flipping this flag — nothing else has to be rewritten.
+ */
+const GROUP_TABS_ENABLED = false;
+
 /** The client's slide 8 tabs, in order. */
 const TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -48,7 +55,10 @@ export function BrandBrowser({
 
   const visible = useMemo(
     () =>
-      (tab === "all" ? brands : brands.filter((b) => b.group === tab))
+      (GROUP_TABS_ENABLED && tab !== "all"
+        ? brands.filter((b) => b.group === tab)
+        : brands
+      )
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name)),
     [brands, tab],
@@ -65,32 +75,35 @@ export function BrandBrowser({
   return (
     <div>
       {/* The three group tabs sit right under the title (the client's slide-8
-          layout); the page's banners follow them. */}
-      <div
-        role="tablist"
-        aria-label="Brand groups"
-        className="flex w-full border-b border-[#eee]"
-      >
-        {TABS.map((t) => {
-          const active = t.key === tab;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setTab(t.key)}
-              className={`flex-1 cursor-pointer border-b-2 px-3 py-3 text-center text-sm font-semibold transition-colors md:text-base ${
-                active
-                  ? "border-point-500 text-[#222]"
-                  : "border-transparent text-[#888] hover:text-[#222]"
-              }`}
-            >
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+          layout); the page's banners follow them. Disabled for now — see
+          GROUP_TABS_ENABLED. */}
+      {GROUP_TABS_ENABLED && (
+        <div
+          role="tablist"
+          aria-label="Brand groups"
+          className="flex w-full border-b border-[#eee]"
+        >
+          {TABS.map((t) => {
+            const active = t.key === tab;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 cursor-pointer border-b-2 px-3 py-3 text-center text-sm font-semibold transition-colors md:text-base ${
+                  active
+                    ? "border-point-500 text-[#222]"
+                    : "border-transparent text-[#888] hover:text-[#222]"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {topBanners && <div className="mt-[30px]">{topBanners}</div>}
 
