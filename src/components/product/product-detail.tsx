@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
+  MdFavorite,
+  MdFavoriteBorder,
   MdKeyboardArrowLeft,
   MdKeyboardArrowRight,
   MdOutlineShoppingCart,
@@ -17,14 +20,16 @@ import {
   discountBadgeLabel,
   resolvePrice,
 } from "@/lib/discounts";
-import { notifyAddedToCart } from "@/lib/toast";
+import { notify, notifyAddedToCart } from "@/lib/toast";
 import { describeCouponValue, type CouponRecord } from "@/lib/coupons";
 import { computeShippingCents } from "@/lib/shipping";
 import { listCouponsForProduct } from "@/app/actions/coupons";
+import { toggleWishlist } from "@/app/actions/wishlist";
 import { FreeShippingBox } from "./free-shipping-box";
 import { ShippingProgressBar } from "@/components/cart/shipping-progress";
 import { useCartSheet } from "@/components/cart/cart-provider";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { useWishlist } from "@/components/wishlist-provider";
 import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { PreorderDialog } from "./preorder-dialog";
@@ -75,6 +80,10 @@ export function ProductDetail({
     "DETAIL",
   );
   const [askOpen, setAskOpen] = useState(false);
+  const router = useRouter();
+  const [wishing, startWishlist] = useTransition();
+  const { isSaved, setSaved } = useWishlist();
+  const saved = isSaved(product.id);
 
   const selectedVariant = product.variants.find((v) => v.id === option);
   // Gallery = the product's own images followed by each option's images, in
@@ -233,6 +242,23 @@ export function ProductDetail({
 
   function handlePreorder() {
     setPreorderOpen(true);
+  }
+
+  /** Saved state is shared with the cards and the account wishlist page. */
+  function handleWishlist() {
+    startWishlist(async () => {
+      const res = await toggleWishlist(product.id);
+      if (!res.ok) {
+        notify.error("Wishlist", res.message);
+        if (res.reason === "auth") router.push("/login");
+        return;
+      }
+      setSaved(product.id, res.saved);
+      notify.success(
+        res.saved ? "Saved to wishlist" : "Removed from wishlist",
+        product.name,
+      );
+    });
   }
 
   /** Step the gallery one photo, wrapping around at either end. */
@@ -548,6 +574,27 @@ export function ProductDetail({
               (stays on the page) beside Buy Now. Pre-order and unavailable
               products keep their single button. */}
           <div className="mt-4 flex gap-2">
+            {/* Wishlist sits beside the purchase actions: the client asked for
+                it on the product page, not only on the listing cards. */}
+            <button
+              type="button"
+              aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+              aria-pressed={saved}
+              onClick={handleWishlist}
+              disabled={wishing}
+              className={`flex h-14 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border px-4 text-[14px] font-bold transition-colors disabled:opacity-60 ${
+                saved
+                  ? "border-point-500 bg-point-50 text-point-600"
+                  : "border-zinc-300 bg-white text-zinc-600 hover:border-point-500 hover:text-point-500"
+              }`}
+            >
+              {saved ? (
+                <MdFavorite className="h-5 w-5" aria-hidden />
+              ) : (
+                <MdFavoriteBorder className="h-5 w-5" aria-hidden />
+              )}
+              <span className="hidden sm:inline">WISHLIST</span>
+            </button>
             {showBuyNow && config.paymentsEnabled && (
               <button
                 type="button"

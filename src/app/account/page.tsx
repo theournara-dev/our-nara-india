@@ -41,6 +41,10 @@ export default async function AccountOverviewPage() {
       })
     : 0;
 
+  const wishlistCount = session
+    ? await db.wishlistItem.count({ where: { userId: session.user.id } })
+    : 0;
+
   return (
     <div>
       <h1 className="mb-1 text-2xl font-semibold text-zinc-900">
@@ -70,7 +74,9 @@ export default async function AccountOverviewPage() {
           className="rounded-2xl border border-zinc-100 bg-white p-5 transition-colors hover:border-zinc-200"
         >
           <p className="text-sm text-zinc-500">Wishlist</p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-900">0</p>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900">
+            {wishlistCount}
+          </p>
         </Link>
       </div>
       <p className="mt-8 text-sm text-zinc-500">

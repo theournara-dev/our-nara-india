@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toggleWishlist } from "@/app/actions/wishlist";
+import { useWishlist } from "@/components/wishlist-provider";
 import { notify } from "@/lib/toast";
 
 /** Remove a saved product from the wishlist (the item's own button). */
@@ -15,6 +16,7 @@ export function WishlistButton({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const { setSaved } = useWishlist();
 
   function onRemove() {
     startTransition(async () => {
@@ -24,6 +26,7 @@ export function WishlistButton({
         if (res.reason === "auth") router.push("/login");
         return;
       }
+      setSaved(productId, false);
       notify.success("Removed from wishlist", productName);
       router.refresh();
     });

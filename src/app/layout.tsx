@@ -11,7 +11,10 @@ import { PopupHost } from "@/components/layout/popup-host";
 import { CartProvider } from "@/components/cart/cart-provider";
 import { ContactDialogHost } from "@/components/contact/contact-dialog";
 import { SiteVersionProvider } from "@/components/site-version-provider";
+import { WishlistProvider } from "@/components/wishlist-provider";
 import { getCategoryNav } from "@/data/categories";
+import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { SITE } from "@/lib/constants";
 import { getSiteConfig } from "@/lib/site-config";
 import { discountBadgeVars } from "@/lib/discount-badge-style";
@@ -104,6 +107,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     local: topBannerBackgroundCss(localSite.topBanner[0]),
     global: topBannerBackgroundCss(globalSite.topBanner[0]),
   };
+  // Saved products for the hearts on cards/product pages. One query per
+  // request, and only for a signed-in visitor.
+  const viewer = await getCurrentUser();
+  const savedProductIds = viewer
+    ? (
+        await db.wishlistItem.findMany({
+          where: { userId: viewer.id },
+          select: { productId: true },
+        })
+      ).map((row) => row.productId)
+    : [];
 
   return (
     <html
@@ -128,20 +142,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           shippingByVersion={shippingByVersion}
           brandLogo={siteContent.switcher.brandLogo}
         >
-          <CartProvider>
-            <Header
-              siteContent={siteContent}
-              navCategories={navCategories}
-              storeBackgrounds={storeBackgrounds}
-              topBanners={{
-                local: localSite.topBanner,
-                global: globalSite.topBanner,
-              }}
-              menuIcons={localSite.menuIcons}
-            />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </CartProvider>
+          <WishlistProvider saved={savedProductIds}>
+            <CartProvider>
+              <Header
+                siteContent={siteContent}
+                navCategories={navCategories}
+                storeBackgrounds={storeBackgrounds}
+                topBanners={{
+                  local: localSite.topBanner,
+                  global: globalSite.topBanner,
+                }}
+                menuIcons={localSite.menuIcons}
+              />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </CartProvider>
+          </WishlistProvider>
           <MobileTabBar />
           {/* Storefront-wide floating actions (recent views + scroll to top);
               it hides itself inside the admin dashboard. */}

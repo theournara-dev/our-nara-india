@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import type { ProductCard as ProductCardType } from "@/data/products";
 import { addProductToCart } from "@/lib/cart";
 import { toggleWishlist } from "@/app/actions/wishlist";
@@ -12,8 +12,8 @@ import { discountBadgeLabel } from "@/lib/discounts";
 import { saleStateForVersion, visibleForVersion } from "@/lib/product-flags";
 import { KDropMark } from "@/components/product/kdrop-mark";
 import { notify, notifyAddedToCart } from "@/lib/toast";
-import { cn } from "@/lib/utils";
 import { useSiteVersion } from "@/components/site-version-provider";
+import { useWishlist } from "@/components/wishlist-provider";
 
 /**
  * Product card. Default image is shown, the hover image crossfades in on hover
@@ -33,9 +33,10 @@ export function ThemeProductCard({
   const { version } = useSiteVersion();
   const router = useRouter();
   const [savingWishlist, startWishlist] = useTransition();
-  // The heart reflects the last toggle this visitor made; the saved list lives
-  // on /account/wishlist.
-  const [saved, setSaved] = useState(false);
+  // The heart is seeded from the account's saved list, so it is correct on
+  // the first paint (it used to start empty on every load).
+  const { isSaved, setSaved } = useWishlist();
+  const saved = isSaved(product.id);
   // The card answers per store: what this storefront sells (buy-now /
   // pre-order / not yet) and at what price.
   const saleState = saleStateForVersion(product, version);
@@ -67,7 +68,7 @@ export function ThemeProductCard({
         if (res.reason === "auth") router.push("/login");
         return;
       }
-      setSaved(res.saved);
+      setSaved(product.id, res.saved);
       if (res.saved) notify.success("Saved to wishlist", product.name);
       else notify.success("Removed from wishlist", product.name);
     });
@@ -128,12 +129,9 @@ export function ThemeProductCard({
             </div>
           )}
 
-          {/* Quick actions (wishlist + cart), revealed on hover */}
-          <div
-            className={cn(
-              "absolute bottom-2 -right-50 z-10 flex flex-col gap-1 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 group-hover:right-2 max-md:hidden",
-            )}
-          >
+          {/* Quick actions (wishlist + cart). Always visible, on phones too:
+              the client asked for a wishlist button that is not hidden. */}
+          <div className="absolute bottom-2 right-2 z-10 flex flex-col gap-1">
             <button
               type="button"
               aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
