@@ -69,6 +69,7 @@ export default async function AccountOrdersPage() {
           createdAt: true,
         },
       },
+      invoice: { select: { number: true, issuedAt: true } },
     },
   });
 
@@ -113,6 +114,9 @@ export default async function AccountOrdersPage() {
       createdAt: formatDate(s.createdAt),
     })),
     shipping: (o.shipping as AccountOrder["shipping"]) ?? null,
+    invoice: o.invoice
+      ? { number: o.invoice.number, issuedAt: formatDate(o.invoice.issuedAt) }
+      : null,
   }));
 
   return (

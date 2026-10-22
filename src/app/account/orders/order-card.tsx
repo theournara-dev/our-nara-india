@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { InvoicePreviewButton } from "@/components/admin/invoice-preview";
 import { formatMoney } from "@/lib/money";
 import { trackingUrl } from "@/lib/delhivery-client";
 import {
@@ -61,6 +62,7 @@ export interface AccountOrder {
   items: AccountOrderItem[];
   payments: AccountOrderPayment[];
   shipments: AccountOrderShipment[];
+  invoice: { number: string; issuedAt: string } | null;
   shipping: {
     name?: string;
     phone?: string | null;
@@ -114,6 +116,11 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
             {order.isPreOrder && (
               <span className={`${badgeClass} bg-sky-100 text-sky-700`}>
                 Pre-order
+              </span>
+            )}
+            {order.invoice && (
+              <span className="text-xs text-zinc-400">
+                Invoice {order.invoice.number}
               </span>
             )}
           </div>
@@ -335,6 +342,25 @@ export function AccountOrderCard({ order }: { order: AccountOrder }) {
               >
                 {activeShipment.waybill} ↗
               </a>
+            </div>
+          ) : null}
+
+          {/* Invoice */}
+          {order.invoice ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-3">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                  Invoice
+                </h3>
+                <p className="mt-0.5 text-sm text-zinc-600">
+                  {order.invoice.number} · issued {order.invoice.issuedAt}
+                </p>
+              </div>
+              <InvoicePreviewButton
+                orderId={order.id}
+                orderNumber={order.orderNumber}
+                variant="customer"
+              />
             </div>
           ) : null}
         </div>

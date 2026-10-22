@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { InvoiceDocument } from "@/components/admin/invoice-document";
 import { fetchInvoiceView, saveInvoiceHsn } from "@/app/admin/invoices/actions";
+import { fetchMyInvoiceView } from "@/app/account/orders/invoice-actions";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf";
 import { printElement } from "@/lib/print";
 import type { InvoiceView } from "@/lib/invoices";
@@ -17,9 +18,12 @@ import { notify } from "@/lib/toast";
 export function InvoicePreviewButton({
   orderId,
   orderNumber,
+  variant = "admin",
 }: {
   orderId: string;
   orderNumber: string;
+  /** Customers get a read-only copy fetched through the ownership check. */
+  variant?: "admin" | "customer";
 }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<InvoiceView | null>(null);
@@ -102,7 +106,10 @@ export function InvoicePreviewButton({
     setOpen(true);
     startTransition(async () => {
       try {
-        const res = await fetchInvoiceView(orderId);
+        const res =
+          variant === "customer"
+            ? await fetchMyInvoiceView(orderId)
+            : await fetchInvoiceView(orderId);
         if (!res.ok) {
           setError(res.message);
           return;
@@ -168,7 +175,7 @@ export function InvoicePreviewButton({
         onClick={show}
         className="inline-flex h-7 items-center rounded-md border border-zinc-200 bg-white px-2.5 text-[11px] font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
       >
-        Preview
+        {variant === "customer" ? "Invoice" : "Preview"}
       </button>
 
       {open && (
@@ -193,7 +200,7 @@ export function InvoicePreviewButton({
                 </h3>
                 <p className="text-xs text-zinc-500">
                   Order {orderNumber}
-                  {hsnStatus !== "idle" && (
+                  {variant === "admin" && hsnStatus !== "idle" && (
                     <span className="ml-2 text-zinc-400">
                       {hsnStatus === "saving" ? "· saving HSN…" : "· HSN saved"}
                     </span>
@@ -241,7 +248,7 @@ export function InvoicePreviewButton({
                 <div ref={documentRef} data-print-root>
                   <InvoiceDocument
                     view={view}
-                    onHsnChange={onHsnChange}
+                    onHsnChange={variant === "admin" ? onHsnChange : undefined}
                     hsnValues={hsnValues}
                     readOnly={plain}
                   />
