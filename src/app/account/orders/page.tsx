@@ -42,7 +42,8 @@ export default async function AccountOrdersPage({
   if (!session) redirect("/login?session=expired");
 
   // Orders placed while signed in carry the userId; guest checkouts made with
-  // the same email (stored lowercased at creation) belong to the customer too.
+  // the same email (stored lowercased at creation) belong to the customer too,
+  // but only once that email is verified.
   const orders = await db.order.findMany({
     where: orderAccountWhere(session.user),
     orderBy: { createdAt: "desc" },

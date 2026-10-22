@@ -175,7 +175,11 @@ export async function requireAdmin() {
 
 /**
  * Resolve the current session and throw if no user is signed in. Used by
- * server actions that require a verified account (reviews, product questions).
+ * server actions that require an account (reviews, product questions).
+ *
+ * This checks sign-in only, not email verification: verification is currently
+ * switched off (see `EMAIL_VERIFICATION_ENABLED`), so requiring it here would
+ * lock every customer out.
  */
 export async function requireUser() {
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;

@@ -30,7 +30,8 @@ export default async function AccountOverviewPage() {
   const roleLabel = ROLE_LABELS[role ?? "normal"] ?? role ?? "Member";
 
   // Orders placed while signed in carry the userId; guest checkouts made with
-  // the same email (stored lowercased at creation) belong to the customer too.
+  // the same email (stored lowercased at creation) belong to the customer too,
+  // but only once that email is verified.
   const orderCount = session
     ? await db.order.count({ where: orderAccountWhere(session.user) })
     : 0;

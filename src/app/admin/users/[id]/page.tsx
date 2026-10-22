@@ -70,8 +70,9 @@ export default async function AdminUserDetailPage({
   if (!user) notFound();
 
   // Same ownership rule as the customer account: orders placed signed-in plus
-  // guest orders made with this email.
-  const accountWhere = orderAccountWhere(user);
+  // guest orders made with this email. Admins see those regardless of whether
+  // the address is verified — verification only gates the customer's own view.
+  const accountWhere = orderAccountWhere({ ...user, emailVerified: true });
 
   const [orders, lifetime, wishlist] = await Promise.all([
     db.order.findMany({
