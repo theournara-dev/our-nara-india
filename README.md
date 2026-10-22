@@ -102,10 +102,12 @@ npm run db:studio      # browse/edit data in Prisma Studio
 > The generated client lives in `src/generated/prisma` and is gitignored; a
 > `postinstall` hook runs `prisma generate` so builds (and CI) regenerate it.
 >
-> **Email verification** is gated behind `EMAIL_VERIFICATION_ENABLED` in
-> `src/lib/config.ts` and is currently **off** until the Resend sending domain
-> (`our-nara.com`) is verified. When on, sign-up is a 3-step wizard
-> (policies → profile → verify email).
+> **Email verification** is controlled by `EMAIL_VERIFICATION_ENABLED` in
+> `src/lib/config.ts` and is **on**: both Resend sending domains are verified,
+> so sign-up is a 3-step wizard (policies → profile → confirm your email by
+> opening the link we send). Verification emails, password-reset links and
+> "forgot member ID" reminders use the branded templates in
+> `src/lib/email-templates.ts`.
 
 ## Run it
 
@@ -226,8 +228,8 @@ boundaries and payment-failure toasts) stores messages + error traces in the
 
 1. Wire the storefront's `src/data/*` queries to the live Prisma catalog
    (schema + Neon DB ready)
-2. Verify the Resend sending domain, then enable email verification
-   (`EMAIL_VERIFICATION_ENABLED = true`)
+2. Confirm both Resend sending domains stay verified — sign-up now requires
+   the emailed verification link (`EMAIL_VERIFICATION_ENABLED = true`)
 3. Coupons + reviews admin sections (placeholders exist in the admin nav)
 4. Mileage (loyalty points) redemption flow
 5. Multi-currency pricing

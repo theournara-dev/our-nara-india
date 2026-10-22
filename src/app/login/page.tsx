@@ -25,10 +25,10 @@ export default function LoginPage() {
     if (!isPending && session) router.replace("/account");
   }, [session, isPending, router]);
 
-  // Unverified-email verification panel
+  // Unverified-email panel: the account is created but the link has not been
+  // opened yet, so there is no session to continue with.
   const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
-  const [code, setCode] = useState("");
-  const [verifying, setVerifying] = useState(false);
+  const [emailForLink, setEmailForLink] = useState("");
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0);
 
@@ -55,13 +55,16 @@ export default function LoginPage() {
           notifyRateLimit(id);
           return;
         }
-        // Blocked until the email is verified — show the code panel.
+        // Blocked until the email is verified — the link has already been
+        // re-sent on sign-in. Show the resend panel.
         if (res.error.code === "EMAIL_NOT_VERIFIED") {
-          setVerifyEmail(identifier.includes("@") ? identifier : "");
+          const email = identifier.includes("@") ? identifier : "";
+          setVerifyEmail(email);
+          setEmailForLink(email);
           notify.error(
             id,
             "Verify your email",
-            "We sent a code to your email.",
+            "We sent a verification link to your email.",
           );
           return;
         }
@@ -91,58 +94,34 @@ export default function LoginPage() {
     }
   }
 
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    if (!verifyEmail) return;
-    setVerifying(true);
-    const id = notify.loading("Verifying your email…");
+  async function handleResend() {
+    const email = emailForLink.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      notify.error("Verify your email", "Enter the email on the account.");
+      return;
+    }
+    setResending(true);
+    const id = notify.loading("Sending a new link…");
     try {
-      const res = await fetch("/api/auth/email-otp/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: verifyEmail, otp: code }),
+      const res = await authClient.sendVerificationEmail({
+        email,
+        callbackURL: `${window.location.origin}/verify-email`,
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        if (res.status === 429) {
-          notifyRateLimit(id, "Verification failed");
+      if (res.error) {
+        if (isRateLimit(res.error)) {
+          notifyRateLimit(id);
           return;
         }
-        notify.error(id, "Verification failed", data.error ?? "Try again.");
+        notify.error(id, "Could not send the link", res.error.message);
         return;
       }
-      notify.success(id, "Email verified!", "Welcome back to OUR:NARA.");
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
-      window.location.assign("/account");
-    } catch {
-      notify.error(id, "Verification failed", "Something went wrong.");
-    } finally {
-      setVerifying(false);
-    }
-  }
-
-  async function handleResend() {
-    if (!verifyEmail) return;
-    setResending(true);
-    const id = notify.loading("Sending a new code…");
-    try {
-      const res = await fetch("/api/auth/verify/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: verifyEmail }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (res.status === 429) {
-        notifyRateLimit(id);
-        return;
-      }
-      if (!res.ok) throw new Error(data.error ?? "Could not send the code");
-      notify.success(id, "Code sent", `Check ${verifyEmail}.`);
+      setVerifyEmail(email);
+      notify.success(id, "Link sent", `Check ${email}.`);
       setResendIn(60);
     } catch (err) {
       notify.error(
         id,
-        "Could not send code",
+        "Could not send the link",
         err instanceof Error ? err.message : "Try again.",
       );
     } finally {
@@ -168,50 +147,46 @@ export default function LoginPage() {
             Welcome back to OUR:NARA
           </p>
 
-          {verifyEmail ? (
-            <form
-              onSubmit={handleVerify}
-              className="space-y-4 border border-[#e9e9e9] bg-white p-8 text-center"
-            >
+          {verifyEmail !== null ? (
+            <div className="space-y-4 border border-[#e9e9e9] bg-white p-8 text-center">
               <p className="text-sm text-[#666]">
-                Please verify your email to continue. We sent a 6-digit code to{" "}
-                <span className="font-semibold text-[#222]">{verifyEmail}</span>
-                .
+                Please verify your email to continue. We sent a verification
+                link{verifyEmail ? " to " : ""}
+                {verifyEmail && (
+                  <span className="font-semibold text-[#222]">
+                    {verifyEmail}
+                  </span>
+                )}
+                . Open it to finish signing in.
               </p>
-              <input
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                required
-                pattern="\d{6}"
-                title="6-digit code"
-                className="mx-auto block h-14 w-48 rounded border border-[#e9e9e9] text-center text-2xl tracking-[0.5em] text-[#222] outline-none focus:border-point-500 placeholder:text-zinc-300"
-              />
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resending || resendIn > 0}
-                  className="h-11 w-28 rounded border border-[#e9e9e9] text-sm font-semibold text-[#666] transition-colors hover:bg-zinc-50 disabled:opacity-60"
-                >
-                  {resending
-                    ? "Sending…"
-                    : resendIn > 0
-                      ? `Resend in ${resendIn}s`
-                      : "Resend code"}
-                </button>
-                <button
-                  type="submit"
-                  disabled={verifying || code.length !== 6}
-                  className="h-11 flex-1 rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
-                >
-                  {verifying ? "Verifying…" : "Verify Email"}
-                </button>
-              </div>
+              {!verifyEmail && (
+                <label className="block text-left">
+                  <span className="mb-1 block text-sm font-medium text-[#222]">
+                    Email address
+                  </span>
+                  <input
+                    type="email"
+                    value={emailForLink}
+                    onChange={(e) => setEmailForLink(e.target.value)}
+                    autoComplete="email"
+                    placeholder="you@email.com"
+                    required
+                    className="h-11 w-full rounded border border-[#e9e9e9] bg-white px-3 text-sm text-[#222] outline-none focus:border-point-500"
+                  />
+                </label>
+              )}
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending || resendIn > 0}
+                className="h-11 w-full rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
+              >
+                {resending
+                  ? "Sending…"
+                  : resendIn > 0
+                    ? `Resend link in ${resendIn}s`
+                    : "Resend verification link"}
+              </button>
               <button
                 type="button"
                 onClick={() => setVerifyEmail(null)}
@@ -219,7 +194,7 @@ export default function LoginPage() {
               >
                 ← Back to login
               </button>
-            </form>
+            </div>
           ) : (
             <form
               onSubmit={handleSubmit}
@@ -271,18 +246,18 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-center gap-4 pt-1 text-xs text-[#888]">
-                <Link href="/help" className="hover:text-point-500">
+                <Link href="/forgot-id" className="hover:text-point-500">
                   Forgot ID
                 </Link>
                 <span aria-hidden="true">|</span>
-                <Link href="/help" className="hover:text-point-500">
+                <Link href="/forgot-password" className="hover:text-point-500">
                   Forgot Password
                 </Link>
               </div>
             </form>
           )}
 
-          {!verifyEmail && (
+          {verifyEmail === null && (
             <div className="mt-4">
               <button
                 type="button"

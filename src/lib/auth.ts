@@ -2,11 +2,11 @@ import "server-only";
 import { headers } from "next/headers";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { admin, emailOTP, username } from "better-auth/plugins";
+import { admin, username } from "better-auth/plugins";
 import { db } from "@/lib/db";
 import { ac, roles } from "@/lib/permissions";
 import { EMAIL_VERIFICATION_ENABLED } from "@/lib/config";
-import { sendVerificationCode } from "@/lib/email";
+import { sendPasswordResetLink, sendVerificationLink } from "@/lib/email";
 
 /**
  * Base URL for auth callbacks and CSRF origin checks. Better Auth derives its
@@ -66,15 +66,33 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 8,
-    // Block sign-in until the email is verified (disabled until the email
-    // provider is ready).
+    // Sign-in stays blocked until the address is verified.
     requireEmailVerification: EMAIL_VERIFICATION_ENABLED,
+    // Link in the email points at /reset-password?token=… (see the client).
+    sendResetPassword: async ({ user, url }) => {
+      // Never await: the auth endpoint must not reveal whether the address
+      // exists through response timing.
+      void sendPasswordResetLink(user.email, user.name, url).catch((err) => {
+        console.error("[auth.email] password reset email failed", err);
+      });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60, // 1 hour
+    // A reset means the old sessions may be compromised.
+    revokeSessionsOnPasswordReset: true,
   },
   emailVerification: {
-    // Auto-send a fresh OTP when a blocked user attempts to sign in.
+    sendVerificationEmail: async ({ user, url }) => {
+      void sendVerificationLink(user.email, user.name, url).catch((err) => {
+        console.error("[auth.email] verification email failed", err);
+      });
+    },
+    // Send the link at sign-up and re-send when an unverified user tries to
+    // sign in.
+    sendOnSignUp: EMAIL_VERIFICATION_ENABLED,
     sendOnSignIn: EMAIL_VERIFICATION_ENABLED,
-    // Sign the user in automatically once they verify the OTP.
+    // The link signs the user in and lands on the callback URL.
     autoSignInAfterVerification: EMAIL_VERIFICATION_ENABLED,
+    expiresIn: 60 * 60, // 1 hour
   },
   socialProviders: {
     google: {
@@ -98,8 +116,6 @@ export const auth = betterAuth({
       "/sign-up/*": { window: 60, max: 10 },
       "/change-password": { window: 60, max: 5 },
       "/change-email": { window: 60, max: 5 },
-      "/email-otp/send-verification-otp": { window: 60, max: 5 },
-      "/email-otp/request-password-reset": { window: 60, max: 5 },
       "/request-password-reset": { window: 60, max: 5 },
       "/send-verification-email": { window: 60, max: 5 },
     },
@@ -140,19 +156,6 @@ export const auth = betterAuth({
       bannedUserMessage:
         "Your account has been blocked. If you believe this is a mistake, please contact support.",
     }),
-    emailOTP({
-      // Send the 6-digit code via the shared email template.
-      sendVerificationOTP: async ({ email, otp }) => {
-        await sendVerificationCode(email, otp);
-      },
-      // Use OTP (code) instead of the default verification link.
-      overrideDefaultEmailVerification: true,
-      expiresIn: 600, // 10 minutes
-      allowedAttempts: 5,
-      // Cooldown: at most one code per 60s per email.
-      rateLimit: { window: 60, max: 1 },
-      sendVerificationOnSignUp: false, // the join wizard sends it explicitly
-    }),
   ],
 });
 
@@ -177,9 +180,8 @@ export async function requireAdmin() {
  * Resolve the current session and throw if no user is signed in. Used by
  * server actions that require an account (reviews, product questions).
  *
- * This checks sign-in only, not email verification: verification is currently
- * switched off (see `EMAIL_VERIFICATION_ENABLED`), so requiring it here would
- * lock every customer out.
+ * This checks sign-in only. Better Auth blocks sign-in for unverified
+ * addresses, so a session already implies a verified email.
  */
 export async function requireUser() {
   let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;

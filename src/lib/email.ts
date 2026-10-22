@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { SiteVersion } from "@/lib/site-version";
+import {
+  memberIdEmail,
+  passwordResetEmail,
+  verificationEmail,
+} from "@/lib/email-templates";
 
 /**
  * Email sending abstraction. Uses Resend when `RESEND_API_KEY` is configured;
@@ -107,19 +112,33 @@ export async function sendEmail({
   return { ok: true, dev: false };
 }
 
-/** Send a 6-digit email verification code. */
-export async function sendVerificationCode(
+/** Send the sign-up verification link. */
+export async function sendVerificationLink(
   to: string,
-  code: string,
+  name: string | null | undefined,
+  url: string,
   version?: SiteVersion,
 ) {
-  return sendEmail({
-    to,
-    version,
-    subject: "Verify your OUR:NARA email",
-    text: `Your OUR:NARA verification code is ${code}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
-    html: `<p>Your OUR:NARA verification code is</p>
-      <p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p>
-      <p>It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>`,
-  });
+  return sendEmail({ to, version, ...verificationEmail({ name, url }) });
+}
+
+/** Send the password-reset link. */
+export async function sendPasswordResetLink(
+  to: string,
+  name: string | null | undefined,
+  url: string,
+  version?: SiteVersion,
+) {
+  return sendEmail({ to, version, ...passwordResetEmail({ name, url }) });
+}
+
+/** Send the member ID reminder. */
+export async function sendMemberIdLink(
+  to: string,
+  name: string | null | undefined,
+  username: string,
+  url: string,
+  version?: SiteVersion,
+) {
+  return sendEmail({ to, version, ...memberIdEmail({ name, username, url }) });
 }

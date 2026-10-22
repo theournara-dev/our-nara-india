@@ -61,7 +61,7 @@ const emptyForm: FormState = {
 };
 
 /** Join wizard mirroring the original member join: 1) Policies, 2) Create
- *  Profile, 3) Verify Email (6-digit code sent to the address). */
+ *  Profile, 3) Verify Email (link sent to the address). */
 export default function JoinPage() {
   const router = useRouter();
   const { data: session, isPending } = authClient.useSession();
@@ -81,9 +81,7 @@ export default function JoinPage() {
   const [optSms, setOptSms] = useState(false);
   const [optEmail, setOptEmail] = useState(false);
 
-  // Step 3 — verification
-  const [code, setCode] = useState("");
-  const [verifying, setVerifying] = useState(false);
+  // Step 3 — wait for the emailed link
   const [resending, setResending] = useState(false);
   const [resendIn, setResendIn] = useState(0); // seconds until resend allowed
 
@@ -119,23 +117,6 @@ export default function JoinPage() {
 
   const requiredAgreed = agreeTerms && agreePrivacy;
 
-  async function sendCode() {
-    const res = await fetch("/api/auth/verify/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: form.email }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    if (res.status === 429) {
-      const err = new Error("Too many attempts. Please wait a minute.");
-      (err as Error & { status?: number }).status = 429;
-      throw err;
-    }
-    if (!res.ok) {
-      throw new Error(data.error ?? "Could not send the code");
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -146,6 +127,7 @@ export default function JoinPage() {
         password: form.password,
         name: `${form.firstName} ${form.lastName}`.trim(),
         username: form.username,
+        callbackURL: `${window.location.origin}/verify-email`,
         firstName: form.firstName,
         lastName: form.lastName,
         country: form.country,
@@ -168,11 +150,10 @@ export default function JoinPage() {
         return;
       }
       if (EMAIL_VERIFICATION_ENABLED) {
-        await sendCode();
         notify.success(
           id,
           "Account created!",
-          "Check your email for the code.",
+          "Check your email for the verification link.",
         );
         setStep(3);
       } else {
@@ -194,52 +175,29 @@ export default function JoinPage() {
     }
   }
 
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault();
-    setVerifying(true);
-    const id = notify.loading("Verifying your email…");
-    try {
-      const res = await fetch("/api/auth/email-otp/verify-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, otp: code }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        if (res.status === 429) {
-          notifyRateLimit(id, "Verification failed");
-          return;
-        }
-        notify.error(id, "Verification failed", data.error ?? "Try again.");
-        return;
-      }
-      notify.success(id, "Email verified!", "Welcome back to OUR:NARA.");
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate full reload
-      window.location.assign("/account");
-    } catch {
-      notify.error(id, "Verification failed", "Something went wrong.");
-    } finally {
-      setVerifying(false);
-    }
-  }
-
   async function handleResend() {
     setResending(true);
-    const id = notify.loading("Sending a new code…");
+    const id = notify.loading("Sending a new link…");
     try {
-      await sendCode();
-      notify.success(id, "Code sent", `Check ${form.email}.`);
+      const res = await authClient.sendVerificationEmail({
+        email: form.email,
+        callbackURL: `${window.location.origin}/verify-email`,
+      });
+      if (res.error) {
+        if (isRateLimit(res.error)) {
+          notifyRateLimit(id);
+          return;
+        }
+        notify.error(id, "Could not send the link", res.error.message);
+        return;
+      }
+      notify.success(id, "Link sent", `Check ${form.email}.`);
       setResendIn(60);
     } catch (err) {
-      const rateLimited = isRateLimit(err as { status?: number });
       notify.error(
         id,
-        rateLimited ? "Too many attempts" : "Could not send code",
-        rateLimited
-          ? "Please wait a minute and try again."
-          : err instanceof Error
-            ? err.message
-            : "Try again.",
+        "Could not send the link",
+        err instanceof Error ? err.message : "Try again.",
       );
     } finally {
       setResending(false);
@@ -616,50 +574,30 @@ export default function JoinPage() {
           )}
 
           {EMAIL_VERIFICATION_ENABLED && step === 3 && (
-            <form
-              onSubmit={handleVerify}
-              className="space-y-4 border border-[#e9e9e9] bg-white p-8 text-center"
-            >
+            <div className="space-y-4 border border-[#e9e9e9] bg-white p-8 text-center">
               <p className="text-sm text-[#666]">
-                We sent a 6-digit code to{" "}
-                <span className="font-semibold text-[#222]">{form.email}</span>.
-                Enter it below to verify your email.
+                We sent a verification link to{" "}
+                <span className="font-semibold text-[#222]">{form.email}</span>
+                . Open it to verify your email and finish setting up your
+                account.
               </p>
-              <input
-                value={code}
-                onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                required
-                pattern="\d{6}"
-                title="6-digit code"
-                className="mx-auto block h-14 w-48 rounded border border-[#e9e9e9] text-center text-2xl tracking-[0.5em] text-[#222] outline-none focus:border-point-500 placeholder:text-zinc-300"
-              />
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleResend}
-                  disabled={resending || resendIn > 0}
-                  className="h-11 w-28 rounded border border-[#e9e9e9] text-sm font-semibold text-[#666] transition-colors hover:bg-zinc-50 disabled:opacity-60"
-                >
-                  {resending
-                    ? "Sending…"
-                    : resendIn > 0
-                      ? `Resend in ${resendIn}s`
-                      : "Resend code"}
-                </button>
-                <button
-                  type="submit"
-                  disabled={verifying || code.length !== 6}
-                  className="h-11 flex-1 rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
-                >
-                  {verifying ? "Verifying…" : "Verify Email"}
-                </button>
-              </div>
-            </form>
+              <p className="text-xs text-[#888]">
+                The link expires in 1 hour. Check your spam folder if it
+                doesn&apos;t arrive.
+              </p>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={resending || resendIn > 0}
+                className="h-11 w-full rounded bg-point-500 text-sm font-semibold text-white transition-colors hover:bg-point-600 disabled:opacity-60"
+              >
+                {resending
+                  ? "Sending…"
+                  : resendIn > 0
+                    ? `Resend link in ${resendIn}s`
+                    : "Resend verification link"}
+              </button>
+            </div>
           )}
 
           <div className="mt-4 text-center text-sm text-[#666]">

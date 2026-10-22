@@ -1,7 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import {
   adminClient,
-  emailOTPClient,
   inferAdditionalFields,
   usernameClient,
 } from "better-auth/client/plugins";
@@ -13,7 +12,6 @@ export const authClient = createAuthClient({
   plugins: [
     usernameClient(),
     adminClient({ ac, roles }),
-    emailOTPClient(),
     inferAdditionalFields({
       user: {
         firstName: { type: "string", required: false },
