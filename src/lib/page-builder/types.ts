@@ -160,6 +160,8 @@ export type TripleBannerBox = z.infer<typeof tripleBannerBoxSchema>;
 
 export const shortItemSchema = z.object({
   id: z.string(),
+  /** Hidden items stay in the admin list but are not rendered on the storefront. */
+  hidden: z.boolean().default(false),
   title: z.string().optional(),
   // Reel link (YouTube Shorts / TikTok / Instagram Reel) OR an uploaded file.
   videoUrl: z.string().optional(),

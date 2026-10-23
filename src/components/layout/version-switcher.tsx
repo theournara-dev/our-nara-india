@@ -13,6 +13,13 @@ import { SITE_DOMAINS, type SiteVersion } from "@/lib/site-version";
 import type { SwitcherContent } from "@/lib/site-content";
 
 /**
+ * The store popup chip and its bobbing nudge are hidden (client request, Oct
+ * 2026). The toggle still switches stores; flip this flag to bring the chip and
+ * the nudge back — nothing else has to be rewritten.
+ */
+const STORE_POPUP_ENABLED = false;
+
+/**
  * Store control, in two parts (client's last round):
  *
  * 1. **The toggle** — two connected halves. The active half wears its store's
@@ -148,53 +155,53 @@ export function VersionSwitcher({
           })}
         </div>
 
-        {/* 2. The popup trigger — unchanged: names the store and opens the
-            panel of store cards. The admin's bobbing nudge sits right above
-            this button (client's note: it points at the trigger, not the
-            toggle). */}
-        <div className="relative">
-          <StoreNudge
-            nudge={content.nudge}
-            className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              if (!open && ref.current) {
-                const phone = window.innerWidth < 768;
-                setPanelLeft(
-                  phone ? 12 - ref.current.getBoundingClientRect().left : null,
-                );
-              }
-              setOpen((v) => !v);
-            }}
-            aria-haspopup="menu"
-            aria-expanded={open}
-            aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
-            title={`Store: ${activeBlock?.title ?? version}`}
-            className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
-          >
-            {pendingTo ? (
-              <Loader2
-                className="h-3.5 w-3.5 animate-spin text-point-500"
-                aria-hidden
-              />
-            ) : (
-              <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
-            )}
-            <span className="text-zinc-900 max-[374px]:hidden">
-              {activeBlock?.title ?? version}
-            </span>
-            {/* The currency is the first thing to go where the icons share the
-              row with the menu. */}
-            <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
-              {activeBlock?.currency}
-            </span>
-          </button>
-        </div>
+        {/* 2. The popup trigger — hidden for now behind STORE_POPUP_ENABLED,
+            together with the admin's bobbing nudge above it. */}
+        {STORE_POPUP_ENABLED && (
+          <div className="relative">
+            <StoreNudge
+              nudge={content.nudge}
+              className="pointer-events-none absolute -top-[30px] left-3 max-[1200px]:hidden"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                if (!open && ref.current) {
+                  const phone = window.innerWidth < 768;
+                  setPanelLeft(
+                    phone ? 12 - ref.current.getBoundingClientRect().left : null,
+                  );
+                }
+                setOpen((v) => !v);
+              }}
+              aria-haspopup="menu"
+              aria-expanded={open}
+              aria-label={`Store: ${activeBlock?.title ?? version}. Change store`}
+              title={`Store: ${activeBlock?.title ?? version}`}
+              className="flex h-8 shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-200 bg-zinc-50 pl-2.5 pr-2 text-[12px] font-semibold text-zinc-700 transition-colors hover:border-zinc-300 hover:bg-white"
+            >
+              {pendingTo ? (
+                <Loader2
+                  className="h-3.5 w-3.5 animate-spin text-point-500"
+                  aria-hidden
+                />
+              ) : (
+                <Globe className="h-3.5 w-3.5 text-zinc-500" aria-hidden />
+              )}
+              <span className="text-zinc-900 max-[374px]:hidden">
+                {activeBlock?.title ?? version}
+              </span>
+              {/* The currency is the first thing to go where the icons share the
+                row with the menu. */}
+              <span className="text-zinc-400 max-md:hidden min-[1200px]:max-[1679px]:hidden">
+                {activeBlock?.currency}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
-      {open && (
+      {STORE_POPUP_ENABLED && open && (
         <div
           role="menu"
           aria-label="Choose store"

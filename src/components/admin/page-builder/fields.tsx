@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff } from "lucide-react";
 import { ImageField } from "@/components/admin/image-field";
 import { inputCls, labelCls } from "@/components/admin/field-styles";
 import {
@@ -1452,6 +1452,8 @@ export function CollapsibleList<T extends { id: string }>({
   renderBody,
   addLabel,
   newItem,
+  isHidden,
+  onToggleHidden,
 }: {
   items: T[];
   onChange: (items: T[]) => void;
@@ -1460,6 +1462,9 @@ export function CollapsibleList<T extends { id: string }>({
   renderBody: (item: T, update: (patch: Partial<T>) => void) => ReactNode;
   addLabel: string;
   newItem: () => Omit<T, "id">;
+  /** When set, each header gets a hide/show toggle and a "Hidden" badge. */
+  isHidden?: (item: T) => boolean;
+  onToggleHidden?: (item: T) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [expandAll, setExpandAll] = useState(false);
@@ -1513,6 +1518,7 @@ export function CollapsibleList<T extends { id: string }>({
 
       {items.map((item, i) => {
         const open = expandAll || item.id === openId;
+        const hidden = isHidden?.(item) ?? false;
         return (
           <div key={item.id} className="rounded-lg border border-zinc-200">
             <div
@@ -1534,8 +1540,15 @@ export function CollapsibleList<T extends { id: string }>({
                 }`}
               />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-zinc-800">
-                  {getTitle(item, i)}
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-zinc-800">
+                    {getTitle(item, i)}
+                  </span>
+                  {hidden && (
+                    <span className="shrink-0 rounded-full bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-500">
+                      Hidden
+                    </span>
+                  )}
                 </div>
                 {getSubtitle && (
                   <div className="truncate text-xs text-zinc-400">
@@ -1547,6 +1560,22 @@ export function CollapsibleList<T extends { id: string }>({
                 className="flex shrink-0 items-center gap-1"
                 onClick={(e) => e.stopPropagation()}
               >
+                {onToggleHidden && (
+                  <button
+                    type="button"
+                    onClick={() => onToggleHidden(item)}
+                    aria-label={
+                      hidden ? "Show on storefront" : "Hide from storefront"
+                    }
+                    aria-pressed={hidden}
+                    title={
+                      hidden ? "Show on storefront" : "Hide from storefront"
+                    }
+                    className={listIconBtn}
+                  >
+                    {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => move(item.id, -1)}
@@ -1799,12 +1828,21 @@ export function ShortsItemsField({
       }
       addLabel="+ Add short"
       newItem={() => ({
+        hidden: false,
         title: "",
         videoUrl: "",
         videoFile: "",
         posterUrl: "",
         productHref: "",
       })}
+      isHidden={(item) => item.hidden === true}
+      onToggleHidden={(item) =>
+        onChange(
+          (value ?? []).map((i) =>
+            i.id === item.id ? { ...i, hidden: i.hidden !== true } : i,
+          ),
+        )
+      }
       renderBody={(item, update) => (
         <div className="grid gap-3">
           <TextField

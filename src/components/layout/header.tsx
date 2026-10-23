@@ -463,13 +463,14 @@ export function Header({
             </div>
           </div>
 
-          {/* Right: the store control (toggle + popup button), account, cart
-              and search. Phones keep the cart only. */}
+          {/* Right: the store control, account, cart and search. The store
+              popup chip (and its nudge) is hidden by STORE_POPUP_ENABLED in
+              version-switcher; phones keep the cart only. */}
           <div className="relative order-3 flex shrink-0 items-center max-[1200px]:order-2 max-[1200px]:ml-auto">
             <VersionSwitcher
               content={siteContent.switcher}
               backgrounds={storeBackgrounds}
-              className="mr-2 max-[1200px]:mr-1"
+              className="mr-6 max-[1200px]:mr-4"
             />
 
             <ul className="inline-flex items-center">

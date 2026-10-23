@@ -130,7 +130,9 @@ export const SECTION_TYPES: Record<SectionType, SectionTypeServer> = {
   shorts: {
     meta: SECTION_TYPE_META_BY_TYPE.shorts,
     load: async (config) => {
-      const items = (config as { items?: ShortItem[] })?.items ?? [];
+      const items = ((config as { items?: ShortItem[] })?.items ?? []).filter(
+        (item) => item.hidden !== true,
+      );
       return {
         picks: items.map((item, i) => ({
           id: item.id,

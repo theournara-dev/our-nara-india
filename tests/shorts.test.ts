@@ -6,6 +6,19 @@ import {
   setVolumeCommand,
   volumeCommand,
 } from "../src/lib/shorts";
+import { sectionConfigSchemas } from "../src/lib/page-builder/types";
+
+test("a shorts item is visible unless the admin hid it", () => {
+  const parsed = sectionConfigSchemas.shorts.parse({
+    items: [
+      { id: "visible", title: "Visible" },
+      { id: "hidden", title: "Hidden", hidden: true },
+    ],
+  });
+  // Items saved before the toggle existed carry no flag and must stay visible.
+  assert.equal(parsed.items[0].hidden, false);
+  assert.equal(parsed.items[1].hidden, true);
+});
 
 test("a shorts URL is parsed into its platform and id", () => {
   assert.deepEqual(
