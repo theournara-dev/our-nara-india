@@ -15,6 +15,7 @@ import {
   checkPickedFile,
 } from "@/components/upload/upload-queue";
 import { notify } from "@/lib/toast";
+import { ProductPicker } from "./product-picker";
 import type {
   AmbassadorImageConfig,
   HeroSlide,
@@ -417,7 +418,7 @@ function SearchableCheckboxList<T extends { id: string }>({
   );
 }
 
-/** Searchable checkbox list for picking specific products by slug. */
+/** Server-searched picker for specific products (not capped by the builder's initial list). */
 export function SlugsField({
   value,
   onChange,
@@ -428,14 +429,11 @@ export function SlugsField({
   options: SectionFormOptions;
 }) {
   return (
-    <SearchableCheckboxList
-      items={options.products.map((p) => ({ id: p.slug, name: p.name }))}
+    <ProductPicker
       value={value}
       onChange={onChange}
-      getLabel={(p) => p.name}
-      placeholder="Search products…"
-      emptyText="No products match."
-      label="Products"
+      brands={options.brands}
+      categories={options.categories}
     />
   );
 }
