@@ -11,10 +11,12 @@ import {
   popupOverlayOpacity,
   popupScale,
   popupWidthPx,
+  storeWelcomeStore,
   type PopupContentLayout,
   type PopupTextAlign,
 } from "@/lib/popups";
 import { StorePickerCards } from "@/components/layout/store-picker-cards";
+import { StoreWelcomeCard } from "@/components/popups/store-welcome-card";
 import { useSiteVersion } from "@/components/site-version-provider";
 import type { SwitcherContent } from "@/lib/site-content";
 
@@ -83,6 +85,7 @@ export function PopupCard({
     ? data.contentKind
     : "custom";
   const storePicker = contentKind === "store-picker" && switcher != null;
+  const storeWelcome = storeWelcomeStore(contentKind);
   const layout: PopupContentLayout = isPopupContentLayout(data.contentLayout)
     ? data.contentLayout
     : "auto";
@@ -93,11 +96,12 @@ export function PopupCard({
   const scale = popupScale(data.scale);
   const mediaHeight = popupImageHeight(data.imageHeightPx);
 
-  const showImage = !storePicker && Boolean(data.image) && layout !== "text";
+  const showImage =
+    !storePicker && !storeWelcome && Boolean(data.image) && layout !== "text";
   const hasText = Boolean(
     data.title || data.body || (data.ctaLabel && data.ctaHref),
   );
-  const showText = !storePicker && hasText && layout !== "image";
+  const showText = !storePicker && !storeWelcome && hasText && layout !== "image";
   const centreText = full || align === "center";
   const overArtwork = full && showImage;
 
@@ -207,6 +211,13 @@ export function PopupCard({
           </div>
         )}
 
+        {storeWelcome && (
+          <StoreWelcomeCard
+            store={storeWelcome}
+            onClose={preview ? () => {} : onClose}
+          />
+        )}
+
         {showImage &&
           (full ? (
             // Full screen: the artwork covers the card.
@@ -252,19 +263,21 @@ export function PopupCard({
         {text}
       </div>
 
-      <button
-        type="button"
-        onClick={preview ? undefined : onClose}
-        aria-label="Close popup"
-        className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900/40 text-white hover:bg-zinc-900/60 ${
-          preview ? "pointer-events-none" : ""
-        }`}
-      >
-        ✕
-      </button>
+      {!storeWelcome && (
+        <button
+          type="button"
+          onClick={preview ? undefined : onClose}
+          aria-label="Close popup"
+          className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-900/40 text-white hover:bg-zinc-900/60 ${
+            preview ? "pointer-events-none" : ""
+          }`}
+        >
+          ✕
+        </button>
+      )}
 
       {/* Footer: the mock's checkbox "Don't show again today" + close pair. */}
-      {data.hideToday && (
+      {!storeWelcome && data.hideToday && (
         <div
           className={`flex items-center gap-3 border-t px-4 py-3 text-xs ${
             full
@@ -321,6 +334,13 @@ export function PopupSurface({
   /** Store-picker content for popups whose content kind is "store-picker". */
   switcher?: SwitcherContent | null;
 }) {
+  // A store-welcome card always dims the page and closes on an outside click:
+  // the check and CTA are its only other exits.
+  const storeWelcome =
+    isPopupContentKind(data.contentKind) &&
+    storeWelcomeStore(data.contentKind) != null;
+  const showOverlay = storeWelcome || data.overlay !== false;
+  const closeOnOverlay = storeWelcome || data.closeOnOverlay !== false;
   // A store-picker popup needs a card wide enough for two columns.
   const card = (
     <PopupCard
@@ -333,13 +353,13 @@ export function PopupSurface({
   if (isFullScreenSize(data.size)) {
     return (
       <div className="fixed inset-0 z-[100]" data-overlay>
-        {data.overlay !== false && (
+        {showOverlay && (
           <div
             className="absolute inset-0"
             style={{
               background: `rgba(24, 24, 27, ${popupOverlayOpacity(data.overlayOpacity) / 100})`,
             }}
-            onClick={data.closeOnOverlay === false ? undefined : onClose}
+            onClick={closeOnOverlay ? onClose : undefined}
             aria-hidden
           />
         )}
@@ -350,12 +370,27 @@ export function PopupSurface({
 
   if (data.placement === "bottom") {
     return (
-      <div className="fixed inset-x-0 bottom-0 z-[100] p-4" data-overlay>
-        <div
-          className="mx-auto w-full"
-          style={{ maxWidth: popupWidthPx(data.size, data.widthPx) }}
-        >
-          {card}
+      <div
+        className={`fixed inset-0 z-[100] ${storeWelcome ? "" : "pointer-events-none"}`}
+        data-overlay
+      >
+        {storeWelcome && (
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `rgba(24, 24, 27, ${popupOverlayOpacity(data.overlayOpacity) / 100})`,
+            }}
+            onClick={onClose}
+            aria-hidden
+          />
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
+          <div
+            className="pointer-events-auto mx-auto w-full"
+            style={{ maxWidth: popupWidthPx(data.size, data.widthPx) }}
+          >
+            {card}
+          </div>
         </div>
       </div>
     );
@@ -366,13 +401,13 @@ export function PopupSurface({
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       data-overlay
     >
-      {data.overlay !== false && (
+      {showOverlay && (
         <div
           className="absolute inset-0"
           style={{
             background: `rgba(24, 24, 27, ${popupOverlayOpacity(data.overlayOpacity) / 100})`,
           }}
-          onClick={data.closeOnOverlay === false ? undefined : onClose}
+          onClick={closeOnOverlay ? onClose : undefined}
           aria-hidden
         />
       )}

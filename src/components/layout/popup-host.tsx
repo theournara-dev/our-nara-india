@@ -6,8 +6,9 @@ import {
   PopupSurface,
   type PopupCardData,
 } from "@/components/popups/popup-card";
-import { nextDuePopup } from "@/lib/popups";
+import { nextDuePopup, popupMatchesStore } from "@/lib/popups";
 import type { SwitcherContent } from "@/lib/site-content";
+import { useSiteVersion } from "@/components/site-version-provider";
 
 type Popup = PopupCardData & {
   id: string;
@@ -83,6 +84,7 @@ function suppress(id: string, at: number) {
 export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
   const pathname = usePathname();
   const inAdmin = pathname?.startsWith("/admin") ?? false;
+  const { version } = useSiteVersion();
   const [queue, setQueue] = useState<Popup[]>([]);
   const [current, setCurrent] = useState<Popup | null>(null);
   const [ready, setReady] = useState(false);
@@ -133,7 +135,12 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
     if (inAdmin || !ready || current) return;
     const now = Date.now();
     const seen = new Set([...seenThisSession(), ...shownThisLoad]);
-    const next = nextDuePopup(queue, seen, suppressedAt(), now);
+    const next = nextDuePopup(
+      queue.filter((popup) => popupMatchesStore(popup.contentKind, version)),
+      seen,
+      suppressedAt(),
+      now,
+    );
     if (!next) return;
 
     const delayMs = firstShow.current
@@ -150,7 +157,7 @@ export function PopupHost({ switcher }: { switcher?: SwitcherContent }) {
     }
     const timer = setTimeout(show, delayMs);
     return () => clearTimeout(timer);
-  }, [inAdmin, ready, queue, current, shownThisLoad]);
+  }, [inAdmin, ready, queue, current, shownThisLoad, version]);
 
   // Auto-close the visible popup after its timeout (0 = waits for the visitor).
   useEffect(() => {

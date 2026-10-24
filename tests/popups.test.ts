@@ -14,8 +14,10 @@ import {
   POPUP_TEXT_ALIGNS,
   popupImageHeight,
   popupOverlayOpacity,
+  popupMatchesStore,
   popupScale,
   popupWidthPx,
+  storeWelcomeStore,
 } from "../src/lib/popups";
 
 const pending = (id: string, frequency: string) => ({ id, frequency });
@@ -153,6 +155,23 @@ test("nextDuePopup walks a stack one by one, skipping what was shown", () => {
   // each id once per load (it passes everything shown so far in the set).
   assert.equal(nextDuePopup(queue, new Set(["a", "b"]), {}, NOW)?.id, "c");
   assert.equal(nextDuePopup(queue, new Set(["a", "b", "c"]), {}, NOW), null);
+});
+
+test("store welcome popups are shown only on their own store", () => {
+  assert.equal(storeWelcomeStore("store-welcome-local"), "local");
+  assert.equal(storeWelcomeStore("store-welcome-global"), "global");
+  assert.equal(storeWelcomeStore("custom"), null);
+  assert.equal(popupMatchesStore("store-welcome-local", "local"), true);
+  assert.equal(popupMatchesStore("store-welcome-local", "global"), false);
+  assert.equal(popupMatchesStore("store-welcome-global", "global"), true);
+  assert.equal(popupMatchesStore("store-welcome-global", "local"), false);
+  // The older content kinds remain visible on both stores.
+  assert.equal(popupMatchesStore("custom", "local"), true);
+  assert.equal(popupMatchesStore("custom", "global"), true);
+  assert.equal(popupMatchesStore("store-picker", "local"), true);
+  assert.equal(popupMatchesStore("store-picker", "global"), true);
+  // A future/unknown kind must not disappear from both stores.
+  assert.equal(popupMatchesStore("not-a-kind", "global"), true);
 });
 
 test("nextDuePopup skips the popup that was just dismissed", () => {

@@ -29,6 +29,7 @@ import {
   POPUP_CONTENT_KINDS,
   CONTENT_KIND_LABELS,
   CONTENT_KIND_HINTS,
+  storeWelcomeStore,
   POPUP_TEXT_ALIGNS,
   TEXT_ALIGN_LABELS,
   POPUP_LIMITS,
@@ -112,6 +113,10 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
   );
   // Store-picker popups render the store cards instead of the fields below.
   const storePicker = contentKind === "store-picker";
+  // Single-store welcome popups draw their own card; the generic content,
+  // button and layout controls do not apply to them.
+  const storeWelcome =
+    isPopupContentKind(contentKind) && storeWelcomeStore(contentKind) !== null;
   const [title, setTitle] = useState(popup?.title ?? "");
   const [body, setBody] = useState(popup?.body ?? "");
   const [image, setImage] = useState(popup?.image ?? "");
@@ -124,6 +129,9 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
     popup?.widthPx ?? DEFAULT_POPUP_WIDTH_PX,
   );
   const [scale, setScale] = useState(popup?.scale ?? DEFAULT_POPUP_SCALE);
+  const [scaleText, setScaleText] = useState(
+    String(popup?.scale ?? DEFAULT_POPUP_SCALE),
+  );
   const [contentLayout, setContentLayout] = useState(
     popup?.contentLayout ?? "auto",
   );
@@ -188,10 +196,10 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
       textAlign: textAlign as PopupInput["textAlign"],
       delaySeconds,
       timeoutSeconds,
-      overlay,
+      overlay: storeWelcome ? true : overlay,
       overlayOpacity,
-      closeOnOverlay,
-      hideToday,
+      closeOnOverlay: storeWelcome ? true : closeOnOverlay,
+      hideToday: storeWelcome ? false : hideToday,
       isActive,
       startsAt: startsAt || undefined,
       expiresAt: expiresAt || undefined,
@@ -288,7 +296,7 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
                   : CONTENT_KIND_HINTS.custom}
               </span>
             </label>
-            {!storePicker && (
+            {!storePicker && !storeWelcome && (
               <>
                 <label className="block">
                   <span className={labelCls}>Title</span>
@@ -321,7 +329,7 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
           </div>
         </section>
 
-        {!storePicker && (
+        {!storePicker && !storeWelcome && (
           <section className="rounded-2xl border border-zinc-100 bg-white p-5">
             <h2 className="mb-4 text-sm font-semibold text-zinc-900">
               Button (optional)
@@ -395,25 +403,42 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
                 <span className={labelCls}>Scale (%)</span>
                 <input
                   inputMode="numeric"
-                  value={String(scale)}
-                  onChange={(e) =>
-                    setScale(
-                      numberValue(
-                        e.target.value,
-                        DEFAULT_POPUP_SCALE,
-                        POPUP_LIMITS.scaleMin,
-                        POPUP_LIMITS.scaleMax,
-                      ),
-                    )
-                  }
+                  value={scaleText}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setScaleText(raw);
+                    const n = Number(raw);
+                    if (
+                      raw.trim() !== "" &&
+                      Number.isFinite(n) &&
+                      n >= POPUP_LIMITS.scaleMin &&
+                      n <= POPUP_LIMITS.scaleMax
+                    ) {
+                      setScale(n);
+                    }
+                  }}
+                  onBlur={() => {
+                    const next = numberValue(
+                      scaleText,
+                      DEFAULT_POPUP_SCALE,
+                      POPUP_LIMITS.scaleMin,
+                      POPUP_LIMITS.scaleMax,
+                    );
+                    setScale(next);
+                    setScaleText(String(next));
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
                   className={inputCls}
                 />
                 <span className={hintCls}>
-                  Zooms the card without changing its layout width.
+                  {POPUP_LIMITS.scaleMin}–{POPUP_LIMITS.scaleMax}% — zooms the
+                  card without changing its layout width.
                 </span>
               </label>
             )}
-            {!storePicker && (
+            {!storePicker && !storeWelcome && (
               <>
                 <label className="block">
                   <span className={labelCls}>Content</span>
@@ -567,9 +592,10 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
             <label className="flex items-center gap-2 sm:col-span-2">
               <input
                 type="checkbox"
-                checked={overlay}
+                checked={storeWelcome || overlay}
+                disabled={storeWelcome}
                 onChange={(e) => setOverlay(e.target.checked)}
-                className="h-4 w-4 accent-point-500"
+                className="h-4 w-4 accent-point-500 disabled:opacity-60"
               />
               <span className="text-sm text-zinc-700">
                 Dim the page behind a centred popup
@@ -597,28 +623,33 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
-                checked={closeOnOverlay}
+                checked={storeWelcome || closeOnOverlay}
+                disabled={storeWelcome}
                 onChange={(e) => setCloseOnOverlay(e.target.checked)}
-                className="h-4 w-4 accent-point-500"
+                className="h-4 w-4 accent-point-500 disabled:opacity-60"
               />
               <span className="text-sm text-zinc-700">
                 Clicking the overlay closes it
               </span>
             </label>
-            <label className="flex items-center gap-2 sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={hideToday}
-                onChange={(e) => setHideToday(e.target.checked)}
-                className="h-4 w-4 accent-point-500"
-              />
-              <span className="text-sm text-zinc-700">
-                Show the &quot;Don&apos;t show again today&quot; link
-              </span>
-            </label>
+            {!storeWelcome && (
+              <label className="flex items-center gap-2 sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={hideToday}
+                  onChange={(e) => setHideToday(e.target.checked)}
+                  className="h-4 w-4 accent-point-500"
+                />
+                <span className="text-sm text-zinc-700">
+                  Show the &quot;Don&apos;t show again today&quot; link
+                </span>
+              </label>
+            )}
           </div>
           <p className={`${hintCls} mt-2`}>
-            Escape always closes the popup, and the ✕ button stays available.
+            {storeWelcome
+              ? "Store welcome popups always dim the page and close on Escape, the check button, the CTA, or an outside click."
+              : "Escape always closes the popup, and the ✕ button stays available."}
           </p>
         </section>
 
@@ -674,7 +705,7 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
               Page behind the popup
             </span>
           </div>
-          {placement === "center" && overlay && !isFullScreenSize(size) && (
+          {placement === "center" && (storeWelcome || overlay) && !isFullScreenSize(size) && (
             <div
               className="absolute inset-0"
               style={{
@@ -773,9 +804,11 @@ function PopupFormInner({ popup, backHref, switcher }: PopupFormProps) {
         <p className="mt-2 text-xs text-zinc-400">
           {storePicker
             ? "The preview shows the same store cards as the header's store switcher. "
-            : imagePreview
-              ? "Showing the picked image — it uploads when you save. "
-              : ""}
+            : storeWelcome
+              ? "The preview shows the welcome card for this store. "
+              : imagePreview
+                ? "Showing the picked image — it uploads when you save. "
+                : ""}
           {!isFullScreenSize(size) &&
           previewBox.cardW > 0 &&
           previewZoom < 0.999

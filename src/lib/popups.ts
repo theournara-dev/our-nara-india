@@ -8,6 +8,8 @@
  * these helpers turn the raw values into the numbers the components use.
  */
 
+import type { SiteVersion } from "./site-version";
+
 export const POPUP_PLACEMENTS = ["center", "bottom"] as const;
 export type PopupPlacement = (typeof POPUP_PLACEMENTS)[number];
 
@@ -63,23 +65,53 @@ export function isFullScreenSize(size: string | null | undefined): boolean {
 export const POPUP_CONTENT_LAYOUTS = ["auto", "image", "text"] as const;
 export type PopupContentLayout = (typeof POPUP_CONTENT_LAYOUTS)[number];
 
-/** What the popup renders: its own content, or the store-switcher cards. */
-export const POPUP_CONTENT_KINDS = ["custom", "store-picker"] as const;
+/** What the popup renders: its own content, the store-switcher cards, or a
+ *  single-store welcome card. */
+export const POPUP_CONTENT_KINDS = [
+  "custom",
+  "store-picker",
+  "store-welcome-local",
+  "store-welcome-global",
+] as const;
 export type PopupContentKind = (typeof POPUP_CONTENT_KINDS)[number];
 
 export const CONTENT_KIND_LABELS: Record<PopupContentKind, string> = {
   custom: "Custom content",
   "store-picker": "Store switcher",
+  "store-welcome-local": "India store welcome",
+  "store-welcome-global": "K-Drop store welcome",
 };
 
 export const CONTENT_KIND_HINTS: Record<PopupContentKind, string> = {
   custom: "The title, body, image and button below.",
   "store-picker":
     "The same cards as the header's store switcher (edited in Site settings → Store picker); image, text and button are hidden. Large (560px) or wider fits the two cards best, and “Once per session” makes a once-a-visit store prompt.",
+  "store-welcome-local":
+    "The single India welcome card. Only visitors on the India store see it. Medium (440px), center modal and “Once per session” work best.",
+  "store-welcome-global":
+    "The single K-Drop welcome card. Only visitors on the International store see it. Medium (440px), center modal and “Once per session” work best.",
 };
 
 export function isPopupContentKind(value: unknown): value is PopupContentKind {
   return POPUP_CONTENT_KINDS.includes(value as PopupContentKind);
+}
+
+/** The store a welcome popup belongs to, or null for a store-agnostic popup. */
+export function storeWelcomeStore(kind: PopupContentKind): SiteVersion | null {
+  if (kind === "store-welcome-local") return "local";
+  if (kind === "store-welcome-global") return "global";
+  return null;
+}
+
+/** Whether a popup is allowed on the visitor's active store. Unknown kinds stay
+ *  visible on both stores so an old record never silently disappears. */
+export function popupMatchesStore(
+  kind: PopupContentKind | string | null | undefined,
+  version: SiteVersion,
+): boolean {
+  if (!isPopupContentKind(kind)) return true;
+  const store = storeWelcomeStore(kind);
+  return store === null || store === version;
 }
 
 export const CONTENT_LAYOUT_LABELS: Record<PopupContentLayout, string> = {

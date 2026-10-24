@@ -172,7 +172,7 @@ export function VersionSwitcher({
                       ? "International store — K-Drop"
                       : `${label} store`
                   }
-                  className={`relative flex h-9 items-center justify-center gap-1 px-3.5 text-[12px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 max-md:h-9 max-md:gap-0.5 max-md:px-1.5 max-md:text-[10px] ${
+                  className={`relative flex h-8 items-center justify-center gap-1 px-4 text-[11.5px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 max-md:gap-0.5 max-md:px-2 max-md:text-[10px] ${
                     active
                       ? "z-10 rounded-full text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
                       : "rounded-full text-zinc-500 hover:text-zinc-700"
@@ -185,7 +185,7 @@ export function VersionSwitcher({
                     width={16}
                     height={16}
                     unoptimized
-                    className="h-[17px] w-[17px] shrink-0 rounded-[3px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)] max-md:h-3.5 max-md:w-3.5"
+                    className="h-4 w-4 shrink-0 rounded-[3px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)] max-md:h-3.5 max-md:w-3.5"
                   />
                   {pending ? (
                     <Loader2
@@ -194,7 +194,7 @@ export function VersionSwitcher({
                     />
                   ) : (
                     <DeliveryIcon
-                      className={`h-[17px] w-[17px] shrink-0 max-md:h-3.5 max-md:w-3.5 ${
+                      className={`h-4 w-4 shrink-0 max-md:h-3.5 max-md:w-3.5 ${
                         active ? "text-white" : deliveryClass
                       }`}
                       strokeWidth={2}
