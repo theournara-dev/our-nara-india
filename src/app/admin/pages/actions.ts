@@ -331,6 +331,8 @@ const brandsPageInput = z.object({
   previewHeight: z.coerce.number().int().min(40).max(600),
   previewColumns: z.coerce.number().int().min(2).max(6),
   previewRows: z.coerce.number().int().min(1).max(10),
+  previewBackground: z.string().regex(/^#[0-9a-fA-F]{6}$/).default("#f6f6f6"),
+  previewTransparent: z.boolean().default(true),
   // The directory's own blocks (client's slide 6): the long banner's picks and
   // height, and the promo — a reference, empty until one is picked.
   longBannerIds: z.array(safeText(100)).max(3).default([]),
@@ -375,6 +377,8 @@ export async function saveBrandsPage(
     brandsPreviewHeight: data.previewHeight,
     brandsPreviewColumns: data.previewColumns,
     brandsPreviewRows: data.previewRows,
+    brandsPreviewBackground: data.previewBackground,
+    brandsPreviewTransparent: data.previewTransparent,
     brandsLongBannerIds: longBannerIds,
     brandsLongBannerHeight: data.longBannerHeight,
     brandsPromoBannerId: promoBannerId,

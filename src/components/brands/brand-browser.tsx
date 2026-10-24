@@ -116,6 +116,11 @@ export function BrandBrowser({
               key={brand.slug}
               brand={brand}
               height={preview.previewHeight}
+              background={
+                preview.previewTransparent
+                  ? "transparent"
+                  : preview.previewBackground
+              }
             />
           ))}
         </ul>
@@ -139,16 +144,18 @@ export function BrandBrowser({
 function BrandPreview({
   brand,
   height,
+  background,
 }: {
   brand: BrandSummary;
   height: number;
+  background: string;
 }) {
   return (
     <li>
       <Link
         href={`/brand/${brand.slug}`}
-        className="group relative block overflow-hidden rounded-xl bg-[#f6f6f6]"
-        style={{ height }}
+        className="group relative block overflow-hidden rounded-xl"
+        style={{ height, backgroundColor: background }}
       >
         {brand.logoUrl ? (
           <>

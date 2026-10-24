@@ -50,6 +50,8 @@ export function BrandsPageSettingsForm({
         previewHeight: current.previewHeight,
         previewColumns: current.previewColumns,
         previewRows: current.previewRows,
+        previewBackground: current.previewBackground,
+        previewTransparent: current.previewTransparent,
         longBannerIds: current.longBannerIds,
         longBannerHeight: current.longBannerHeight,
         promoBannerId: current.promoBannerId ?? undefined,
@@ -129,6 +131,36 @@ export function BrandsPageSettingsForm({
             />
           </label>
         </div>
+        <div className="mt-4 flex flex-wrap items-end gap-4">
+          <label className="flex h-10 items-center gap-2">
+            <input
+              type="checkbox"
+              checked={current.previewTransparent}
+              onChange={(e) =>
+                patch({ previewTransparent: e.target.checked })
+              }
+              className="h-4 w-4 rounded border-zinc-300 accent-point-500"
+            />
+            <span className="text-sm text-zinc-700">
+              Transparent background
+            </span>
+          </label>
+          <label className="block">
+            <span className={labelCls}>Background color</span>
+            <input
+              type="color"
+              value={current.previewBackground}
+              disabled={current.previewTransparent}
+              onChange={(e) =>
+                patch({ previewBackground: e.target.value })
+              }
+              className="h-10 w-16 cursor-pointer rounded border border-zinc-200 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-zinc-400">
+          The color shows behind each brand tile when transparency is off.
+        </p>
       </section>
 
       <BannerBlocksFields

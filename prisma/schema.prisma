@@ -1148,6 +1148,8 @@ model SiteConfig {
   brandsPreviewHeight  Int? @map("brands_preview_height")
   brandsPreviewColumns Int? @map("brands_preview_columns")
   brandsPreviewRows    Int? @map("brands_preview_rows")
+  brandsPreviewBackground String? @default("#f6f6f6") @map("brands_preview_background")
+  brandsPreviewTransparent Boolean? @default(true) @map("brands_preview_transparent")
   brandsLongBannerIds     String[] @default([]) @map("brands_long_banner_ids")
   brandsLongBannerHeight  Int      @default(0) @map("brands_long_banner_height")
   brandsPromoBannerId     String?  @map("brands_promo_banner_id")

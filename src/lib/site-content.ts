@@ -120,6 +120,10 @@ export type BrandsPageContent = {
   previewColumns: number;
   /** Rows of previews shown; the rest stay in the list below. */
   previewRows: number;
+  /** Background behind each preview tile; ignored while transparent. */
+  previewBackground: string;
+  /** Whether the tiles keep the page background. */
+  previewTransparent: boolean;
   /**
    * The long banner above the group tabs, in order (up to three, one banner per
    * column — the same strip the category pages use). Picked here because the
@@ -138,6 +142,8 @@ export const DEFAULT_BRANDS_PAGE: BrandsPageContent = {
   previewHeight: 100,
   previewColumns: 4,
   previewRows: 2,
+  previewBackground: "#f6f6f6",
+  previewTransparent: true,
   longBannerIds: [],
   longBannerHeight: 0,
   promoBannerId: null,
@@ -560,6 +566,8 @@ export function siteContentFromRow(
     brandsPreviewHeight: number | null;
     brandsPreviewColumns: number | null;
     brandsPreviewRows: number | null;
+    brandsPreviewBackground: string | null;
+    brandsPreviewTransparent: boolean | null;
     /** The directory's own blocks: long banner ids, heights, promo pick. */
     brandsLongBannerIds: string[];
     brandsLongBannerHeight: number;
@@ -619,6 +627,13 @@ export function siteContentFromRow(
         10,
         base.brandsPage.previewRows,
       ),
+      previewBackground:
+        typeof row.brandsPreviewBackground === "string" &&
+        /^#[0-9a-fA-F]{6}$/.test(row.brandsPreviewBackground)
+          ? row.brandsPreviewBackground
+          : base.brandsPage.previewBackground,
+      previewTransparent:
+        row.brandsPreviewTransparent ?? base.brandsPage.previewTransparent,
       longBannerIds: (row.brandsLongBannerIds ?? base.brandsPage.longBannerIds)
         .filter(Boolean)
         .slice(0, 3),
