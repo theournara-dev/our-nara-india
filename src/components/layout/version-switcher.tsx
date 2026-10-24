@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Globe, Loader2 } from "lucide-react";
+import type { ComponentType } from "react";
+import { Globe, Loader2, Plane } from "lucide-react";
+import { FaTruckFast } from "react-icons/fa6";
 import { useSiteVersion } from "@/components/site-version-provider";
 import { StoreNudge } from "@/components/layout/store-nudge";
 import {
@@ -78,9 +81,35 @@ export function VersionSwitcher({
   const localTitle =
     content.blocks.find((b) => b.store === "local")?.title ?? "India";
 
-  const options: { store: SiteVersion; label: string; background: string }[] = [
-    { store: "global", label: "KDROP", background: backgrounds.global },
-    { store: "local", label: localTitle, background: backgrounds.local },
+  const options: {
+    store: SiteVersion;
+    label: string;
+    background: string;
+    flag: string;
+    /** Lucide and react-icons both fit this minimal shape. */
+    delivery: ComponentType<{
+      className?: string;
+      strokeWidth?: number;
+      "aria-hidden"?: boolean;
+    }>;
+    deliveryClass: string;
+  }[] = [
+    {
+      store: "global",
+      label: "KDROP",
+      background: backgrounds.global,
+      flag: "/flags/kr.svg",
+      delivery: Plane,
+      deliveryClass: "text-[#7c3aed]",
+    },
+    {
+      store: "local",
+      label: localTitle,
+      background: backgrounds.local,
+      flag: "/flags/in.svg",
+      delivery: FaTruckFast,
+      deliveryClass: "text-[#1e293b]",
+    },
   ];
 
   function choose(next: SiteVersion) {
@@ -106,53 +135,77 @@ export function VersionSwitcher({
   return (
     <div ref={ref} className={`relative ${className}`}>
       <div className="flex items-center gap-1.5">
-        {/* 1. The quick switch: one pill, not two. The container is the pill
-            (grey, clipped); the **active** half is the only rounded, coloured
-            shape and it laps over the grey half, so the unselected side has no
-            visible corner of its own — the control reads as a single component
-            with a coloured slider on it (client's note). */}
+        {/* 1. The quick switch: one pill, not two. The container is the track
+            (grey, clipped); the active half is a coloured pill, the inactive
+            half keeps the track's grey. The halves sit side by side rather
+            than lapping over each other, so the active side never covers the
+            other label (client request, Oct 2026). */}
         <div
           role="group"
           aria-label="Choose your store"
           className="flex shrink-0 items-center overflow-hidden rounded-full bg-zinc-200"
         >
-          {options.map(({ store, label, background }, index) => {
-            const active = version === store;
-            const pending = pendingTo === store;
-            return (
-              <button
-                key={store}
-                type="button"
-                onClick={() => choose(store)}
-                aria-pressed={active}
-                aria-label={
-                  store === "global"
-                    ? "Shop the International (K-Drop) store"
-                    : `Shop the ${label} store`
-                }
-                title={
-                  store === "global"
-                    ? "International store — K-Drop"
-                    : `${label} store`
-                }
-                className={`relative flex h-8 items-center justify-center gap-1 px-5 text-[11.5px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 ${
-                  // The second half laps 12px over the first. Its padding covers
-                  // that, so neither label slides under the active pill.
-                  index > 0 ? "-ml-3" : ""
-                } ${
-                  active
-                    ? "z-10 rounded-full text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
-                    : "rounded-none text-zinc-500 hover:text-zinc-700"
-                }`}
-                style={active ? { background } : undefined}
-              >
-                {pending && (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" aria-hidden />
-                )}
-                <span className="whitespace-nowrap">{label}</span>
-              </button>
-            );
-          })}
+          {options.map(
+            ({
+              store,
+              label,
+              background,
+              flag,
+              delivery: DeliveryIcon,
+              deliveryClass,
+            }) => {
+              const active = version === store;
+              const pending = pendingTo === store;
+              return (
+                <button
+                  key={store}
+                  type="button"
+                  onClick={() => choose(store)}
+                  aria-pressed={active}
+                  aria-label={
+                    store === "global"
+                      ? "Shop the International (K-Drop) store"
+                      : `Shop the ${label} store`
+                  }
+                  title={
+                    store === "global"
+                      ? "International store — K-Drop"
+                      : `${label} store`
+                  }
+                  className={`relative flex h-9 items-center justify-center gap-1 px-3.5 text-[12px] font-bold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-point-500 max-md:h-9 max-md:gap-0.5 max-md:px-1.5 max-md:text-[10px] ${
+                    active
+                      ? "z-10 rounded-full text-white shadow-[0_1px_4px_rgba(0,0,0,0.25)]"
+                      : "rounded-full text-zinc-500 hover:text-zinc-700"
+                  }`}
+                  style={active ? { background } : undefined}
+                >
+                  <Image
+                    src={flag}
+                    alt=""
+                    width={16}
+                    height={16}
+                    unoptimized
+                    className="h-[17px] w-[17px] shrink-0 rounded-[3px] object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)] max-md:h-3.5 max-md:w-3.5"
+                  />
+                  {pending ? (
+                    <Loader2
+                      className="h-4 w-4 shrink-0 animate-spin max-md:h-3.5 max-md:w-3.5"
+                      aria-hidden
+                    />
+                  ) : (
+                    <DeliveryIcon
+                      className={`h-[17px] w-[17px] shrink-0 max-md:h-3.5 max-md:w-3.5 ${
+                        active ? "text-white" : deliveryClass
+                      }`}
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  )}
+                  <span className="whitespace-nowrap">{label}</span>
+                </button>
+              );
+            },
+          )}
         </div>
 
         {/* 2. The popup trigger — hidden for now behind STORE_POPUP_ENABLED,

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="South Korea">
+  <defs>
+    <clipPath id="kr-square">
+      <rect width="24" height="24" rx="5" />
+    </clipPath>
+    <clipPath id="kr-taegeuk">
+      <circle r="5.4" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#kr-square)">
+    <rect width="24" height="24" fill="#ffffff" />
+    <g transform="translate(12 12)">
+      <g clip-path="url(#kr-taegeuk)">
+        <rect x="-5.4" y="-5.4" width="10.8" height="5.4" fill="#cd2e3a" />
+        <rect x="-5.4" y="0" width="10.8" height="5.4" fill="#0047a0" />
+        <path d="M-5.4 0C-1.8 3.6 1.8-3.6 5.4 0L5.4 5.4L-5.4 5.4Z" fill="#0047a0" />
+      </g>
+    </g>
+    <g stroke="#1b1b1b" stroke-width="0.9" stroke-linecap="round">
+      <g transform="translate(5 5) rotate(-45)">
+        <path d="M-2.5-1.5h5M-2.5 0h5M-2.5 1.5h5" />
+      </g>
+      <g transform="translate(19 5) rotate(45)">
+        <path d="M-2.5-1.5h5M-2.5 0h5M-2.5 1.5h5" />
+      </g>
+      <g transform="translate(5 19) rotate(45)">
+        <path d="M-2.5-1.5h5M-2.5 0h5M-2.5 1.5h5" />
+      </g>
+      <g transform="translate(19 19) rotate(-45)">
+        <path d="M-2.5-1.5h5M-2.5 0h5M-2.5 1.5h5" />
+      </g>
+    </g>
+  </g>
+</svg>
